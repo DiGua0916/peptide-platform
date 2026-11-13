@@ -34,14 +34,23 @@ final class Board_Page {
 
 	// ---------- 设置和版本 ----------
 
-	/** @return array{untagged_pct:float,min_clicks:int} */
+	/** @return array{untagged_pct:float,min_clicks:int,scale_roas:float,stop_roas:float,stop_spend:float} */
 	public static function settings(): array {
 		$s = get_option( self::OPTION_SETTINGS, array() );
 		$s = is_array( $s ) ? $s : array();
 		return array(
 			'untagged_pct' => isset( $s['untagged_pct'] ) ? max( 0.0, min( 100.0, (float) $s['untagged_pct'] ) ) : (float) Board::UNTAGGED_PCT,
 			'min_clicks'   => isset( $s['min_clicks'] ) ? max( 1, min( 100000, (int) $s['min_clicks'] ) ) : Board::MIN_CLICKS,
+			// 建议标签的规则（2026-11-13）。
+			'scale_roas'   => isset( $s['scale_roas'] ) ? max( 0.0, min( 100.0, (float) $s['scale_roas'] ) ) : (float) Board::RULES['scale_roas'],
+			'stop_roas'    => isset( $s['stop_roas'] ) ? max( 0.0, min( 100.0, (float) $s['stop_roas'] ) ) : (float) Board::RULES['stop_roas'],
+			'stop_spend'   => isset( $s['stop_spend'] ) ? max( 0.0, min( 100000.0, (float) $s['stop_spend'] ) ) : Board::RULES['stop_spend_cents'] / 100,
 		);
+	}
+
+	/** 设置 → Board::verdict() 的规则。 */
+	public static function rules( array $settings ): array {
+		return array( 'scale_roas' => $settings['scale_roas'], 'stop_roas' => $settings['stop_roas'], 'stop_spend_cents' => (int) round( $settings['stop_spend'] * 100 ) );
 	}
 
 	/** @return list<array{ver:string,since_ms:int,user:int}> */
@@ -87,7 +96,11 @@ final class Board_Page {
 			check_admin_referer( 'pc_creative_board_settings' );
 			$pct    = isset( $_POST['untagged_pct'] ) ? (float) wp_unslash( $_POST['untagged_pct'] ) : Board::UNTAGGED_PCT;
 			$clicks = isset( $_POST['min_clicks'] ) ? (int) wp_unslash( $_POST['min_clicks'] ) : Board::MIN_CLICKS;
-			update_option( self::OPTION_SETTINGS, array( 'untagged_pct' => max( 0.0, min( 100.0, $pct ) ), 'min_clicks' => max( 1, min( 100000, $clicks ) ) ), false );
+			$num = static fn( string $k, float $d ): float => isset( $_POST[ $k ] ) && is_numeric( wp_unslash( $_POST[ $k ] ) ) ? (float) wp_unslash( $_POST[ $k ] ) : $d; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+			$old = self::settings();
+			$scale = max( 0.0, min( 100.0, $num( 'scale_roas', $old['scale_roas'] ) ) );
+			$stop  = max( 0.0, min( $scale, $num( 'stop_roas', $old['stop_roas'] ) ) );
+			update_option( self::OPTION_SETTINGS, array( 'untagged_pct' => max( 0.0, min( 100.0, $pct ) ), 'min_clicks' => max( 1, min( 100000, $clicks ) ), 'scale_roas' => $scale, 'stop_roas' => $stop, 'stop_spend' => max( 0.0, min( 100000.0, $num( 'stop_spend', $old['stop_spend'] ) ) ) ), false );
 			$ver = isset( $_POST['version'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['version'] ) ) ) : '';
 			$msg = '设置已保存。';
 			if ( '' !== $ver && $ver !== self::current_version() ) {
@@ -127,8 +140,9 @@ final class Board_Page {
 			$from = $get['from'];
 			$to   = $get['to'];
 		}
-		$ver = is_string( $get['ver'] ?? null ) && self::valid_version( $get['ver'] ) ? $get['ver'] : '';
-		return array( 'dim' => $dim, 'mode' => $mode, 'from' => $from, 'to' => $to, 'ver' => $ver );
+		$ver  = is_string( $get['ver'] ?? null ) && self::valid_version( $get['ver'] ) ? $get['ver'] : '';
+		$sort = is_string( $get['sort'] ?? null ) && isset( Board::SORTS[ $get['sort'] ] ) ? $get['sort'] : 'roas';
+		return array( 'dim' => $dim, 'mode' => $mode, 'from' => $from, 'to' => $to, 'ver' => $ver, 'sort' => $sort );
 	}
 
 	public static function render(): void {
@@ -178,7 +192,7 @@ final class Board_Page {
 		}
 		self::render_alerts( $agg, $data, $settings );
 		self::render_filters( $f, $versions, $ver_note );
-		self::render_table( $agg, $f );
+		self::render_cards( $agg, $f, $settings );
 		self::render_exports();
 		self::render_settings( $settings, $versions );
 		self::render_report_status();
@@ -222,6 +236,47 @@ final class Board_Page {
 .pc-cr-board .pc-cr-alert{border-left:4px solid #dba617;background:#fff;padding:8px 12px;margin:12px 0}
 .pc-cr-board .pc-cr-section{margin-top:28px}
 .pc-cr-board .pc-cr-muted{color:#646970}
+.pc-cr-board .pc-cr-kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px;margin:14px 0 6px}
+.pc-cr-board .pc-cr-kpi{background:#fff;border:1px solid #dcdcde;border-radius:8px;padding:10px 14px}
+.pc-cr-board .pc-cr-kpi span{display:block;font-size:12px;color:#646970}
+.pc-cr-board .pc-cr-kpi b{display:block;font-size:22px;line-height:1.3;font-weight:600;font-variant-numeric:tabular-nums}
+.pc-cr-board .pc-cr-toolbar{display:flex;flex-wrap:wrap;gap:8px 16px;align-items:center;justify-content:space-between;margin:12px 0 8px}
+.pc-cr-board .pc-cr-sorts{display:flex;gap:4px 14px;flex-wrap:wrap}
+.pc-cr-board .pc-cr-counts{display:flex;gap:6px;flex-wrap:wrap}
+.pc-cr-board .pc-cr-badge{display:inline-block;white-space:nowrap;font-size:12px;line-height:20px;padding:0 10px;border-radius:10px;background:#f0f0f1;color:#50575e}
+.pc-cr-board .pc-cr-badge.is-scale{background:#edfaef;color:#007017}
+.pc-cr-board .pc-cr-badge.is-watch{background:#fcf9e8;color:#8a6d00}
+.pc-cr-board .pc-cr-badge.is-stop{background:#fcf0f1;color:#b32d2e}
+.pc-cr-board .pc-cr-badge.is-nospend{background:#f0f6fc;color:#2271b1}
+.pc-cr-board .pc-cr-group-title{margin:18px 0 6px;font-size:14px}
+.pc-cr-board details.pc-cr-row{background:#fff;border:1px solid #dcdcde;border-radius:8px;margin:0 0 10px}
+.pc-cr-board details.pc-cr-row.is-stop{border-left:4px solid #d63638}
+.pc-cr-board details.pc-cr-row.is-scale{border-left:4px solid #00a32a}
+.pc-cr-board details.pc-cr-row.is-thin{background:#fafafa}
+.pc-cr-board details.pc-cr-row>summary{list-style:none;padding:12px 14px;display:grid;gap:8px}
+.pc-cr-board details.pc-cr-row>summary::-webkit-details-marker{display:none}
+.pc-cr-board .pc-cr-row-head{display:flex;align-items:center;gap:10px}
+.pc-cr-board .pc-cr-row-head .pc-cr-thumb{width:40px;height:40px;margin:0}
+.pc-cr-board .pc-cr-row-name{flex:1;min-width:0}
+.pc-cr-board .pc-cr-row-name b{font-family:monospace;font-size:14px;margin-right:8px}
+.pc-cr-board .pc-cr-row-name span{font-size:12px;color:#50575e}
+.pc-cr-board .pc-cr-row-keys{display:flex;flex-wrap:wrap;gap:4px 22px;font-size:13px;color:#50575e}
+.pc-cr-board .pc-cr-row-keys b{font-size:16px;color:#1d2327;font-variant-numeric:tabular-nums}
+.pc-cr-board .pc-cr-row-keys b.is-good{color:#007017}
+.pc-cr-board .pc-cr-row-keys b.is-bad{color:#b32d2e}
+.pc-cr-board .pc-cr-funnel{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+.pc-cr-board .pc-cr-step span{display:block;font-size:12px;color:#50575e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.pc-cr-board .pc-cr-step b{color:#1d2327}
+.pc-cr-board .pc-cr-step em{font-style:normal;color:#8c8f94}
+.pc-cr-board .pc-cr-step i{display:block;height:8px;border-radius:4px;background:#72aee6;margin-top:3px;min-width:2px}
+.pc-cr-board .pc-cr-step.is-drop span,.pc-cr-board .pc-cr-step.is-drop em{color:#b32d2e}
+.pc-cr-board .pc-cr-step.is-drop i{background:#e65054}
+.pc-cr-board .pc-cr-row-body{border-top:1px solid #f0f0f1;padding:10px 14px 12px}
+.pc-cr-board .pc-cr-all{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:8px 12px}
+.pc-cr-board .pc-cr-all span{display:block;font-size:11px;color:#646970}
+.pc-cr-board .pc-cr-all b{font-variant-numeric:tabular-nums}
+.pc-cr-board ul.pc-cr-visitors{columns:4;font-size:12px;margin:4px 0 0}
+@media (max-width:600px){.pc-cr-board .pc-cr-funnel{grid-template-columns:repeat(3,minmax(0,1fr))}.pc-cr-board ul.pc-cr-visitors{columns:2}.pc-cr-board .pc-cr-kpi b{font-size:18px}}
 </style>';
 	}
 
@@ -395,6 +450,138 @@ final class Board_Page {
 		echo '</tbody></table></div>';
 	}
 
+	// ---------- 新样式（2026-11-13）：总数 + 每个素材一张卡片（关键数字、漏斗、建议），点开看全部指标和访客 ----------
+
+	private static function render_cards( array $agg, array $f, array $settings ): void {
+		$total = $agg['total'];
+		$rules = self::rules( $settings );
+		$money = static fn( $c ): string => self::format( $c, 'money' );
+		echo '<div class="pc-cr-kpis">';
+		foreach ( array(
+			array( '花费', $money( $total['spend_cents'] ) ),
+			array( '销售额', $money( $total['sales_cents'] ) ),
+			array( 'ROAS', self::format( $total['roas'], 'x' ) ),
+			array( '订单', (string) (int) $total['orders'] ),
+			array( '付费访客', (int) $total['visitors'] . '（有效 ' . (int) $total['valid'] . '）' ),
+		) as $k ) {
+			echo '<div class="pc-cr-kpi"><span>' . esc_html( $k[0] ) . '</span><b>' . esc_html( $k[1] ) . '</b></div>';
+		}
+		echo '</div>';
+		echo '<p class="pc-cr-muted">' . esc_html( sprintf( '%s ~ %s · %s · %s · 意向：高 %d / 中 %d / 低 %d / 无效 %d · 没带参数的 FB/IG 访客 %d', $f['from'], $f['to'], Board::MODES[ $f['mode'] ], Board::DIMS[ $f['dim'] ], $total['intent']['high'], $total['intent']['mid'], $total['intent']['low'], $total['intent']['invalid'], $agg['untagged'] ) ) . '</p>';
+
+		$rows = array_values( $agg['rows'] );
+		$counts = array_fill_keys( array_keys( Board::VERDICTS ), 0 );
+		foreach ( $rows as $i => $row ) {
+			$rows[ $i ]['verdict'] = Board::verdict( $row, $rules );
+			++$counts[ $rows[ $i ]['verdict'] ];
+		}
+		// 排序：按属性时在每组里排，其他维度整体排。
+		if ( 'attr' === $f['dim'] ) {
+			$groups = array();
+			foreach ( $rows as $row ) {
+				$groups[ (string) strtok( $row['key'], ':' ) ][] = $row;
+			}
+			$rows = array();
+			foreach ( $groups as $g ) {
+				$rows = array_merge( $rows, Board::sort_rows( $g, $f['sort'] ) );
+			}
+		} else {
+			$rows = Board::sort_rows( $rows, $f['sort'] );
+		}
+
+		echo '<div class="pc-cr-toolbar"><span class="pc-cr-sorts">';
+		foreach ( Board::SORTS as $k => $label ) {
+			$url = add_query_arg( array( 'page' => Module::PAGE_BOARD, 'dim' => $f['dim'], 'mode' => $f['mode'], 'from' => $f['from'], 'to' => $f['to'], 'ver' => $f['ver'], 'sort' => $k ), admin_url( 'admin.php' ) );
+			echo $k === $f['sort'] ? '<b>' . esc_html( $label ) . '</b>' : '<a href="' . esc_url( $url ) . '">' . esc_html( $label ) . '</a>';
+		}
+		echo '</span><span class="pc-cr-counts">';
+		foreach ( Board::VERDICTS as $k => $label ) {
+			if ( $counts[ $k ] ) {
+				echo '<span class="pc-cr-badge is-' . esc_attr( $k ) . '">' . esc_html( $label . ' ' . $counts[ $k ] ) . '</span>';
+			}
+		}
+		echo '</span></div>';
+
+		if ( ! $rows ) {
+			echo '<p>这段时间没有付费访客，也没有导入花费。</p>';
+		}
+		$group = null;
+		foreach ( $rows as $row ) {
+			if ( 'attr' === $f['dim'] ) {
+				$g = (string) strtok( $row['key'], ':' );
+				if ( $g !== $group ) {
+					$group = $g;
+					echo '<h3 class="pc-cr-group-title">' . esc_html( Board::ATTR_LABELS[ $g ] ?? $g ) . '</h3>';
+				}
+			}
+			self::render_card( $row, $rules );
+		}
+		echo '<p class="pc-cr-muted">建议：ROAS ≥ ' . esc_html( self::num( $rules['scale_roas'], 1 ) ) . ' 加投，&lt; ' . esc_html( self::num( $rules['stop_roas'], 1 ) ) . ' 建议停，花费 ≥ ' . esc_html( $money( $rules['stop_spend_cents'] ) ) . ' 还没订单也建议停；有效访客不到 ' . esc_html( (string) Board::MIN_VALID ) . ' 显示样本不足。规则在下面“设置”里改。漏斗按这一行的进站访客算比例，红色是丢人最多的一步。点卡片看全部指标和访客名单。</p>';
+	}
+
+	private static function render_card( array $row, array $rules ): void {
+		$v      = (string) $row['verdict'];
+		$attrs  = (array) ( $row['meta']['attrs'] ?? array() );
+		$thumb  = (string) ( $row['meta']['thumb'] ?? '' );
+		$attr_t = '';
+		if ( $attrs ) {
+			static $names = null;
+			$names = $names ?? Creatives::label_map( Schema::vocab() );
+			$parts = array();
+			foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
+				if ( '' !== (string) ( $attrs[ $k ] ?? '' ) ) {
+					$parts[] = $names[ $k ][ $attrs[ $k ] ] ?? $attrs[ $k ];
+				}
+			}
+			$attr_t = implode( ' · ', $parts );
+		}
+		$roas_cls = 'scale' === $v ? 'is-good' : ( 'stop' === $v ? 'is-bad' : '' );
+		echo '<details class="pc-cr-row is-' . esc_attr( $v ) . '"><summary>';
+		echo '<div class="pc-cr-row-head">' . ( '' !== $thumb ? '<img class="pc-cr-thumb" src="' . esc_url( $thumb ) . '" alt="">' : '' );
+		echo '<div class="pc-cr-row-name"><b>' . esc_html( (string) $row['label'] ) . '</b>' . ( '' !== $attr_t ? '<span>' . esc_html( $attr_t ) . '</span>' : '' ) . '</div>';
+		echo '<span class="pc-cr-badge is-' . esc_attr( $v ) . '">' . esc_html( Board::VERDICTS[ $v ] ?? $v ) . '</span></div>';
+		echo '<div class="pc-cr-row-keys">';
+		foreach ( array( array( '花费', self::format( $row['spend_cents'], 'money' ), '' ), array( '订单', (string) (int) $row['orders'], '' ), array( '销售额', self::format( $row['sales_cents'], 'money' ), '' ), array( 'ROAS', self::format( $row['roas'], 'x' ), $roas_cls ) ) as $k ) {
+			echo '<span>' . esc_html( $k[0] ) . ' <b class="' . esc_attr( $k[2] ) . '">' . esc_html( $k[1] ) . '</b></span>';
+		}
+		echo '</div>';
+		// 漏斗：进站 → 中高意向 → 加购 → 结账 → 成交，宽度按进站访客算。
+		$steps = array( array( '进站', (int) $row['visitors'] ), array( '中高意向', (int) $row['intent']['high'] + (int) $row['intent']['mid'] ), array( '加购', (int) $row['carted'] ), array( '结账', (int) $row['checkout'] ), array( '成交', (int) $row['orders'] ) );
+		$base   = max( 1, (int) $row['visitors'] );
+		$worst  = -1;
+		$drop   = 0.0;
+		for ( $i = 1; $i < count( $steps ); $i++ ) {
+			// 按“这一步丢掉的人占进站访客的比例”找最大的一步（小数字的相对比例会误导，比如 1 → 0）。
+			$loss = ( $steps[ $i - 1 ][1] - $steps[ $i ][1] ) / $base;
+			if ( $loss > $drop ) {
+				$drop  = $loss;
+				$worst = $i;
+			}
+		}
+		echo '<div class="pc-cr-funnel">';
+		foreach ( $steps as $i => $s ) {
+			$pct = (int) round( 100 * $s[1] / $base );
+			echo '<div class="pc-cr-step' . ( $i === $worst ? ' is-drop' : '' ) . '" title="' . esc_attr( $s[0] . ' ' . $s[1] . '（' . $pct . '%）' ) . '"><span>' . esc_html( $s[0] ) . ' <b>' . esc_html( (string) $s[1] ) . '</b>' . ( $i > 0 ? ' <em>' . esc_html( $pct . '%' ) . '</em>' : '' ) . '</span><i style="width:' . esc_attr( (string) max( 0, min( 100, $pct ) ) ) . '%"></i></div>';
+		}
+		echo '</div></summary><div class="pc-cr-row-body"><div class="pc-cr-all">';
+		foreach ( self::COLUMNS as $key => $col ) {
+			echo '<div><span>' . esc_html( $col[0] ) . '</span><b>' . esc_html( self::format( $row[ $key ] ?? null, $col[1] ) ) . '</b></div>';
+		}
+		echo '</div>';
+		$ids = (array) ( $row['visitor_ids'] ?? array() );
+		if ( $ids ) {
+			echo '<p class="pc-cr-muted">访客（点进去看机型、IP、浏览路径）：</p><ul class="pc-cr-visitors">';
+			foreach ( $ids as $id ) {
+				echo '<li><a href="' . esc_url( admin_url( 'admin.php?page=pc-visitors&visitor=' . (int) $id ) ) . '">访客 #' . esc_html( (string) (int) $id ) . '</a></li>';
+			}
+			echo '</ul>';
+			if ( count( $ids ) >= Board::DRILL_LIMIT ) {
+				echo '<p class="pc-cr-muted">只列出前 ' . esc_html( (string) Board::DRILL_LIMIT ) . ' 位。</p>';
+			}
+		}
+		echo '</div></details>';
+	}
+
 	private static function render_settings( array $settings, array $versions ): void {
 		echo '<div class="pc-cr-section"><h2>设置</h2><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '">';
 		echo '<input type="hidden" name="action" value="' . esc_attr( Module::ACTION_EXPORT ) . '"><input type="hidden" name="op" value="settings">';
@@ -402,6 +589,7 @@ final class Board_Page {
 		echo '<table class="form-table" role="presentation"><tbody>';
 		echo '<tr><th scope="row"><label for="pc-cr-pct">没带参数的访客占比提醒线（%）</label></th><td><input id="pc-cr-pct" type="number" name="untagged_pct" min="0" max="100" step="0.1" value="' . esc_attr( self::num( $settings['untagged_pct'], 1 ) ) . '"></td></tr>';
 		echo '<tr><th scope="row"><label for="pc-cr-clicks">疑似漏参：当天链接点击至少</label></th><td><input id="pc-cr-clicks" type="number" name="min_clicks" min="1" max="100000" value="' . esc_attr( (string) $settings['min_clicks'] ) . '"></td></tr>';
+		echo '<tr><th scope="row">建议标签规则</th><td><label>ROAS ≥ <input type="number" name="scale_roas" min="0" max="100" step="0.1" value="' . esc_attr( self::num( $settings['scale_roas'], 1 ) ) . '" style="width:70px"> 显示“加投”</label>；<label>ROAS &lt; <input type="number" name="stop_roas" min="0" max="100" step="0.1" value="' . esc_attr( self::num( $settings['stop_roas'], 1 ) ) . '" style="width:70px"> 显示“建议停”</label>；<label>花费 ≥ $<input type="number" name="stop_spend" min="0" max="100000" step="1" value="' . esc_attr( self::num( $settings['stop_spend'], 0 ) ) . '" style="width:80px"> 还没有订单也显示“建议停”</label><p class="description">中间的显示“观察”；有效访客不到 ' . esc_html( (string) Board::MIN_VALID ) . ' 时显示“样本不足”。只是提示，不会自动改广告。</p></td></tr>';
 		echo '<tr><th scope="row"><label for="pc-cr-ver">当前站点版本号</label></th><td><input id="pc-cr-ver" type="text" name="version" maxlength="32" placeholder="例如 v1" value="' . esc_attr( self::current_version() ) . '"><p class="description">改成新的版本号 = 从保存这一刻起算新版本（改了页面、价格、落地页等之后填）。用于按版本筛选和“每个版本满 500、1000 访客”的导出。</p></td></tr>';
 		echo '</tbody></table><button class="button button-primary">保存设置</button></form>';
 		if ( $versions ) {

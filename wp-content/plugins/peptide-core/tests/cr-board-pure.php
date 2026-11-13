@@ -301,11 +301,24 @@ check( 'yesterday in store timezone', '2026-11-09' === D::yesterday( (int) ( $da
 // ---------- 页面参数和格式 ----------
 $now2 = (int) ( $day1[0] / 1000 ) + 7200;
 $fdef = Board_Page::filters( array(), $tz, $now2 );
+// ---------- 建议标签和排序（2026-11-13） ----------
+$vr = static fn( array $x ): array => $x + array( 'spend_cents' => 10000, 'orders' => 3, 'roas' => 2.0, 'insufficient' => false, 'visitors' => 40 );
+check( 'verdict: roas >= 3 = scale', 'scale' === Board::verdict( $vr( array( 'roas' => 3.0 ) ) ) );
+check( 'verdict: between = watch', 'watch' === Board::verdict( $vr( array() ) ) );
+check( 'verdict: roas < 1.5 = stop', 'stop' === Board::verdict( $vr( array( 'roas' => 1.2 ) ) ) );
+check( 'verdict: spent $100 with no order = stop even when thin', 'stop' === Board::verdict( $vr( array( 'orders' => 0, 'roas' => 0.0, 'insufficient' => true ) ) ) );
+check( 'verdict: thin sample = thin', 'thin' === Board::verdict( $vr( array( 'insufficient' => true, 'spend_cents' => 5000 ) ) ) );
+check( 'verdict: no spend imported = nospend', 'nospend' === Board::verdict( $vr( array( 'spend_cents' => null, 'roas' => null ) ) ) );
+check( 'verdict: custom rules', 'scale' === Board::verdict( $vr( array() ), array( 'scale_roas' => 1.8 ) ) );
+$sorted = Board::sort_rows( array( array( 'label' => 'a', 'roas' => 1.0, 'visitors' => 5 ), array( 'label' => 'b', 'roas' => null, 'visitors' => 50 ), array( 'label' => 'c', 'roas' => 4.0, 'visitors' => 9 ), array( 'label' => 'd', 'roas' => 1.0, 'visitors' => 20 ) ), 'roas' );
+check( 'sort by roas: high first, null last, ties by visitors', array( 'c', 'd', 'a', 'b' ) === array_column( $sorted, 'label' ) );
+check( 'sort by orders', array( 'y', 'x' ) === array_column( Board::sort_rows( array( array( 'label' => 'x', 'orders' => 1 ), array( 'label' => 'y', 'orders' => 3 ) ), 'orders' ), 'label' ) );
 check( 'filters: defaults', 'creative' === $fdef['dim'] && 'first' === $fdef['mode'] && '2026-11-10' === $fdef['to'] && '2026-11-04' === $fdef['from'] && '' === $fdef['ver'] );
 $fbad = Board_Page::filters( array( 'dim' => 'x', 'mode' => array(), 'from' => '2026-11-09', 'to' => '2026-11-01', 'ver' => '../v1' ), $tz, $now2 );
 check( 'filters: bad input falls back', 'creative' === $fbad['dim'] && 'first' === $fbad['mode'] && '2026-11-04' === $fbad['from'] && '' === $fbad['ver'] );
 $fok = Board_Page::filters( array( 'dim' => 'ad', 'mode' => 'last', 'from' => '2026-11-01', 'to' => '2026-11-09', 'ver' => 'v1.2' ), $tz, $now2 );
-check( 'filters: valid input kept', array( 'dim' => 'ad', 'mode' => 'last', 'from' => '2026-11-01', 'to' => '2026-11-09', 'ver' => 'v1.2' ) === $fok );
+check( 'filters: valid input kept', array( 'dim' => 'ad', 'mode' => 'last', 'from' => '2026-11-01', 'to' => '2026-11-09', 'ver' => 'v1.2', 'sort' => 'roas' ) === $fok );
+check( 'filters: sort kept, bad sort falls back', 'orders' === Board_Page::filters( array( 'sort' => 'orders' ), 'UTC', 1794268800 )['sort'] && 'roas' === Board_Page::filters( array( 'sort' => 'x' ), 'UTC', 1794268800 )['sort'] );
 check( 'version names', Board_Page::valid_version( 'v2' ) && Board_Page::valid_version( '2026.11-a' ) && ! Board_Page::valid_version( '' ) && ! Board_Page::valid_version( 'v 2' ) && ! Board_Page::valid_version( str_repeat( 'a', 33 ) ) );
 check( 'format: dash for null', '—' === Board_Page::format( null, 'pct' ) );
 check( 'format: money / pct / x / int', '$23.50' === Board_Page::format( 2350, 'money' ) && '12.5%' === Board_Page::format( 0.125, 'pct' ) && '2.45' === Board_Page::format( 2.4462, 'x' ) && '1,234' === Board_Page::format( 1234, 'int' ) );

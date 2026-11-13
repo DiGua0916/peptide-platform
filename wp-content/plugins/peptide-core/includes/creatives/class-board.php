@@ -504,6 +504,70 @@ final class Board {
 	 *
 	 * @param array{visitors:int,intent:array<string,int>,carted:int,checkout:int,cashier:int,orders:int,sales_cents:int,spend_cents:?int,impressions:?int,link_clicks:?int} $c
 	 */
+	// ---------- 建议标签（2026-11-13）：给投手的提示，不替投手做决定 ----------
+
+	/** 默认规则：ROAS ≥ 3 加投；< 1.5 建议停；花费 ≥ $100 还没有订单也建议停。看板“设置”里可以改。 */
+	public const RULES = array( 'scale_roas' => 3.0, 'stop_roas' => 1.5, 'stop_spend_cents' => 10000 );
+
+	public const VERDICTS = array(
+		'scale'   => '加投',
+		'watch'   => '观察',
+		'stop'    => '建议停',
+		'thin'    => '样本不足',
+		'nospend' => '待导入花费',
+	);
+
+	/**
+	 * 一行的建议（纯函数）。顺序：花了钱没出单 → 停；样本不足 → 不下结论；没导入花费 → 等；再按 ROAS 分。
+	 *
+	 * @param array<string,mixed> $row metrics() 的结果
+	 */
+	public static function verdict( array $row, array $rules = self::RULES ): string {
+		$rules = array_merge( self::RULES, $rules );
+		$spend = isset( $row['spend_cents'] ) ? (int) $row['spend_cents'] : null;
+		if ( null !== $spend && $spend >= (int) $rules['stop_spend_cents'] && 0 === (int) ( $row['orders'] ?? 0 ) ) {
+			return 'stop';
+		}
+		if ( ! empty( $row['insufficient'] ) ) {
+			return 'thin';
+		}
+		if ( null === $spend || $spend <= 0 || null === ( $row['roas'] ?? null ) ) {
+			return 'nospend';
+		}
+		$roas = (float) $row['roas'];
+		if ( $roas >= (float) $rules['scale_roas'] ) {
+			return 'scale';
+		}
+		return $roas < (float) $rules['stop_roas'] ? 'stop' : 'watch';
+	}
+
+	public const SORTS = array( 'roas' => '按 ROAS', 'spend' => '按花费', 'orders' => '按订单', 'visitors' => '按访客' );
+
+	/**
+	 * 排序（纯函数）：从高到低；没有值（比如没导入花费时的 ROAS）排最后，再按访客数。
+	 *
+	 * @param array<int,array<string,mixed>> $rows
+	 */
+	public static function sort_rows( array $rows, string $by ): array {
+		$key = array( 'roas' => 'roas', 'spend' => 'spend_cents', 'orders' => 'orders', 'visitors' => 'visitors' )[ $by ] ?? 'roas';
+		usort(
+			$rows,
+			static function ( $a, $b ) use ( $key ) {
+				$x = $a[ $key ] ?? null;
+				$y = $b[ $key ] ?? null;
+				if ( null === $x || null === $y ) {
+					if ( null !== $x || null !== $y ) {
+						return null === $x ? 1 : -1;
+					}
+				} elseif ( $x != $y ) { // phpcs:ignore Universal.Operators.StrictComparisons.LooseNotEqual -- int / float 混比。
+					return $y <=> $x;
+				}
+				return (int) ( $b['visitors'] ?? 0 ) <=> (int) ( $a['visitors'] ?? 0 );
+			}
+		);
+		return $rows;
+	}
+
 	public static function metrics( array $c, int $min_valid = self::MIN_VALID ): array {
 		$div     = static fn( $a, $b ): ?float => ( null === $a || null === $b || (float) $b <= 0 ) ? null : (float) $a / (float) $b;
 		$intent  = array_merge( array_fill_keys( Contract::INTENT_TIERS, 0 ), (array) ( $c['intent'] ?? array() ) );
