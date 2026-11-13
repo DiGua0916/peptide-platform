@@ -270,10 +270,12 @@ final class Cloak_Trust {
 		$body = $list
 			? '<div style="max-height:280px;overflow:auto"><table class="widefat striped" style="font-size:12px;white-space:nowrap"><thead><tr><th>IP</th><th>订单</th><th>来源</th><th>加入时间</th><th></th></tr></thead><tbody>' . $rows . '</tbody></table></div>'
 			: '<p class="cbs-help">还没有。客户真实付款后会自动加进来。</p>';
-		$card = '<section class="cbs-card cbs-span-2" id="pc-cloak-trust"><div class="cbs-card-head"><span class="cbs-card-head-icon dashicons dashicons-yes-alt"></span><div><h2>已购用户信任 IP（' . count( $list ) . '）</h2><p>付过款的客户自动放行，斗篷开着也能进来查订单</p></div></div><div class="cbs-card-body">'
+		// 店主 2026-11-14：默认最小化，只显示一行标题，点开才看说明和名单。
+		$card = '<section class="cbs-card cbs-span-2" id="pc-cloak-trust"><details class="pc-ct"><summary class="cbs-card-head" style="cursor:pointer;list-style:none"><span class="cbs-card-head-icon dashicons dashicons-yes-alt"></span><div style="flex:1"><h2>已购用户信任 IP（' . count( $list ) . '）</h2><p>付过款的客户自动放行，斗篷开着也能进来查订单</p></div><span class="button button-small pc-ct-toggle">展开</span></summary><div class="cbs-card-body">'
 			. '<p class="cbs-help">只收真实付款的订单（处理中 / 已完成，不含测试单）。下单用的 IP 自动加入；客户付款成功或登录后，那台设备一年内换了 IP 也会放行并补进来。订单退款 / 取消后自动移出。不影响上面手填的 IP 白名单。</p>'
-			. $body . '</div></section>';
-		echo '<template id="pc-cloak-trust-tpl">' . $card . '</template><script>(function(){var t=document.getElementById("pc-cloak-trust-tpl"),w=document.getElementById("ip_whitelist");if(!t)return;var c=w&&w.closest(".cbs-card"),g=document.querySelector(".cbs-grid");var n=t.content.cloneNode(true);if(c){c.parentNode.insertBefore(n,c.nextSibling);}else if(g){g.appendChild(n);}})();</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 上面逐项转义。
+			. $body . '</div></details></section>'
+			. '<style>#pc-cloak-trust details>summary::-webkit-details-marker{display:none}#pc-cloak-trust details:not([open])>summary{margin-bottom:0;border-bottom:0}</style>';
+		echo '<template id="pc-cloak-trust-tpl">' . $card . '</template><script>(function(){var t=document.getElementById("pc-cloak-trust-tpl"),w=document.getElementById("ip_whitelist");if(!t)return;var c=w&&w.closest(".cbs-card"),g=document.querySelector(".cbs-grid");var n=t.content.cloneNode(true);if(c){c.parentNode.insertBefore(n,c.nextSibling);}else if(g){g.appendChild(n);}var d=document.querySelector("#pc-cloak-trust details");if(d){var b=d.querySelector(".pc-ct-toggle");d.addEventListener("toggle",function(){b.textContent=d.open?"收起":"展开";});if(location.hash==="#pc-cloak-trust"){d.open=true;}}})();</script>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 上面逐项转义。
 	}
 
 	public static function remove_handler(): void {
