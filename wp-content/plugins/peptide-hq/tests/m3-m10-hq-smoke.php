@@ -444,7 +444,7 @@ add_filter( 'pchq_m10_extras', '__return_false' );
 $html = $render( PeptideHq\Admin\Report_Page::class, array( 'page' => 'pchq-report', 'from' => $from, 'to' => $today ) );
 $check( 'switch off: the report has the columns that are live and nothing else', ! str_contains( $html, '顾客' ) && ! str_contains( $html, '弃单' ) && 10 === substr_count( explode( '</thead>', $html )[0], '<th scope="col"' ) && str_contains( $html, '全部系列合计' ) && str_contains( $html, '转化率' ), substr_count( explode( '</thead>', $html )[0], '<th scope="col"' ) );
 $html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders', 'order' => (string) Orders::get( $a, 990001 )['id'] ) );
-$check( 'switch off: order detail has no customer id row', ! str_contains( $html, '客户编号' ) && ! str_contains( $html, 'C00SMK01' ) && str_contains( $html, '店内订单编号' ) );
+$check( 'switch off: order detail has no customer id or store order id row; the hang- number has no #', ! str_contains( $html, '客户编号' ) && ! str_contains( $html, 'C00SMK01' ) && ! str_contains( $html, '店内订单编号' ) && str_contains( $html, '订单 hang-990001' ) );
 $html = $render( PeptideHq\Admin\Orders_Page::class, array( 'page' => 'pchq-orders' ) );
 $check( 'switch off: the search box is the one that is live', str_contains( $html, '<label>订单号<input' ) && ! str_contains( $html, '客户编号' ) );
 $check( 'switch off: a customer id finds nothing, order numbers still do', 0 === Orders::search( array( 'q' => 'C00SMK01' ) )['total'] && 1 === Orders::search( array( 'q' => 'HANG-990001' ) )['total'] );

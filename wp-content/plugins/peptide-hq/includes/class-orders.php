@@ -26,7 +26,7 @@ final class Orders {
 	public const OPTION    = 'pchq_m10_db';
 
 	/**
-	 * 开关（默认关）：报表的“顾客”“弃单”“弃单率”三列、订单页的客户编号、按客户编号搜索、收集各店每日汇总里的弃单数。
+	 * 开关（默认关）：报表的“顾客”“弃单”“弃单率”三列、订单页的客户编号和店内订单编号、按客户编号搜索、收集各店每日汇总里的弃单数。
 	 * 这些是 2026-11-12 之后加的新东西；关着时页面和 11-10 上线的版本一样。打开：wp option update pchq_m10_extras 1。
 	 */
 	public const EXTRAS    = 'pchq_m10_extras';

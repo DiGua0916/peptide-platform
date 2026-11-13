@@ -258,7 +258,7 @@ final class Orders_Page {
 				$when             = $o['paid_at'] ? $o['paid_at'] : $o['created_at'];
 				echo '<tr><td>' . esc_html( $when ? wp_date( 'Y-m-d H:i', $when ) : '—' ) . '</td>';
 				echo '<td>' . esc_html( self::site_name( $sites, $o['site_id'] ) ) . '</td>';
-				echo '<td><a href="' . esc_url( self::url( array( 'order' => $o['id'] ) ) ) . '">' . esc_html( self::number( $o ) ) . '</a>' . ( self::has_own_number( $o ) ? '<small>店内编号 ' . (int) $o['store_order_id'] . '</small>' : '' ) . '</td>';
+				echo '<td><a href="' . esc_url( self::url( array( 'order' => $o['id'] ) ) ) . '">' . esc_html( self::number( $o ) ) . '</a>' . ( Orders::extras() && self::has_own_number( $o ) ? '<small>店内编号 ' . (int) $o['store_order_id'] . '</small>' : '' ) . '</td>';
 				echo '<td><span class="pcp-state ' . esc_attr( $tone ) . '"><i></i>' . esc_html( $label ) . '</span>' . ( 1 === $o['refund_sync'] ? '<small class="pchq-f3-bad">待写回店铺</small>' : '' ) . '</td>';
 				echo '<td class="pchq-f3-num">' . esc_html( Orders::money( $o['total_cents'], (string) $o['currency'] ) ) . '</td>';
 				echo '<td class="pchq-f3-num">' . ( $o['refunded_cents'] > 0 ? esc_html( Orders::money( $o['refunded_cents'], (string) $o['currency'] ) ) : '<span class="pchq-f3-muted">—</span>' ) . '</td>';
@@ -313,7 +313,7 @@ final class Orders_Page {
 		foreach ( array(
 			'店铺'       => self::site_name( $sites, $o['site_id'] ),
 			'系列'       => (string) ( $series[ $o['series_id'] ]['name'] ?? '—' ),
-			'店内订单编号' => (string) $o['store_order_id'],
+			'店内订单编号' => Orders::extras() ? (string) $o['store_order_id'] : null, // 新加的一行，跟着开关走。
 			'店铺订单状态' => (string) $o['status'],
 			'下单时间'    => $o['created_at'] ? wp_date( 'Y-m-d H:i', $o['created_at'] ) : '—',
 			'付款时间'    => $o['paid_at'] ? wp_date( 'Y-m-d H:i', $o['paid_at'] ) : '—',
