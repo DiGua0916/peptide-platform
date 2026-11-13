@@ -105,8 +105,11 @@ final class Store_Settings {
 		echo '<p><label for="pc-by-store-email">客服邮箱（可以不填）</label><input type="email" id="pc-by-store-email" name="email" value="' . esc_attr( (string) ( $support['email'] ?? '' ) ) . '" placeholder="例如 support@example.com"></p>';
 		// FE-03：前台右下角的客服按钮（主题的 vc-help-widget）早就有，开关是 support.enabled，默认关，原来只有管理员能在
 		// “系统设置 → 联系方式”里打开。投手填了 WhatsApp 也不会出现按钮，所以在这里给一个同样的开关。
-		echo '<input type="hidden" name="float_present" value="1">';
-		echo '<p class="pc-by-check"><label><input type="checkbox" name="float" value="1"' . checked( ! empty( $support['enabled'] ), true, false ) . '> 在前台右下角显示客服按钮</label><span class="pc-by-hint">打开后，前台每个页面右下角有一个客服按钮，顾客点一下就打开和上面这个 WhatsApp 号码的对话。结账页不显示。</span></p>';
+		// 开关 Staff_Buyer::OPTION_EXTRAS 关着时不显示这个勾选框（线上没有），保存时也不动 support.enabled。
+		if ( Staff_Buyer::extras() ) {
+			echo '<input type="hidden" name="float_present" value="1">';
+			echo '<p class="pc-by-check"><label><input type="checkbox" name="float" value="1"' . checked( ! empty( $support['enabled'] ), true, false ) . '> 在前台右下角显示客服按钮</label><span class="pc-by-hint">打开后，前台每个页面右下角有一个客服按钮，顾客点一下就打开和上面这个 WhatsApp 号码的对话。结账页不显示。</span></p>';
+		}
 		echo '<p class="pc-by-actions"><button type="submit" class="button button-primary">' . esc_html( 'wizard' === $from ? '保存，下一步' : '保存' ) . '</button></p></form>';
 		echo '<p class="pc-by-hint">后台里的店铺名称“' . esc_html( (string) get_option( 'blogname', '' ) ) . '”由总后台管理，这里不能改。</p>';
 	}
@@ -168,7 +171,7 @@ final class Store_Settings {
 		$form    = Support_Contacts::to_form( $support );
 		$form['support_whatsapp'] = $clean['whatsapp'];
 		$form['support_email']    = $clean['email'];
-		if ( null !== $clean['float'] ) {
+		if ( null !== $clean['float'] && Staff_Buyer::extras() ) {
 			$form['support_enabled'] = $clean['float'] ? '1' : ''; // 右下角客服按钮的开关（FE-03）。
 		}
 		$stored['support']        = Support_Contacts::sanitize( $form );

@@ -103,7 +103,8 @@ namespace {
 	// WordPress 的命令面板会列出全部后台菜单的名字和地址：投手不加载它。
 	$buyer_src = (string) file_get_contents( dirname( __DIR__ ) . '/includes/class-staff-buyer.php' );
 	check( 'command palette is not loaded for buyers', false !== strpos( $buyer_src, "remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' )" ) && false !== strpos( $buyer_src, "array( self::class, 'no_command_palette' ), 0 )" ) );
-	check( 'command palette button is removed from the toolbar', false !== strpos( $buyer_src, "'comments', 'command-palette' ) as " ) );
+	check( 'command palette button is removed from the toolbar', false !== strpos( $buyer_src, "\$nodes[] = 'command-palette';" ) );
+	check( 'both only when the store switches it on (pc_buyer_no_palette, off by default = as online)', false !== strpos( $buyer_src, "if ( self::current() && self::hide_palette() ) {" ) && false !== strpos( $buyer_src, "if ( self::hide_palette() ) {\n\t\t\t\$nodes[] = 'command-palette';" ) );
 	check( 'export action name matches the constant', 'pc_buyer_orders_export' === \PeptideCore\Staff_Buyer::ACTION_EXPORT && 'pc-order' === \PeptideCore\Staff_Buyer::PAGE_ORDER );
 
 	// 弃单、数据、实时访客。

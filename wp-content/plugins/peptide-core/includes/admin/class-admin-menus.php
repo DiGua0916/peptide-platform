@@ -127,17 +127,23 @@ final class Admin_Menus {
 		if ( ! is_array( $columns ) || ! \PeptideCore\Staff_Buyer::current() ) {
 			return $columns;
 		}
-		return self::buyer_columns( $columns );
+		return self::buyer_columns( $columns, \PeptideCore\Staff_Buyer::extras() );
 	}
 
 	/**
 	 * 投手的订单列表有哪些列（不读数据库，测试里直接调用）。
 	 *
-	 * 去掉：勾选框、WooCommerce 的行内按钮、主线的“操作”列（里面有发货和写邮件；订单号本身就能点开详情）、
-	 * WooCommerce 的“来源”（下面的来源广告更具体）。已经有物流单号一列时不再加运单号。
+	 * 总是去掉（修 bug）：勾选框（投手没有批量操作）、WooCommerce 的行内按钮和主线的“操作”列（里面的发货、写邮件
+	 * 对投手都是 403；订单号本身就能点开详情）。
+	 * 开关 Staff_Buyer::OPTION_EXTRAS 打开时另外：用“来源广告”代替 WooCommerce 的“来源”，加“运单号”（已经有物流单号
+	 * 一列时不加）和“退款状态”。开关关着时其余列和线上一样。
 	 */
-	public static function buyer_columns( array $columns ): array {
-		unset( $columns['cb'], $columns['wc_actions'], $columns['pc_ops'], $columns['origin'] );
+	public static function buyer_columns( array $columns, bool $extras ): array {
+		unset( $columns['cb'], $columns['wc_actions'], $columns['pc_ops'] );
+		if ( ! $extras ) {
+			return $columns;
+		}
+		unset( $columns['origin'] );
 		$columns['pc_source'] = '来源广告';
 		if ( ! isset( $columns['shipment_tracking'] ) ) {
 			$columns['pc_tracking'] = '运单号';
@@ -324,7 +330,7 @@ final class Admin_Menus {
 			return;
 		}
 		echo '<div class="notice notice-info"><p>订单在这里只能查看。改价、退款、作废和发货由总后台处理，有问题请联系平台负责人。</p></div>';
-		if ( ! $detail || ! function_exists( 'wc_get_order' ) ) {
+		if ( ! $detail || ! \PeptideCore\Staff_Buyer::extras() || ! function_exists( 'wc_get_order' ) ) {
 			return;
 		}
 		// 详情页本身不显示总后台标记的退款（F3 的 _pc_refund_state / _pc_refund_cents），在这里补一行。

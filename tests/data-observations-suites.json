@@ -949,6 +949,15 @@
       "status": "module-gate",
       "module": "M9"
     },
+    {
+      "name": "m9-buyer-switches-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-switches-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
     {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-capture-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-capture-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},

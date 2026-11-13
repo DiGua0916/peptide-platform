@@ -22,12 +22,20 @@ namespace {
 	// ---------- 订单列表的列 ----------
 	// 主线 Order_List::columns()（2026-11-11）给出的列。
 	$mainline = array( 'cb' => '', 'pc_ops' => '操作', 'pc_number' => '订单编号', 'pc_items' => '商品', 'pc_email' => '顾客邮箱', 'pc_country' => '国家', 'pc_ship' => '配送方式', 'order_total' => '订单总价', 'pc_pay' => '支付方式', 'pc_paid' => '支付时间', 'pc_tid' => '流水号', 'order_status' => '订单状态', 'fulfillment_status' => '发货状态', 'shipment_tracking' => '物流单号', 'origin' => '来源' );
-	$cols     = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline );
+	// 开关 pc_buyer_extras 关着（默认，和线上一样）：只去掉投手用不了的勾选框和“操作”列，其余列和线上一字不差。
+	$online = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline, false );
+	$expect = $mainline;
+	unset( $expect['cb'], $expect['pc_ops'] );
+	check( 'switch off: only the checkbox and the action column (ship / write email, 403 for buyers) go; the rest is as online', $expect === $online );
+	check( 'switch off: no ad source, tracking or refund column is added', ! isset( $online['pc_source'] ) && ! isset( $online['pc_tracking'] ) && ! isset( $online['pc_refund'] ) && isset( $online['origin'] ) );
+	check( 'switch off: WooCommerce row buttons also go', ! isset( \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'order_number' => 'Order', 'wc_actions' => 'Actions' ), false )['wc_actions'] ) );
+	// 开关打开：下面是原来的版本。
+	$cols     = \PeptideCore\Admin\Admin_Menus::buyer_columns( $mainline, true );
 	check( 'no checkbox, no action column (ship / write email), no duplicate source', ! isset( $cols['cb'] ) && ! isset( $cols['pc_ops'] ) && ! isset( $cols['wc_actions'] ) && ! isset( $cols['origin'] ) );
 	check( 'order number column stays (it opens the detail page)', isset( $cols['pc_number'] ) && isset( $cols['order_total'] ) && isset( $cols['order_status'] ) );
 	check( 'ad source and refund status are added at the end', array( 'pc_source', 'pc_refund' ) === array_slice( array_keys( $cols ), -2 ) && '来源广告' === $cols['pc_source'] && '退款状态' === $cols['pc_refund'] );
 	check( 'no second tracking column when the list already has one', ! isset( $cols['pc_tracking'] ) && isset( $cols['shipment_tracking'] ) );
-	$plain = \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'cb' => '', 'order_number' => 'Order', 'order_total' => 'Total', 'wc_actions' => 'Actions' ) );
+	$plain = \PeptideCore\Admin\Admin_Menus::buyer_columns( array( 'cb' => '', 'order_number' => 'Order', 'order_total' => 'Total', 'wc_actions' => 'Actions' ), true );
 	check( 'without mainline columns: tracking column is added', array( 'order_number', 'order_total', 'pc_source', 'pc_tracking', 'pc_refund' ) === array_keys( $plain ) );
 	$src = (string) file_get_contents( $inc . '/admin/class-admin-menus.php' );
 	check( 'buyer columns run after the mainline list (999)', false !== strpos( $src, "array( self::class, 'buyer_order_columns' ), 1000 )" ) );

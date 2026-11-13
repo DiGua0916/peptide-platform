@@ -183,7 +183,7 @@ final class Buyer_Order_Export {
 		$page   = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? sanitize_key( wp_unslash( $_GET['page'] ) ) : '';
 		$action = isset( $_GET['action'] ) && is_string( $_GET['action'] ) ? sanitize_key( wp_unslash( $_GET['action'] ) ) : '';
 		// phpcs:enable
-		if ( 'wc-orders' !== $page || ! in_array( $action, array( '', '-1' ), true ) || ! Staff_Buyer::current() || ! Staff_Buyer::can_use() ) {
+		if ( 'wc-orders' !== $page || ! in_array( $action, array( '', '-1' ), true ) || ! Staff_Buyer::current() || ! Staff_Buyer::can_use() || ! Staff_Buyer::extras() ) {
 			return;
 		}
 		$range = self::range( '', '', wp_date( 'Y-m-d' ) );
@@ -202,7 +202,7 @@ final class Buyer_Order_Export {
 
 	/** admin-post.php?action=pc_buyer_orders_export&from=…&to=…&_wpnonce=… → CSV 下载。 */
 	public static function handle(): void {
-		if ( ! Staff_Buyer::can_use() ) {
+		if ( ! Staff_Buyer::can_use() || ! Staff_Buyer::extras() ) {
 			Staff_Buyer::deny();
 		}
 		check_admin_referer( self::NONCE );

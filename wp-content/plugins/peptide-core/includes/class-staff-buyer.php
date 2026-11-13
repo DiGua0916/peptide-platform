@@ -54,6 +54,15 @@ final class Staff_Buyer {
 	/** F2 定的只读权限（Admin\Marketing::VIEW_CAP）。写字面值：F2 的代码合进来之前那个常量还不存在。 */
 	public const CAP_CAMPAIGNS  = 'pc_view_campaigns';
 
+	/**
+	 * 按店开关（值 on 才生效，默认关）：投手后台在线上版本之外新加、会改变页面内容的几样——订单列表上方的导出、
+	 * 订单列表的“来源广告 / 运单号 / 退款状态”三列和详情页顶部的退款提示、店铺信息里的“显示客服按钮”。
+	 * 平台所有者 2026-11-13 定“优化，不改功能”：这些算功能变化，代码随模块发布，开不开另由所有者定。
+	 */
+	public const OPTION_EXTRAS     = 'pc_buyer_extras';
+	/** 按店开关（值 on 才生效，默认关）：投手不加载 WordPress 的命令面板（⌘K）。等所有者定性（算 bug 还是算功能调整）。 */
+	public const OPTION_NO_PALETTE = 'pc_buyer_no_palette';
+
 	public const ACTION_PASSWORD = 'pc_buyer_password';
 	public const ACTION_STORE    = 'pc_buyer_store_save';
 	public const ACTION_ADS      = 'pc_buyer_ads_save';
@@ -124,7 +133,17 @@ final class Staff_Buyer {
 
 	/** 向总后台声明这家店的代码支持投手版后台和开店向导（新旧版本混跑时用，约定见 F1 的 pc_hq_capabilities）。 */
 	public static function capabilities( $caps ) {
-		return is_array( $caps ) ? $caps + array( 'm9.media_buyer' => '1', 'm9.onboarding' => '1' ) : $caps;
+		return is_array( $caps ) ? $caps + array( 'm9.media_buyer' => '1', 'm9.onboarding' => '1', 'm9.buyer_extras' => '1', 'm9.buyer_no_palette' => '1' ) : $caps;
+	}
+
+	/** 投手后台的新增内容开着没有（OPTION_EXTRAS，默认关）。 */
+	public static function extras(): bool {
+		return (bool) apply_filters( 'pc_buyer_extras_enabled', 'on' === (string) get_option( self::OPTION_EXTRAS, 'off' ) );
+	}
+
+	/** 投手不加载命令面板这一条开着没有（OPTION_NO_PALETTE，默认关 = 和线上一样加载）。 */
+	public static function hide_palette(): bool {
+		return (bool) apply_filters( 'pc_buyer_no_palette_enabled', 'on' === (string) get_option( self::OPTION_NO_PALETTE, 'off' ) );
 	}
 
 	// ---------- 角色和开关 ----------
@@ -276,10 +295,10 @@ final class Staff_Buyer {
 	/**
 	 * WordPress 的命令面板（⌘K）会把这次请求里登记的全部后台菜单连名字带地址写进页面，包括投手看不到的页面
 	 * （客户、邮件、店铺设置……）。它在 admin_enqueue_scripts 时读菜单，比这里重建菜单（admin_head）早。
-	 * 投手不加载命令面板；顶部工具条上的入口在 admin_bar() 里去掉。
+	 * 投手不加载命令面板；顶部工具条上的入口在 admin_bar() 里去掉。只在开关 OPTION_NO_PALETTE 打开时。
 	 */
 	public static function no_command_palette(): void {
-		if ( self::current() ) {
+		if ( self::current() && self::hide_palette() ) {
 			remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' );
 		}
 	}
@@ -723,7 +742,11 @@ final class Staff_Buyer {
 		if ( ! $bar instanceof \WP_Admin_Bar || ! self::current() ) {
 			return;
 		}
-		foreach ( array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments', 'command-palette' ) as $node ) {
+		$nodes = array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments' );
+		if ( self::hide_palette() ) {
+			$nodes[] = 'command-palette';
+		}
+		foreach ( $nodes as $node ) {
 			$bar->remove_node( $node );
 		}
 		$store = self::page_url( self::PAGE_STORE );
