@@ -676,3 +676,13 @@
 - 结果（主店）：每个请求的数据库查询 68 → 20；总后台主机上接口 ~240ms → ~190ms（6 家店后台都在 185–200ms）；浏览器实测实时数据接口 323ms → ~200ms、简单接口 300–350ms → ~245ms。web 主机首页 ~93ms，6 家店购物车同一商品 2 件仍 $215.35。
 - 剩下的大头是 WordPress + WooCommerce 本身（WooCommerce 注册接口 / 区块约 55ms）；SSH 通道复用连接时重置仍有一次 40ms 等待，彻底去掉要改成两台主机直连数据库（加密），涉及安全组和数据库配置，未做、需店主决定。
 - 部署前 14 份副本这 3 个 peptide-core 文件和 d1e6932 一致；部署后全部一致。备份 `speed-*-20261113T17…`。
+
+### 2026-11-13 17:42–17:50 UTC（北京 2026-11-14 01:42–01:50）数据页抓不到国家；实时访客行为加“一天”
+- 店主：有人反馈数据页国家不显示。原因：实时数据的国家（地图、在线国家、热门国家）来自 `Tracking\Country_Provider`，它只认常量 `PC_DATA_GEOIP_DATABASE` 或 WooCommerce 的 MaxMind 国家库。只有主店（web current 和 store-admin）的 wp-config 配了常量；5 家子店都没配，查询一律“unavailable”，国家从来不显示。
+- 改动：
+  - `peptide-core/includes/tracking/class-country-provider.php`：配置的库文件不存在 / 没配置时，退回用访客追踪同一份 DB-IP 城市库（`Ip_Network::databases()['city']`，即 uploads/peptide-geoip/dbip-city-lite.mmdb，每月自动更新，含国家）；用的是 DB-IP 的库就显示 “IP Geolocation by DB-IP” 出处（许可要求）。
+  - 总后台主机 5 家子店后台 `shared/wp-config.php` 加上和主店后台相同的 `PC_DATA_GEOIP_DATABASE=/etc/vialcove/geoip/dbip-country-lite-2026-11.mmdb`、`PC_DATA_GEOIP_ATTRIBUTION=db-ip`（那台主机上 peptide-geoip 的软链接指向的城市库不存在）。原文件备份 `/root/vialcove-backups/geo-wpconfig-20261114/`。
+  - 店主同时要求“实时访客行为”除了 10 / 20 / 30 分钟再加“一天”：`class-realtime.php` 新增 `FUNNEL_WINDOWS = 10/20/30/1440`（只用于漏斗；每分钟访客图仍是 10/20/30），参数校验和两处 summary 都按它；`data-realtime.js` 漏斗下拉多“一天（最近 24 小时）”，记住选择；`class-data-pages.php` 加文字。
+- 检查：12 份副本（web 6 + 后台 6）`Country_Provider::lookup('81.2.69.142')` 全部 known=GB、出处 DB-IP；子店后台登录页 200。主店浏览器选“一天”：realtime / filter-options / dimensions 三个请求都 200，漏斗显示最近 24 小时 12 访问 → 5 看商品 → 5 加购 → 2 发起结账 …；60 分钟等非法值仍返回 pc_invalid_param；测试 realtime 相关 cjs / pure 全过，country 两套测试全过。
+- 注意：国家是在访客打开页面时记下的，子店之前的访问没有国家，不会补；从现在起的新访问会有。
+- 部署前 14 份副本这 4 个文件和 243dc7e 一致；部署后全部一致。备份 `geo-*`、`geo2-*-20261113T17…`。

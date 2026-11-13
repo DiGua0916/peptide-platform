@@ -18,6 +18,7 @@
 	var T = cfg.strings;
 	var PATH = '/peptide/v1/data/realtime';
 	var WINDOWS = [ 10, 20, 30 ];
+	var FUNNEL_WINDOWS = [ 10, 20, 30, 1440 ]; // 实时访客行为多一个“一天”（店主 2026-11-14）
 	var KEY_FUNNEL = 'pcDataRealtimeFunnel';
 	var KEY_MINUTES = 'pcDataRealtimeMinutes';
 	var REFRESH_MS = 60000;
@@ -25,7 +26,7 @@
 	var LAYERS = [ 'visitors', 'viewed', 'carted', 'checkout', 'address', 'shipping', 'payment', 'paid' ];
 	var LAYER_TEXT = { visitors: 'funnelVisitors', viewed: 'viewed', carted: 'carted', checkout: 'checkout', address: 'address', shipping: 'shipping', payment: 'payment', paid: 'paidVisitors' };
 
-	var state = { funnel: readWindow( KEY_FUNNEL ), minutes: readWindow( KEY_MINUTES ) };
+	var state = { funnel: readWindow( KEY_FUNNEL, FUNNEL_WINDOWS ), minutes: readWindow( KEY_MINUTES ) };
 	var wanted = { mode: 'live', params: {} };
 	var urlAction = '';
 	var displayedHistory = false;
@@ -80,10 +81,11 @@
 	}
 
 	// 窗口选择记在 localStorage 里；读写都可能失败（隐私模式、被禁用），失败就用默认的 10。
-	function readWindow( key ) {
+	function readWindow( key, list ) {
+		list = list || WINDOWS;
 		try {
 			var n = parseInt( window.localStorage.getItem( key ), 10 );
-			return WINDOWS.indexOf( n ) >= 0 ? n : WINDOWS[ 0 ];
+			return list.indexOf( n ) >= 0 ? n : list[ 0 ];
 		} catch ( e ) {
 			return WINDOWS[ 0 ];
 		}
@@ -296,9 +298,9 @@
 
 	// ---------- 页面框架（只建一次） ----------
 
-	function selectHtml( cls, label, current ) {
-		var options = WINDOWS.map( function ( n ) {
-			return '<option value="' + esc( n ) + '"' + ( n === current ? ' selected' : '' ) + '>' + esc( fill( T.minutesOption, { '%d': n } ) ) + '</option>';
+	function selectHtml( cls, label, current, list ) {
+		var options = ( list || WINDOWS ).map( function ( n ) {
+			return '<option value="' + esc( n ) + '"' + ( n === current ? ' selected' : '' ) + '>' + esc( 1440 === n ? ( T.dayOption || '一天（最近 24 小时）' ) : fill( T.minutesOption, { '%d': n } ) ) + '</option>';
 		} ).join( '' );
 		return '<select class="pc-rt-select ' + cls + '" aria-label="' + esc( label ) + '">' + options + '</select>';
 	}
@@ -338,7 +340,7 @@
 				'<section class="pc-rt-section">' +
 					'<div class="pc-rt-section__head">' +
 						'<h2 class="pc-rt-section__title"><span class="pc-rt-funnel-title">' + esc( T.behaviour ) + '</span><span class="pc-rt-funnel-tip"></span></h2>' +
-						selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel ) +
+						selectHtml( 'pc-rt-funnel-select', T.behaviour, state.funnel, FUNNEL_WINDOWS ) +
 					'</div>' +
 					'<div class="pc-rt-steps"></div>' +
 				'</section>' +
@@ -484,7 +486,7 @@
 	// 选了新的窗口：只认 10 / 20 / 30，记下来，马上重新取数。
 	function choose( which, value ) {
 		var n = parseInt( value, 10 );
-		if ( WINDOWS.indexOf( n ) < 0 ) {
+		if ( ( 'funnel' === which ? FUNNEL_WINDOWS : WINDOWS ).indexOf( n ) < 0 ) {
 			return;
 		}
 		state[ which ] = n;

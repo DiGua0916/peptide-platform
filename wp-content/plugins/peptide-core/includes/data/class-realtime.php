@@ -53,6 +53,8 @@ final class Realtime {
 
 	/** 漏斗和每分钟图可以选的窗口（分钟），第一个是默认值。 */
 	public const WINDOWS = array( 10, 20, 30 );
+	/** 实时访客行为（漏斗）可选窗口：多一个“一天”= 最近 24 小时（店主 2026-11-14）。每分钟图仍只到 30 分钟。 */
+	public const FUNNEL_WINDOWS = array( 10, 20, 30, 1440 );
 
 	/** 今日每个列表的条数。 */
 	public const LIST_SIZE = 5;
@@ -71,7 +73,7 @@ final class Realtime {
 	 * @param int $minutes 每分钟图的窗口，WINDOWS 里的值，其他按 10。
 	 */
 	public static function summary( int $now_ms, int $funnel, int $minutes ): array {
-		$funnel  = in_array( $funnel, self::WINDOWS, true ) ? $funnel : self::WINDOWS[0];
+		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
 		$minutes = in_array( $minutes, self::WINDOWS, true ) ? $minutes : self::WINDOWS[0];
 		$sec     = intdiv( $now_ms, 1000 );
 		$day     = Overview::window( 'today', $sec );
@@ -140,7 +142,7 @@ final class Realtime {
 	public static function filtered_summary( int $now_ms, int $funnel, int $minutes, Realtime_Filter $filter ): array {
 		if ( $filter->is_all() ) { return self::summary( $now_ms, $funnel, $minutes ); }
 		$filter = $filter->at( $now_ms + 1 ); $filter->require_ready();
-		$funnel  = in_array( $funnel, self::WINDOWS, true ) ? $funnel : self::WINDOWS[0];
+		$funnel  = in_array( $funnel, self::FUNNEL_WINDOWS, true ) ? $funnel : self::WINDOWS[0];
 		$minutes = in_array( $minutes, self::WINDOWS, true ) ? $minutes : self::WINDOWS[0];
 		$sec     = intdiv( $now_ms, 1000 );
 		$day     = Overview::window( 'today', $sec );
@@ -270,7 +272,7 @@ final class Realtime {
 		$allowed = array_map( 'strval', self::WINDOWS );
 		$errors  = array();
 
-		$funnel = Params::word( $params, 'funnel', $allowed[0], $allowed );
+		$funnel = Params::word( $params, 'funnel', $allowed[0], array_map( 'strval', self::FUNNEL_WINDOWS ) );
 		if ( null === $funnel ) {
 			$errors['funnel'] = 'invalid_format';
 		}

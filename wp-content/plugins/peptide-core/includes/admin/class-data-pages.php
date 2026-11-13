@@ -962,6 +962,7 @@ final class Data_Pages {
 			'perMinute'      => __( 'Visitors per minute', 'peptide-core' ),
 			/* translators: %d: number of minutes */
 			'minutesOption'  => __( '%d minutes', 'peptide-core' ),
+			'dayOption'      => '一天（最近 24 小时）',
 			/* translators: %d: number of minutes */
 			'minutesAgo'     => __( '%d min ago', 'peptide-core' ),
 			'now'            => __( 'Now', 'peptide-core' ),
