@@ -33,12 +33,14 @@ function vc_use_statement(): void {
 }
 
 /**
- * “Track your order” entry (M11 / FE-11). Printed only while the store has returning-buyer
- * recognition switched on and a published look-up page; never on that page itself.
+ * “Track your order” entry (M11 / FE-11). Since 2026-11-14 (owner's Q20, plan A) it opens the
+ * store's existing order-tracking panel (peptide-core Track_Widget, the van button) through that
+ * panel's own [data-pc-open-track] hook; M11's separate look-up page is retired.
+ * Printed only while the store has returning-buyer recognition switched on (as before, so a store
+ * with the switch off looks exactly as it does now) and the tracking panel is switched on.
  */
 function vc_track_order_entry(): void {
-    if ( ! is_callable( array( '\PeptideCore\Buyer_Status', 'enabled' ) ) || ! is_callable( array( '\PeptideCore\Order_Lookup', 'page_url' ) ) || ! \PeptideCore\Buyer_Status::enabled() ) { return; }
-    $url = (string) \PeptideCore\Order_Lookup::page_url();
-    if ( '' === $url || ( is_page() && (int) get_queried_object_id() === (int) get_option( 'pc_track_order_page', 0 ) ) ) { return; }
-    echo '<p class="vc-track-order"><a href="' . esc_url( $url ) . '">Track your order ' . vc_icon() . '</a></p>';
+    if ( ! is_callable( array( '\PeptideCore\Buyer_Status', 'enabled' ) ) || ! \PeptideCore\Buyer_Status::enabled() ) { return; }
+    if ( ! is_callable( array( '\PeptideCore\Track_Widget', 'enabled' ) ) || ! \PeptideCore\Track_Widget::enabled() || is_customize_preview() ) { return; }
+    echo '<p class="vc-track-order"><button type="button" data-pc-open-track>Track your order ' . vc_icon() . '</button></p>';
 }

@@ -21,6 +21,8 @@ $ok = static function ( string $label, bool $cond ): void {
 };
 
 $original = get_option( Settings::OPTION, null );
+// 结束时要回到开始时的样子。原来写死“演示模式开、确认项关”，只在开发站成立；沙盒用的是真实店铺的快照（演示模式是关的）。
+$before = Settings::public_config();
 
 // 1. 清理与校验。
 $clean = Settings::sanitize(
@@ -85,4 +87,4 @@ if ( null === $original ) {
 } else {
 	update_option( Settings::OPTION, $original );
 }
-$ok( 'cleanup: settings restored', false === Settings::public_config()['checkout_ack']['enabled'] && true === Settings::public_config()['demo_mode'] );
+$ok( 'cleanup: settings restored', $before === Settings::public_config() );
