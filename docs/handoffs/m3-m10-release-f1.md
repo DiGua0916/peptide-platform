@@ -53,7 +53,7 @@
 
 | 开关 | 在哪 | 打开后多出什么 | 打开的前提 |
 | --- | --- | --- | --- |
-| `pchq_m10_extras` | 总后台选项，没有 = 关 | 跨店报表“顾客”“弃单”“弃单率”三列和说明；订单详情的“店内订单编号”“客户编号”两行，列表里的“店内编号”；hang- 单号前不加“#”；搜索去掉“#”、不分大小写、可按客户编号搜；收集各店每日汇总里的弃单数 | 弃单数要等 F4 的每日汇总和 F1 的 `/hq/summary` 接线上线；“弃单率”的口径要平台所有者 / F4 确认 |
+| `pchq_m10_extras` | 总后台选项，没有 = 关 | 跨店报表“顾客”“弃单”“弃单率”三列和说明；订单详情的“店内订单编号”“客户编号”两行，列表里的“店内编号”；hang- 单号前不加“#”；搜索去掉“#”、不分大小写、可按客户编号搜；收集各店每日汇总里的弃单数 | 弃单数要等 F4 的每日汇总和 F1 的 `/hq/summary` 接线上线；弃单率口径已定（第十一节） |
 | `pc_order_report_customer_id` | 每家店的选项，没有 = 关 | 店铺上报订单时带客户编号 | 打开后每张已上报的订单会重报一次（比对里 6 张里 6 张），之后每家店再跑一次 `wp peptide orders backfill` |
 
 打开 / 关上：`wp option update pchq_m10_extras 1`（总后台）、`wp option update pc_order_report_customer_id 1`（店铺）；关上用 `wp option delete …`。不动代码，立刻生效。
@@ -141,7 +141,7 @@ wp eval 'echo wp_json_encode(get_option("peptide_core_series")), " cid=", var_ex
 1. 沙盒装线上版代码（那时的主线），只读取数（脚本文件取本分支的，放在沙盒上任意位置即可，不用放进插件目录）：
    `wp eval-file …/peptide-hq/tests/m3-m10-compare-dump.php /tmp/f3/hq-live <起> <止>`；每家店 `wp eval-file …/peptide-core/tests/m3-m10-compare-dump.php /tmp/f3/store-live`
 2. 换成本分支代码，打开总后台任意一页（自动升级），同样取数到 `hq-release`、`store-release`。
-3. `diff -r` 两边。**通过**：`pages/` 下没有任何差别；数据只多新键（`customers / abandoned / abandon_orders / abandon_rate / customer_id`）；店铺 `orders_that_would_be_reported_again` 是 0；两个 `meta.json` 的 `writes_during_dump` 都是空的。
+3. `diff -r` 两边。**通过**：`pages/` 下没有任何差别；数据只多新键（`customers / abandoned / abandon_orders / abandon_recovered / abandon_rate / customer_id`）；店铺 `orders_that_would_be_reported_again` 是 0；两个 `meta.json` 的 `writes_during_dump` 都是空的。
 4. 第三节的只读查询前后各跑一次，结果相同（除版本号 1→2）。
 5. 换回那时的主线再取一次，和第 1 步相同；再换回本分支。
 6. 演练手册 `docs/handoffs/m3-m10-sandbox-rehearsal.md` 第 2、4 步（升级重跑、回填）——前两轮已过，这次只确认版本 `1/2`。
@@ -180,7 +180,7 @@ wp eval 'echo wp_json_encode(get_option("peptide_core_series")), " cid=", var_ex
 | 7 | 运费两档的默认值（不满 $1000 收 $45、满 $1000 收 $15）和各店投手姓名 | 平台所有者在“系列管理”里填 | — | 他填就好 |
 | 8 | 开店页加“系列”下拉、调用 `Series::reserve()` | 日常会话 | 没排 | 日常会话估 |
 
-**弃单数的口径（平台所有者 2026-11-14 定）**：包含召回成功的。F3 报表里的弃单数直接取店铺每日汇总的 `abandoned`，它来自 F4 的 `Metrics::abandoned_daily()`，口径见 `docs/metrics.md`：弃单数 = 待召回 + 召回中 + 召回失败 + 召回成功（一位顾客一条，不含作废和测试单），已经包含召回成功的，和平台所有者定的一致，代码不用改。提醒一句：弃单率现在是 F3 先用的“弃单数 ÷（弃单数 + 订单数）”，召回成功的顾客后来也付了款，会同时算进弃单数和订单数；平台所有者只定了弃单数，弃单率的分母要不要扣掉召回成功的，打开前请他看一眼（只改 `Orders::metrics()` 一处）。
+**弃单数的口径（平台所有者 2026-11-14 定）**：包含召回成功的。F3 报表里的弃单数直接取店铺每日汇总的 `abandoned`，它来自 F4 的 `Metrics::abandoned_daily()`，口径见 `docs/metrics.md`：弃单数 = 待召回 + 召回中 + 召回失败 + 召回成功（一位顾客一条，不含作废和测试单），已经包含召回成功的，和平台所有者定的一致，代码不用改。**弃单率（平台所有者 2026-11-14 定）**：弃单率 = 弃单数 ÷（弃单数 + 订单数 − 召回成功数），同一位召回成功的顾客不算两次；个别日期分母比弃单数还小时按弃单数算，最高 100%。代码已改（`Orders::metrics()`），用例已补：纯测试“店 1：3 ÷ (3+2−1) = 75%”和“不会超过 100%”，冒烟测试“6 ÷ (6+3−1) = 75%、合计 9 ÷ (9+5−1) = 69.23%”。口径写在 `docs/CONTRACT.md` M10 一节；`docs/metrics.md` 归 F4，已请 F4 补上这一行。
 
 **估计**：不算等待，F3 自己还要的工作量约 1.5 天（沙盒比对半天、差异报告半天、同步演练和逐店打开半天）。按“F4 → F2 → F3”的顺序和每次都要平台所有者确认，**最快 3 个工作日**能把第 1–3 项做完、第 2 项发出去；第 4–6 项看平台所有者确认的速度，乐观再加 2 天，**合计约 5 个工作日**。
 

@@ -611,7 +611,7 @@ CREATE TABLE {$left} (
 	 * 这段日期（店铺时区的日期，含两端）里各店的弃单数，和这些天店铺自己数的订单数。
 	 * 没有任何一天带弃单数的店不在结果里（“还不支持”和“0 个弃单”要分开）。
 	 *
-	 * @return array<int,array{abandoned:int,orders:int}>
+	 * @return array<int,array{abandoned:int,orders:int,recovered:int}>
 	 */
 	public static function abandoned_by_site( string $from_day, string $to_day ): array {
 		global $wpdb;
@@ -620,8 +620,8 @@ CREATE TABLE {$left} (
 		}
 		$t   = self::abandoned_table();
 		$out = array();
-		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT site_id, SUM(abandoned) AS abandoned, SUM(orders) AS orders FROM {$t} WHERE day BETWEEN %s AND %s GROUP BY site_id", $from_day, $to_day ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-			$out[ (int) $r['site_id'] ] = array( 'abandoned' => (int) $r['abandoned'], 'orders' => (int) $r['orders'] );
+		foreach ( (array) $wpdb->get_results( $wpdb->prepare( "SELECT site_id, SUM(abandoned) AS abandoned, SUM(orders) AS orders, SUM(recall_recovered) AS recovered FROM {$t} WHERE day BETWEEN %s AND %s GROUP BY site_id", $from_day, $to_day ), ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$out[ (int) $r['site_id'] ] = array( 'abandoned' => (int) $r['abandoned'], 'orders' => (int) $r['orders'], 'recovered' => (int) $r['recovered'] );
 		}
 		return $out;
 	}
@@ -709,14 +709,18 @@ CREATE TABLE {$left} (
 	/**
 	 * 一组数字加上净额、ROAS、客单价、转化率、弃单率。
 	 *
-	 * 弃单率 = 弃单数 ÷（弃单数 + 订单数）：留下联系方式开始结账的人里，没付款的占多少。
+	 * 弃单率 = 弃单数 ÷（弃单数 + 订单数 − 召回成功数）——平台所有者 2026-11-14 定的口径。
+	 * 弃单数包含召回成功的（docs/metrics.md：待召回 + 召回中 + 召回失败 + 召回成功），召回成功的顾客后来也付了款、
+	 * 又算进了订单数，所以分母里减掉一次，同一位顾客只算一次。
+	 * 召回成功按弃单产生那天算，付款可能落在另一天，个别日期分母会比弃单数还小；这时分母按弃单数算，弃单率最高 100%。
 	 * 分母里的订单数（$abandon_orders）是带了弃单数的那些店、那些天，店铺每日汇总里自己数的订单数——
 	 * 和弃单数同一个来源、同一批日期，所以有的店还没带弃单数、或者日期跨过了功能上线那天，比率也不会被冲淡。
 	 * null 表示这一级没有任何弃单数据，不算弃单率。
-	 * 指标口径文档（docs/metrics.md）只定义了弃单数，没有定义“弃单率”，这是 F3 先用的保守算法；口径定了再改这一处。
+	 * $abandon_recovered 是同样那些店、那些天的召回成功数。
 	 */
-	public static function metrics( int $orders, int $gross_cents, int $refunded_cents, int $spend_cents, int $visitors, int $abandoned = 0, int $customers = 0, ?int $abandon_orders = null ): array {
-		$net = $gross_cents - $refunded_cents;
+	public static function metrics( int $orders, int $gross_cents, int $refunded_cents, int $spend_cents, int $visitors, int $abandoned = 0, int $customers = 0, ?int $abandon_orders = null, int $abandon_recovered = 0 ): array {
+		$net  = $gross_cents - $refunded_cents;
+		$base = null === $abandon_orders ? 0 : max( $abandoned, $abandoned + $abandon_orders - $abandon_recovered );
 		return array(
 			'orders'         => $orders,
 			'gross_cents'    => $gross_cents,
@@ -726,11 +730,12 @@ CREATE TABLE {$left} (
 			'visitors'       => $visitors,
 			'abandoned'      => $abandoned,
 			'abandon_orders' => $abandon_orders,
+			'abandon_recovered' => null === $abandon_orders ? null : $abandon_recovered,
 			'customers'      => $customers,
 			'roas'           => $spend_cents > 0 ? round( $net / $spend_cents, 2 ) : null,
 			'aov_cents'      => $orders > 0 ? (int) round( $net / $orders ) : null,
 			'cvr'            => $visitors > 0 ? round( $orders / $visitors * 100, 2 ) : null,
-			'abandon_rate'   => null !== $abandon_orders && $abandoned + $abandon_orders > 0 ? round( $abandoned / ( $abandoned + $abandon_orders ) * 100, 2 ) : null,
+			'abandon_rate'   => null !== $abandon_orders && $base > 0 ? round( $abandoned / $base * 100, 2 ) : null,
 		);
 	}
 
@@ -739,7 +744,7 @@ CREATE TABLE {$left} (
 	 * 顾客数例外：同一位顾客在几家店都买过，上一级只算一次（按客户编号去重），所以不是下一级相加。
 	 *
 	 * @param array[] $stores 每家店一行：site_id、name、series_id、series_name、buyer_name、orders、gross_cents、refunded_cents、spend_cents、visitors，
-	 *                        可选 abandoned（弃单数）、abandon_orders（有弃单数的那些天店铺自己数的订单数；没有弃单数据时不带或为 null）
+	 *                        可选 abandon_recovered（同样那些天的召回成功数）、abandoned（弃单数）、abandon_orders（有弃单数的那些天店铺自己数的订单数；没有弃单数据时不带或为 null）
 	 *                        和 customer_keys（这家店的顾客标识列表）
 	 * @return array{total:array,series:array}
 	 */
@@ -747,6 +752,7 @@ CREATE TABLE {$left} (
 		$sum  = static function ( array $rows, array $customers ): array {
 			$t    = array( 0, 0, 0, 0, 0, 0 );
 			$base = null;
+			$back = 0;
 			foreach ( $rows as $r ) {
 				$t[0] += (int) $r['orders'];
 				$t[1] += (int) $r['gross_cents'];
@@ -755,10 +761,11 @@ CREATE TABLE {$left} (
 				$t[4] += (int) $r['visitors'];
 				$t[5] += (int) ( $r['abandoned'] ?? 0 );
 				if ( isset( $r['abandon_orders'] ) ) {
-					$base = (int) $base + (int) $r['abandon_orders'];
+					$base  = (int) $base + (int) $r['abandon_orders'];
+					$back += (int) ( $r['abandon_recovered'] ?? 0 );
 				}
 			}
-			return self::metrics( $t[0], $t[1], $t[2], $t[3], $t[4], $t[5], count( $customers ), $base );
+			return self::metrics( $t[0], $t[1], $t[2], $t[3], $t[4], $t[5], count( $customers ), $base, $back );
 		};
 		$tree = array();
 		foreach ( $stores as $s ) {
@@ -769,7 +776,7 @@ CREATE TABLE {$left} (
 			$tree[ $sid ]['buyers'][ $buyer ]['customers'] = ( $tree[ $sid ]['buyers'][ $buyer ]['customers'] ?? array() ) + $keys;
 			$tree[ $sid ]['buyers'][ $buyer ]['stores'][]  = array_merge(
 				array( 'site_id' => (int) $s['site_id'], 'name' => (string) $s['name'] ),
-				self::metrics( (int) $s['orders'], (int) $s['gross_cents'], (int) $s['refunded_cents'], (int) $s['spend_cents'], (int) $s['visitors'], (int) ( $s['abandoned'] ?? 0 ), count( $keys ), isset( $s['abandon_orders'] ) ? (int) $s['abandon_orders'] : null )
+				self::metrics( (int) $s['orders'], (int) $s['gross_cents'], (int) $s['refunded_cents'], (int) $s['spend_cents'], (int) $s['visitors'], (int) ( $s['abandoned'] ?? 0 ), count( $keys ), isset( $s['abandon_orders'] ) ? (int) $s['abandon_orders'] : null, (int) ( $s['abandon_recovered'] ?? 0 ) )
 			);
 		}
 		ksort( $tree );
@@ -826,6 +833,7 @@ CREATE TABLE {$left} (
 				'visitors'       => $visit[ $id ]['visitors'] ?? 0,
 				'abandoned'      => $left[ $id ]['abandoned'] ?? 0,
 				'abandon_orders' => isset( $left[ $id ] ) ? $left[ $id ]['orders'] : null,
+				'abandon_recovered' => $left[ $id ]['recovered'] ?? 0,
 				'customer_keys'  => $who[ $id ] ?? array(),
 			);
 		}

@@ -129,9 +129,9 @@ namespace {
 				}
 				return array_values( $out );
 			}
-			if ( preg_match( "/^SELECT site_id, SUM\(abandoned\) AS abandoned, SUM\(orders\) AS orders FROM (\S+) WHERE day BETWEEN '([\d-]+)' AND '([\d-]+)' GROUP BY site_id$/", $sql, $m ) ) {
+			if ( preg_match( "/^SELECT site_id, SUM\(abandoned\) AS abandoned, SUM\(orders\) AS orders, SUM\(recall_recovered\) AS recovered FROM (\S+) WHERE day BETWEEN '([\d-]+)' AND '([\d-]+)' GROUP BY site_id$/", $sql, $m ) ) {
 				$out = array();
-				foreach ( $this->tables[ $m[1] ] as $r ) { if ( $r['day'] >= $m[2] && $r['day'] <= $m[3] ) { $out[ $r['site_id'] ] = array( 'site_id' => $r['site_id'], 'abandoned' => ( $out[ $r['site_id'] ]['abandoned'] ?? 0 ) + $r['abandoned'], 'orders' => ( $out[ $r['site_id'] ]['orders'] ?? 0 ) + $r['orders'] ); } }
+				foreach ( $this->tables[ $m[1] ] as $r ) { if ( $r['day'] >= $m[2] && $r['day'] <= $m[3] ) { $out[ $r['site_id'] ] = array( 'site_id' => $r['site_id'], 'abandoned' => ( $out[ $r['site_id'] ]['abandoned'] ?? 0 ) + $r['abandoned'], 'orders' => ( $out[ $r['site_id'] ]['orders'] ?? 0 ) + $r['orders'], 'recovered' => ( $out[ $r['site_id'] ]['recovered'] ?? 0 ) + $r['recall_recovered'] ); } }
 				return array_values( $out );
 			}
 			if ( preg_match( '/^SELECT site_id, store_order_id FROM (\S+) WHERE refund_sync = 1 ORDER BY updated_at ASC LIMIT 20$/', $sql, $m ) ) {
@@ -285,7 +285,7 @@ namespace {
 	check( 'no abandoned data yet means no rate', 0 === $rep['total']['abandoned'] && null === $rep['total']['abandon_orders'] && null === $rep['total']['abandon_rate'] );
 	check( 'only rows that carry the abandoned count are stored', 1 === Orders::store_abandoned( 1, array( array( 'day' => $today, 'orders' => 2, 'abandoned' => 3, 'abandoned_open' => 2, 'recall_emailed' => 1, 'recall_recovered' => 0 ), array( 'day' => $today, 'orders' => 2 ), array( 'day' => 'bad', 'abandoned' => 9 ) ) ) && 0 === Orders::store_abandoned( 0, array() ) );
 	$summary = array( 'response' => array( 'code' => 200 ), 'body' => json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 1, 'abandoned' => 1 ) ) ) ) );
-	check( 'the summary reply of a store is picked up by its address', $summary === Orders::watch_summary( $summary, array(), 'https://s2.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary&days=2' ) && array( 1 => array( 'abandoned' => 3, 'orders' => 2 ), 2 => array( 'abandoned' => 1, 'orders' => 1 ) ) === Orders::abandoned_by_site( $today, $today ) );
+	check( 'the summary reply of a store is picked up by its address', $summary === Orders::watch_summary( $summary, array(), 'https://s2.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary&days=2' ) && array( 1 => array( 'abandoned' => 3, 'orders' => 2, 'recovered' => 0 ), 2 => array( 'abandoned' => 1, 'orders' => 1, 'recovered' => 0 ) ) === Orders::abandoned_by_site( $today, $today ) );
 	Orders::watch_summary( $summary, array(), 'https://s3.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fstatus' );
 	Orders::watch_summary( array( 'response' => array( 'code' => 500 ), 'body' => $summary['body'] ), array(), 'https://s3.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary' );
 	check( 'other routes and failed replies are ignored', array( 1, 2 ) === array_keys( Orders::abandoned_by_site( $today, $today ) ) );
@@ -293,7 +293,7 @@ namespace {
 	$GLOBALS['extra_sites'] = array( 9 => array( 'id' => 9, 'name' => 'Twin', 'url' => 'https://s2.example.test/' ) );
 	Orders::watch_summary( array( 'response' => array( 'code' => 200 ), 'body' => json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 7, 'abandoned' => 7 ) ) ) ) ), array(), 'https://s2.example.test/?rest_route=%2Fpeptide%2Fv1%2Fhq%2Fsummary&days=2' );
 	unset( $GLOBALS['extra_sites'] );
-	check( 'an address shared by two stores is not guessed', array( 'abandoned' => 1, 'orders' => 1 ) === Orders::abandoned_by_site( $today, $today )[2] );
+	check( 'an address shared by two stores is not guessed', array( 'abandoned' => 1, 'orders' => 1, 'recovered' => 0 ) === Orders::abandoned_by_site( $today, $today )[2] );
 	Orders::store_abandoned( 1, array( array( 'day' => $today, 'orders' => 2, 'abandoned' => 3 ) ) );
 	$rep = Orders::report( $today, $today );
 	// 店 1：3 ÷ (3+2) = 60%；店 2：1 ÷ (1+1) = 50%；店 3 没有弃单数据；合计只用有数据的店：4 ÷ (4+3) = 57.14%（不是 4 ÷ (4+5)）。
@@ -301,6 +301,12 @@ namespace {
 	Orders::store_abandoned( 3, array( array( 'day' => $today, 'orders' => 4, 'abandoned' => 0 ) ) );
 	$rep = Orders::report( $today, $today );
 	check( 'a store that reports zero abandoned has a rate of 0, not a dash', 0.0 === $rep['series'][1]['metrics']['abandon_rate'] && 0 === $rep['series'][1]['metrics']['abandoned'] && 36.36 === $rep['total']['abandon_rate'] );
+	// 平台所有者 2026-11-14 定的口径：弃单率 = 弃单数 ÷（弃单数 + 订单数 − 召回成功数）。
+	Orders::store_abandoned( 1, array( array( 'day' => $today, 'orders' => 2, 'abandoned' => 3, 'recall_recovered' => 1 ) ) );
+	$rep = Orders::report( $today, $today );
+	// 店 1：3 ÷ (3+2−1) = 75%；合计：弃单 4、订单 3+4=7、召回成功 1 → 4 ÷ (4+7−1) = 40%。
+	check( 'recovered recalls are counted once: abandoned / (abandoned + orders - recovered)', 75.0 === $rep['series'][0]['buyers'][0]['metrics']['abandon_rate'] && 1 === $rep['series'][0]['buyers'][0]['metrics']['abandon_recovered'] && 1 === $rep['total']['abandon_recovered'] && 40.0 === $rep['total']['abandon_rate'] && $levels_equal( $rep ), array( $rep['series'][0]['buyers'][0]['metrics'], $rep['total'] ) );
+	check( 'the rate never goes above 100% when recoveries land on another day', 100.0 === Orders::metrics( 0, 0, 0, 0, 0, 3, 0, 0, 5 )['abandon_rate'] && 60.0 === Orders::metrics( 0, 0, 0, 0, 0, 3, 0, 3, 1 )['abandon_rate'] && null === Orders::metrics( 0, 0, 0, 0, 0, 3, 0, null, 1 )['abandon_recovered'] );
 	check( 'rate needs a denominator', null === Orders::metrics( 0, 0, 0, 0, 0, 0, 0, 0 )['abandon_rate'] && null === Orders::metrics( 5, 0, 0, 0, 0, 3, 0, null )['abandon_rate'] && 100.0 === Orders::metrics( 0, 0, 0, 0, 0, 3, 0, 0 )['abandon_rate'] );
 	check( 'yesterday is empty', 0 === Orders::report( gmdate( 'Y-m-d', time() - 86400 ), gmdate( 'Y-m-d', time() - 86400 ) )['total']['orders'] );
 

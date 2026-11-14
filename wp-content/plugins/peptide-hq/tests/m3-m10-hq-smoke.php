@@ -374,7 +374,7 @@ $check( 'a later report can add the customer id to an order', 'C00SMK02' === Ord
 // ---- 9c. 弃单数和弃单率：店铺每日汇总带来的弃单数按店按天存一行，重复不变 ----
 $yday = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
 $days = array(
-	array( 'day' => $today, 'orders' => 1, 'abandoned' => 4, 'abandoned_open' => 1, 'recall_emailed' => 2, 'recall_recovered' => 1 ),
+	array( 'day' => $today, 'orders' => 3, 'abandoned' => 4, 'abandoned_open' => 1, 'recall_emailed' => 2, 'recall_recovered' => 1 ),
 	array( 'day' => $yday, 'orders' => 0, 'abandoned' => 2 ),
 	array( 'day' => 'not-a-day', 'abandoned' => 9 ),
 	array( 'day' => wp_date( 'Y-m-d', time() - 2 * DAY_IN_SECONDS ), 'orders' => 3 ),
@@ -398,17 +398,17 @@ if ( $twins > 1 ) {
 }
 $summary_url = $summary_of( $c_site );
 $check( 'the summary reply passes through untouched', $reply === apply_filters( 'http_response', $reply, array(), $summary_url ) );
-$check( 'abandoned counts are picked up from the summary reply of that store', array( 'abandoned' => 3, 'orders' => 2 ) === ( Orders::abandoned_by_site( $today, $today )[ $c_site ] ?? null ) && ! isset( Orders::abandoned_by_site( $today, $today )[ $b ] ), Orders::abandoned_by_site( $today, $today ) );
+$check( 'abandoned counts are picked up from the summary reply of that store', array( 'abandoned' => 3, 'orders' => 2, 'recovered' => 0 ) === ( Orders::abandoned_by_site( $today, $today )[ $c_site ] ?? null ) && ! isset( Orders::abandoned_by_site( $today, $today )[ $b ] ), Orders::abandoned_by_site( $today, $today ) );
 apply_filters( 'http_response', array_merge( $reply, array( 'response' => array( 'code' => 500, 'message' => 'x' ), 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'abandoned' => 99 ) ) ) ) ) ), array(), $summary_url );
 apply_filters( 'http_response', array_merge( $reply, array( 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'abandoned' => 99 ) ) ) ) ) ), array(), str_replace( 'hq%2Fsummary', 'hq%2Fstatus', $summary_url ) );
 apply_filters( 'http_response', array_merge( $reply, array( 'body' => wp_json_encode( array( 'days' => array( array( 'day' => $today, 'orders' => 5 ) ) ) ) ) ), array(), $summary_url );
 $check( 'failed replies, other routes and stores without the field are ignored', 3 === ( Orders::abandoned_by_site( $today, $today )[ $c_site ]['abandoned'] ?? 0 ) );
 $rep = Orders::report( $from, $today );
 $is  = $store_rows( $rep );
-// 店 a：两天共 6 个弃单，这两天店铺自己数的订单 1 笔 → 6 ÷ 7；店 c：3 ÷ (3+2)；合计只用有弃单数据的店和天：9 ÷ (9+3)。
-$check( 'abandon rate = abandoned / (abandoned + orders of the same store days)', 6 === $is[ $a ]['abandoned'] && 85.71 === $is[ $a ]['abandon_rate'] && 60.0 === $is[ $c_site ]['abandon_rate'] && 9 === $rep['total']['abandoned'] && 3 === $rep['total']['abandon_orders'] && 75.0 === $rep['total']['abandon_rate'], array( $is[ $a ], $rep['total'] ) );
+// 店 a：两天共 6 个弃单，这两天店铺自己数的订单 3 笔，召回成功 1 → 6 ÷ (6+3−1) = 75%；店 c：3 ÷ (3+2−0) = 60%；合计 9 ÷ (9+5−1) = 69.23%。
+$check( 'abandon rate = abandoned / (abandoned + orders - recovered) of the same store days', 6 === $is[ $a ]['abandoned'] && 1 === $is[ $a ]['abandon_recovered'] && 75.0 === $is[ $a ]['abandon_rate'] && 60.0 === $is[ $c_site ]['abandon_rate'] && 9 === $rep['total']['abandoned'] && 5 === $rep['total']['abandon_orders'] && 69.23 === $rep['total']['abandon_rate'], array( $is[ $a ], $rep['total'] ) );
 $check( 'a store without abandoned data has no rate and does not dilute the total', 0 === $is[ $b ]['abandoned'] && null === $is[ $b ]['abandon_orders'] && null === $is[ $b ]['abandon_rate'] && $is[ $b ]['orders'] > 0 );
-$check( 'a narrower range only counts its own days', array( 'abandoned' => 4, 'orders' => 1 ) === ( Orders::abandoned_by_site( $today, $today )[ $a ] ?? null ) );
+$check( 'a narrower range only counts its own days', array( 'abandoned' => 4, 'orders' => 3, 'recovered' => 1 ) === ( Orders::abandoned_by_site( $today, $today )[ $a ] ?? null ) );
 $check( 'money levels still add up', $levels( $rep ) );
 
 // ---- 10. 三个后台页面能渲染，没有警告 ----
