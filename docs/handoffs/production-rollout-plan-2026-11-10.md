@@ -812,3 +812,48 @@
   - 沙盒：菜单 7 项、访客归档 25 行、访客详情三组卡片（美国 田纳西州 · Greenback / 美中时间 03:18（周六）/ Comcast · 家庭宽带 / 英语（美国））、支付结果按 7 个维度都正常，无警告。
   - 主店：菜单正确、访客归档高亮正确、**店主圈的那位客户现在显示“美国 德州 · Houston / 美西时间 01:19（周六）/ Pandg / 英语（美国）”**，错误日志无相关报错。
 - 部署前 14 份副本和 31044629 一致；部署后这 10 个文件全部一致。备份 `plain5-*-20261114T0918…`、`…T0919…`。回滚：删 class-plain-words.php，恢复备份里其余 9 个文件，reload。
+
+### 2026-11-14 15:08–15:21 UTC（北京 2026-11-14 23:08–23:21）收款回写中断：定位、影响范围、修复
+**这一节不是插件发布，只改了总后台主机上 6 份店铺后台的 wp-config，一行 define。代码仓库没有改动。**
+
+#### 现象
+店主发现李军（s0006）后台"支付中心"有一笔显示支付成功，但订单没变。查下来是**所有店铺后台的收款回写从 2026-11-13 17:35 UTC 起全断**：hub 把 Panapay 的结果投给店铺后台，店铺一律返回 503，hub 的 `wp_pc_pay_hub_events` 里 `last_error=store_unavailable`，一直重试（最多重到 248 次）。
+
+#### 根因（是我 11-13 给后台提速那次改动引入的，commit 243dc7e）
+- 后台走 SSH 通道 `127.0.0.1:13361` 连 web 主机的库，每请求新建连接要 42–83ms。那次在各后台放了 `wp-content/db.php`，用 `PC_Reused_Connection_WPDB extends wpdb` 给主机名加 `p:` 走 mysqli 持久连接。
+- `peptide-panapay` 的 `Database::open()`（includes/class-database.php:39）有一道刻意的防线：
+  `if ( false === $override && 'wpdb' !== get_class( $wpdb ) ) { throw; }`
+  —— 意思是"$wpdb 被换成了自定义类，DB_HOST 可能只是个占位符（读写分离 / 路由），**绝不猜写库地址**"，必须由 `PC_PANAPAY_DB_HOST` 显式给出。
+- db.php 一放进去，`get_class($wpdb)` 就不是 `wpdb` 了，而当时没人定义 `PC_PANAPAY_DB_HOST`，于是 `Database::open()` 抛 `payment_database_unavailable`；它在 `Hub_Protocol::verify_request()` 里被调用，`Bridge::receive()` 整条请求直接 503。时间线吻合：db.php mtime 17:35，第一笔 `store_unavailable` 17:43。
+- web 主机的店铺（顾客访问的那一侧）没有 db.php，`$wpdb` 是原生 `wpdb`，所以不受影响——这也是只有后台断、下单和建支付会话一切正常的原因。
+
+#### 影响范围（逐笔核对过）
+故障窗口内 Panapay 一共只回了 **1 笔 SUCCEEDED**：
+
+| 店 | 订单 | 金额 | Panapay 结果 | 处理 |
+| --- | --- | --- | --- | --- |
+| 李军 s0006 | #11882 | $139.65 | SUCCEEDED 11-14 11:30 UTC，交易号 2026111419302317946558233240240 | 11-14 21:03 人工入账（见上一节），现 processing |
+| 李军 s0006 | #11881 | $607.06 | FAILED | 无钱可收；订单已被超时取消器改成 cancelled |
+| 光辉 s0008 | #11890 | $287.00 | FAILED | 同上 |
+
+- **没有任何已付款的顾客收到弃单召回邮件。** #11882 是 19:30 下的单，超时取消器还没扫到它就在 21:03 结清了，所以没被取消、没发 payment-help 邮件，顾客收到的是正常的 Processing 邮件。（helmsjason1@gmail.com 当天另收过一封 payment-help，那是他真的弃单 #11880，与本故障无关。）
+- 其余时间段的 attempt 都停在 `created` 且没有 Panapay 通知，即顾客自己没付完，不涉及回写。
+- **口径副作用（无法靠重投补回）**：#11881 / #11890 的拒付通知当时没送到，店铺侧 `_pc_panapay_sessions` 的 attempt 还停在 `created`，订单被超时取消器改成了 cancelled。重投时 `Session_Service::apply_notification()` 的保护条件 `! $order->has_status( array( 'pending','failed' ) )` 会直接 return——**这是正确的**（一笔迟到的失败通知不该去动一个已取消的订单），但代价是这两笔在复盘 / 作战室里会被算成"打开支付页没付"而不是"支付被拒"，拒付数少 2 笔。往后新的拒付通知在订单还 pending 时就到，会正常记成 failed。
+
+#### 修复（2026-11-14 15:14 UTC 前后）
+- 在 6 份店铺后台的**共享** wp-config（`shared/wp-config.php`，不是各 release 下的入口 stub，这样换 release 也不会丢）的 `DB_HOST` 之后加一行：
+  `define( 'PC_PANAPAY_DB_HOST', DB_HOST );`
+- 覆盖：`store-admin/shared`（主店 s0001，库 vialcove_web01）+ `tenant-admin/s0006…s0010/shared`。hub（`/srv/vialcove/hq`）和 web 主机都没有 db.php，不需要。
+- 为什么等于 DB_HOST 是对的：db.php 只在同一个 DB_HOST 前面加 `p:` 走持久连接，不做读写分离、不换主机，DB_HOST 就是写库；`Database::open()` 另外还会拒绝以 `p:` 开头的地址，所以它自己开的连接不是持久连接。
+- 备份：每份都留了 `wp-config.php.bak-20261114-payfix`。**回滚**：把备份覆盖回去即可（只删那一行也行）。6 份都过了 `php -l`。
+
+#### 验证
+- 6 家后台逐个 `Database::open()`：全部 OK，`SELECT DATABASE()` 对得上（vialcove_web01 / vc_s0006…vc_s0010），`@@autocommit=1`。
+- 在 hub 上按 `Hub::retry_pending()` 的原样复现了一次投递（POST `https://s0006.vialcoveresearch.com/?rest_route=/pc-panapay/v1/store/event`）：**HTTP 200，`accepted:true`**。
+- 跑 `wp cron event run pc_panapay_hub_relay`：3 条卡住的通知**全部 delivered**，`delivery_state <> 'delivered'` 的事件数归 **0**，`last_error` 清空。
+- 三张订单复查：状态、付款时间、备注、库存**都没有被重复改动**，也没有重复邮件——`apply_notification()` 对已付款的走 `persisted_paid` 分支只记交易、不重跑完成流程，对已取消的直接 return。disposition 三条都是 `review`（符合预期：都不需要再动订单）。
+
+#### 遗留
+1. **新开店会再踩一次**：`/srv/vialcove-provision-template/yy-sync-0532574-1794082452-admin/source/wp-content/db.php` 在供应模板里，但模板的 wp-config 是开店时生成的，不带 `PC_PANAPAY_DB_HOST`。要么在开店脚本里一起写进去，要么让 `Database::open()` 认得这个只加 `p:` 的 drop-in（后者动的是支付核心的安全防线，需要店主拍板，且 peptide-panapay 正在发版，先不动）。
+2. db.php 不在代码仓库里（是手工放到各后台的），下次整目录发布 store-admin 会不会把它带走，取决于发布代理的替换范围——要确认。
+3. 光辉那位客户的 "Payment attempts are too frequent"（Panapay 限流）仍待店主找 Panapay 确认限流维度和是否仍在限。
