@@ -1,0 +1,6 @@
+/* Shipping protection row (site 1 P0-5): checkbox + label left, crossed-out reference + price right. */
+.pc-ship-protect { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 16px; font-size: 0.875em; }
+.pc-ship-protect__label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+.pc-ship-protect__box { width: 16px; height: 16px; margin: 0; accent-color: currentColor; }
+.pc-ship-protect__ref { opacity: 0.6; }
+.pc-ship-protect.is-off .pc-ship-protect__now { opacity: 0.6; }

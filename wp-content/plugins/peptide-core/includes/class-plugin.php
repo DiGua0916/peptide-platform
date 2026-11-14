@@ -66,6 +66,8 @@ final class Plugin {
 		Campaign_Countdown::register_hooks();
 		First_Order_Offer::register_hooks();
 		Postal_Assist::register_hooks();
+		Checkout_Assist::register_hooks();
+		Commerce_Speed::register_hooks();
 		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();
 		Cloak_Trust::register_hooks(); // 流量斗篷“已购用户信任 IP”（2026-11-14）
@@ -111,6 +113,8 @@ final class Plugin {
 		Store_Config::register_hooks();
 		Shipping\Plans::register_hooks();
 		Shipping\Discounts::register_hooks();
+		Shipping\Protection::register_hooks();
+		Resale_Prompt::register_hooks();
 		Emails\Registry::register_hooks();
 		Emails\Chase_Copy::register_hooks();
 		Terms::register_hooks();

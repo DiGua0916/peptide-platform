@@ -1,0 +1,6 @@
+/* Checkout assist (site 1 P1-1 / P1-6). */
+.pc-assist-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: #e8f6ea; color: #24603e; font-size: 14px; font-weight: 600; }
+.pc-phone-note { margin: 4px 0 0; font-size: 13px; color: #415e68; }
+.pc-phone-note.is-error { color: #b3261e; font-weight: 600; }
+.pc-pay-save { margin: 6px 0 0; text-align: center; font-size: 14px; font-weight: 700; color: #2e7d4f; }
+.pc-pay-help { margin: 6px 0 0; font-weight: 600; }

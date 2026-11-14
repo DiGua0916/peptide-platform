@@ -128,7 +128,7 @@ final class First_Order_Offer {
 		$es = class_exists( Storefront_Translation::class ) && 'es' === Storefront_Translation::code() && Storefront_Translation::active();
 		return $es ? array(
 			'title'=>'5% en su primer pedido', 'body'=>'',
-			'copy'=>'Copiar código', 'apply'=>'Obtener', 'copied'=>'Código copiado', 'copyFailed'=>'No se pudo copiar. Seleccione y copie el código de la oferta.',
+			'copy'=>'Copiar código', 'apply'=>'Obtener', 'claimed'=>'✓ Aplicado', 'saved'=>'Código guardado. El 5% se aplica al añadir un producto.', 'copied'=>'Código copiado', 'copyFailed'=>'No se pudo copiar. Seleccione y copie el código de la oferta.',
 			'empty'=>'Código copiado. Añada un producto para usarlo.', 'pending'=>'La elegibilidad se verifica al finalizar la compra.',
 			'working'=>'Aplicando…', 'success'=>'Su código está aplicado.', 'already'=>'Este código ya está aplicado.', 'uncertain'=>'No pudimos confirmar la solicitud. Revise su carrito antes de intentarlo de nuevo.',
 			'failed'=>'No se pudo aplicar el código. Revise sus condiciones y su carrito antes de intentarlo de nuevo.',
@@ -144,7 +144,7 @@ final class First_Order_Offer {
 			'close'=>'Cerrar resultado', 'viewCart'=>'Ver carrito', 'timer'=>'Este mensaje se cierra automáticamente en 15 segundos.', 'orderTotal'=>'Total actual del pedido',
 		) : array(
 			'title'=>'5% off your first order', 'body'=>'',
-			'copy'=>'Copy code', 'apply'=>'Claim', 'copied'=>'Code copied', 'copyFailed'=>'Could not copy. Select and copy the code shown in this offer.',
+			'copy'=>'Copy code', 'apply'=>'Claim', 'claimed'=>'✓ Applied', 'saved'=>'Code saved. 5% comes off as soon as you add an item.', 'copied'=>'Code copied', 'copyFailed'=>'Could not copy. Select and copy the code shown in this offer.',
 			'empty'=>'Code copied. Add an item to use it.', 'pending'=>'First-order eligibility is checked at checkout.',
 			'working'=>'Applying…', 'success'=>'Your code is applied.', 'already'=>'This code is already applied.', 'uncertain'=>'We could not confirm the request. Review your bag before trying again.',
 			'failed'=>'The code could not be applied. Check its conditions and review your bag before trying again.',
@@ -159,7 +159,7 @@ final class First_Order_Offer {
 		$c = self::coupon();
 		if ( ! $c ) { return $preview ? '<p class="pc-first-offer-empty">请在插件绑定并启用符合规则的首单 5% 优惠券。</p>' : ''; }
 		$s = self::strings();
-		$config = array( 'code' => $c->get_code(), 'strings' => $s, 'cartUrl' => wc_get_cart_url(), 'closeMs' => 15000, 'preview' => $preview );
+		$config = array( 'code' => $c->get_code(), 'strings' => $s, 'cartUrl' => wc_get_cart_url(), 'rememberUrl' => function_exists( 'home_url' ) ? home_url( '/' ) : '/', 'closeMs' => 15000, 'preview' => $preview );
 		$json = wp_json_encode( $config, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT );
 		if ( ! is_string( $json ) ) { return ''; }
 		$id = wp_unique_id( 'pc-first-offer-' );
