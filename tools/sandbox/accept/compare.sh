@@ -1,0 +1,1 @@
+D=/var/tmp/m1-accept; for f in menu pages shop assets; do if diff -q $D/$f-before.txt $D/$f-after.txt >/dev/null; then echo "$f：相同"; else echo "$f：不同"; diff $D/$f-before.txt $D/$f-after.txt | head -12; fi; done
