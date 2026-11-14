@@ -855,5 +855,5 @@
 
 #### 遗留
 1. **新开店会再踩一次**：`/srv/vialcove-provision-template/yy-sync-0532574-1794082452-admin/source/wp-content/db.php` 在供应模板里，但模板的 wp-config 是开店时生成的，不带 `PC_PANAPAY_DB_HOST`。要么在开店脚本里一起写进去，要么让 `Database::open()` 认得这个只加 `p:` 的 drop-in（后者动的是支付核心的安全防线，需要店主拍板，且 peptide-panapay 正在发版，先不动）。
-2. db.php 不在代码仓库里（是手工放到各后台的），下次整目录发布 store-admin 会不会把它带走，取决于发布代理的替换范围——要确认。
+2. ~~db.php 会不会被发布带走~~ **已确认不会**（2026-11-14，经另一会话向 F1 核对）：发布代理只整目录替换 5 个组件目录（plugins/peptide-core、peptide-hq、peptide-panapay、peptide-ops、themes/peptide-site），wp-content 根目录下的 db.php 和 wp-config 都不碰。但 db.php 仍然不在代码仓库里，是手工放到各后台的，换机器 / 重装时要记得补。
 3. 光辉那位客户的 "Payment attempts are too frequent"（Panapay 限流）仍待店主找 Panapay 确认限流维度和是否仍在限。
