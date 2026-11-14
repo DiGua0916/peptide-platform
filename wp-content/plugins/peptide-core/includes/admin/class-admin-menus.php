@@ -513,7 +513,7 @@ final class Admin_Menus {
 			$to = array_search( $after, array_column( $items, 2 ), true );
 			array_splice( $items, false === $to ? count( $items ) : $to + 1, 0, array( $item ) );
 		};
-		$move( 'edit.php', 'pc-visitors' );
+		$move( 'edit.php', Data_Pages::SLUG );
 		$move( Media_Page::SLUG, self::SETTINGS );
 		// 用户 2026-10-29：分析与顾客对调，保留其他菜单的相对位置。
 		$customers = array_search( self::CUSTOMERS, array_column( $items, 2 ), true );
@@ -550,8 +550,7 @@ final class Admin_Menus {
 			if ( false === $to ) { array_splice( $order, $from, 0, array( $slug ) ); return; }
 			array_splice( $order, $to + 1, 0, array( $slug ) );
 		};
-		$move( 'pc-visitors', Data_Pages::SLUG );
-		$move( 'pc-buyer-ads', 'pc-visitors' ); // 广告数据追踪紧跟在访客后面（2026-11-12）。
+		$move( 'pc-buyer-ads', Data_Pages::SLUG ); // 广告数据追踪紧跟在数据后面（访客数据 2026-11-14 并进数据，不再是顶层菜单）。
 		$move( Mail_Page::SLUG, self::CUSTOMERS ); // 邮件紧跟在顾客后面（2026-11-09）。
 		$move( 'cbs-dashboard', 'pc-referrals' );
 		$move( 'edit.php', in_array( 'cbs-dashboard', $order, true ) ? 'cbs-dashboard' : 'pc-referrals' );

@@ -23,7 +23,7 @@ final class Hq_Ai {
 
 	/** 这家店对某种分析的人设调优（只放店主自己写的阅读习惯和要求）。 */
 	/** 全站分析的版面要求（店主 2026-11-13：商品明细只在商品详情数据里看，报告不重复列表）。 */
-	public const SITE_LAYOUT = '【版面要求（店铺后台已改版，必须遵守）】每个商品的浏览、加购、下单、付款明细，店主在“数据 → 商品详情数据”里看。报告里不要输出商品明细表格，不要写“商品横向对比”表，也不要逐个列出商品的浏览、加购数字。商品方面只用一两句话点出最值得关注的 1–3 个商品和原因。其余部分（大盘体检、状态评级、顾客在哪里卡住、店铺优化建议、行动清单、下期重点）照常写。';
+	public const SITE_LAYOUT = '【版面要求（店铺后台已改版，必须遵守）】每个商品的浏览、加购、下单、付款明细，店主在“数据 → 商品详情数据”里看。报告里不要输出商品明细表格，不要写“商品横向对比”表，也不要逐个列出商品的浏览、加购数字。商品方面只用一两句话点出最值得关注的 1–3 个商品和原因。其余部分（大盘体检、状态评级、顾客在哪里卡住、店铺优化建议、行动清单、下期重点）照常写。【支付（店主 2026-11-14 要求）】数据里有【支付结果】和按时段 / 星期 / 州 / 上网方式 / 系统 / 浏览器 / 金额的分组。只要成功率不到 80%，就要单独写一段“钱有没有真收到”：说清被拒和“打开支付页没付”各多少、没收到多少钱，并结合这几张分组表指出规律（例如某个时段、某个州、某种网络或某个金额段明显更差），再给可执行的建议。样本少于 3 单的行不要当成规律。';
 
 	public static function tune( string $use ): string {
 		return trim( (string) get_option( self::TUNE . $use, '' ) );
@@ -721,6 +721,56 @@ final class Hq_Ai {
 	}
 
 	/** 全站分析额外的数据：漏斗、渠道、弃单、上期对比。 */
+	/**
+	 * 支付结果给 AI（店主 2026-11-14：整站分析要把支付失败算进去，还要带时间因素，看哪个时段容易失败）。
+	 * 口径见 Admin\Data_Cockpit::payment_outcome()：被拒之后订单会被超时取消覆盖，所以看支付网关记的尝试。
+	 */
+	private static function payment_facts( int $from, int $to ): array {
+		if ( ! class_exists( Admin\Data_Review::class ) ) {
+			return array();
+		}
+		try {
+			$rows = Admin\Data_Review::load_payments( array( 'from' => $from * 1000, 'to' => $to * 1000, 'days' => 1 ) );
+		} catch ( \Throwable $e ) {
+			return array( '【支付结果】' => '暂时读不到' );
+		}
+		if ( ! $rows ) {
+			return array( '【支付结果】' => '这段时间没有进到支付这一步的订单' );
+		}
+		$sum = array( 'paid' => 0, 'failed' => 0, 'abandoned' => 0 );
+		$lost = 0.0;
+		foreach ( $rows as $o ) {
+			++$sum[ $o['outcome'] ];
+			$lost += 'paid' !== $o['outcome'] ? (float) $o['total'] : 0.0;
+		}
+		$n   = array_sum( $sum );
+		$out = array(
+			'【支付结果】' => array(
+				'说明'         => '被拒 = 支付通道明确拒付（这些单之后多半被超时取消，订单状态会显示已取消）；没付 = 客户打开了支付页就没再回来。',
+				'付成了'       => $sum['paid'],
+				'被拒'         => $sum['failed'],
+				'打开支付页没付' => $sum['abandoned'],
+				'成功率%'      => $n ? round( 100 * $sum['paid'] / $n, 1 ) : null,
+				'没收到的钱'    => round( $lost, 2 ),
+			),
+		);
+		// 多个角度各给一张小表，AI 自己找规律（哪个时段、哪种网络、哪个金额段容易失败）。
+		foreach ( array( 'hour' => '按时段', 'weekday' => '按星期', 'state' => '按州', 'network' => '按上网方式', 'os' => '按系统', 'in_app' => '按浏览器', 'amount' => '按金额' ) as $dim => $label ) {
+			$rowsd = Admin\Data_Review::payment_by( $rows, $dim );
+			$table = array();
+			foreach ( array_slice( $rowsd, 0, 12, true ) as $r ) {
+				if ( $r['total'] < 1 ) {
+					continue;
+				}
+				$table[ (string) $r['label'] ] = array( '下单' => $r['total'], '付成' => $r['paid'], '被拒' => $r['failed'], '没付' => $r['abandoned'], '成功率%' => null === $r['rate'] ? null : round( 100 * $r['rate'], 1 ) );
+			}
+			if ( $table ) {
+				$out['【支付结果 ' . $label . '】'] = $table;
+			}
+		}
+		return $out;
+	}
+
 	private static function site_extras( int $from, int $to ): array {
 		$out = array();
 		try {
@@ -741,6 +791,7 @@ final class Hq_Ai {
 		} catch ( \Throwable $e ) {
 			$out['【渠道】'] = '暂时读不到';
 		}
+		$out += self::payment_facts( $from, $to );
 		$out += self::product_funnel( $from, $to );
 		$out['【离开页面】'] = self::exit_pages( $from, $to );
 		$counts = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 1 )['counts'] ?? array();

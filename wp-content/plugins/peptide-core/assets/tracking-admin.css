@@ -273,4 +273,11 @@
 /* 设备和网络（2026-11-13） */
 .pc-trk-net-title { margin: 18px 0 6px; font-size: 15px; }
 .pc-trk-net-title small { font-weight: 400; color: #646970; }
-.pc-trk-net .pc-trk-card b { font-size: 14px; word-break: break-all; }
+/* 店主 2026-11-14：这一块按“人在哪 / 用什么看的 / 哪来的”分组，每项人话在上、技术原值在下。 */
+.pc-trk-net-group { margin: 14px 0 0; font-size: 12px; font-weight: 600; color: #646970; }
+.pc-trk-net { margin: 6px 0 0; gap: 10px; }
+.pc-trk-net .pc-trk-card { min-width: 0; flex: 1 1 200px; max-width: 320px; padding: 10px 14px; }
+.pc-trk-net .pc-trk-card b { display: block; font-size: 14px; line-height: 1.4; word-break: break-word; }
+.pc-trk-net .pc-trk-card small { display: block; margin-top: 2px; color: #787c82; font-size: 11px; word-break: break-all; }
+.pc-trk-net .pc-trk-card.is-odd { border-color: #d63638; background: #fcf0f1; }
+.pc-trk-net .pc-trk-card.is-odd b { color: #a02729; }

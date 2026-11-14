@@ -48,6 +48,9 @@ final class Data_Review {
 		'os'        => '手机系统',
 		'in_app'    => 'App 内 / 浏览器',
 		'state'     => '美国各州',
+		'city'      => '城市',
+		'network'   => '上网方式',
+		'language'  => '语言',
 		'newret'    => '新客 / 回访',
 		'hour'      => '几点（美国中部）',
 		'weekday'   => '星期几',
@@ -142,7 +145,7 @@ final class Data_Review {
 		return $out;
 	}
 
-	private const VISIT_COLS = 'v.id, v.visitor_id, v.start_ms, v.stage, v.order_id, v.utm_source, v.utm_term, v.utm_content, v.creative_code, v.placement, v.device, v.in_app, v.os, v.geo_region, v.landing_path, v.referrer_host, p.first_visit_id';
+	private const VISIT_COLS = 'v.id, v.visitor_id, v.start_ms, v.stage, v.order_id, v.utm_source, v.utm_term, v.utm_content, v.creative_code, v.placement, v.device, v.in_app, v.os, v.geo_country, v.geo_region, v.geo_city, v.isp, v.ip_type, v.language, v.landing_path, v.referrer_host, p.first_visit_id';
 
 	/** 时段里开始的真实访问。 */
 	private static function load_visits( array $r ): array {
@@ -203,6 +206,99 @@ final class Data_Review {
 			);
 		}
 		return $out;
+	}
+
+	/**
+	 * 时段里下的单的支付结果（店主 2026-11-14：整站分析要把支付失败算进去，还要能看出哪个时段容易失败）。
+	 *
+	 * 一单一行，带下单那次访问的属性（州、城市、设备、上网方式），这样可以按任意维度看成功率。
+	 * 结果口径见 Data_Cockpit::payment_outcome()：被拒之后订单会被超时取消覆盖，所以优先看支付网关记的尝试。
+	 *
+	 * @return array<int,array{outcome:string,created_ms:int,total:float,visit:?array}>
+	 */
+	public static function load_payments( array $r ): array {
+		global $wpdb;
+		if ( ! function_exists( 'wc_get_orders' ) ) {
+			return array();
+		}
+		$ids = (array) wc_get_orders( array( 'status' => array( 'failed', 'cancelled', 'pending', 'on-hold', 'processing', 'completed' ), 'limit' => 300, 'type' => 'shop_order', 'date_created' => intdiv( $r['from'], 1000 ) . '...' . intdiv( $r['to'], 1000 ), 'return' => 'ids' ) );
+		$orders = array();
+		foreach ( $ids as $id ) {
+			$o = wc_get_order( $id );
+			if ( ! $o instanceof \WC_Order || self::is_test_order( $o ) ) {
+				continue;
+			}
+			$outcome = \PeptideCore\Admin\Data_Cockpit::payment_outcome( $o->get_meta( '_pc_panapay_sessions' ), $o->get_status() );
+			if ( 'none' === $outcome ) {
+				continue;
+			}
+			$created          = $o->get_date_created();
+			$orders[ (int) $id ] = array( 'outcome' => $outcome, 'created_ms' => $created ? $created->getTimestamp() * 1000 : 0, 'total' => (float) $o->get_total(), 'visit' => null );
+		}
+		if ( ! $orders ) {
+			return array();
+		}
+		// 下单那次访问一次查完，别一单一条 SQL。
+		$in = implode( ',', array_map( 'intval', array_keys( $orders ) ) );
+		foreach ( (array) $wpdb->get_results( 'SELECT ' . self::VISIT_COLS . ', v.order_id FROM ' . TS::table( 'visits' ) . ' v JOIN ' . TS::table( 'visitors' ) . " p ON p.id = v.visitor_id WHERE v.order_id IN ({$in}) ORDER BY v.stage ASC, v.id ASC", ARRAY_A ) as $row ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$oid = (int) $row['order_id'];
+			if ( isset( $orders[ $oid ] ) ) {
+				$orders[ $oid ]['visit'] = $row; // 升序排，留下的是 stage 最高的那次
+			}
+		}
+		return array_values( $orders );
+	}
+
+	/** 支付结果能按哪些维度看。 */
+	public const PAY_DIMS = array( 'hour' => '几点（美国中部）', 'weekday' => '星期几', 'state' => '美国各州', 'network' => '上网方式', 'os' => '手机系统', 'in_app' => 'App 内 / 浏览器', 'amount' => '订单金额' );
+
+	/**
+	 * 支付结果按维度分组（纯函数）。
+	 *
+	 * @param array  $rows load_payments() 的结果
+	 * @param string $dim  PAY_DIMS 的 key
+	 * @return array<string,array{label:string,paid:int,failed:int,abandoned:int,total:int,rate:?float,lost:float}>
+	 */
+	public static function payment_by( array $rows, string $dim ): array {
+		$out = array();
+		foreach ( $rows as $o ) {
+			$k = self::pay_key( $o, $dim );
+			$out[ $k ] = $out[ $k ] ?? array( 'label' => $k, 'paid' => 0, 'failed' => 0, 'abandoned' => 0, 'total' => 0, 'rate' => null, 'lost' => 0.0 );
+			++$out[ $k ][ $o['outcome'] ];
+			++$out[ $k ]['total'];
+			if ( 'paid' !== $o['outcome'] ) {
+				$out[ $k ]['lost'] += (float) $o['total'];
+			}
+		}
+		foreach ( $out as $k => $r ) {
+			$out[ $k ]['rate'] = $r['total'] ? (float) $r['paid'] / (float) $r['total'] : null; // 两个整数整除时 PHP 会返回 int，统一成 float
+		}
+		if ( 'hour' === $dim ) {
+			ksort( $out );
+		} elseif ( 'weekday' === $dim ) {
+			$order = array_flip( array( '周一', '周二', '周三', '周四', '周五', '周六', '周日' ) );
+			uksort( $out, static fn( $a, $b ) => ( $order[ $a ] ?? 9 ) <=> ( $order[ $b ] ?? 9 ) );
+		} elseif ( 'amount' === $dim ) {
+			$order = array_flip( array( '$100 以下', '$100–200', '$200–400', '$400 以上' ) );
+			uksort( $out, static fn( $a, $b ) => ( $order[ $a ] ?? 9 ) <=> ( $order[ $b ] ?? 9 ) );
+		} else {
+			uasort( $out, static fn( $a, $b ) => array( $b['total'], $b['failed'] ) <=> array( $a['total'], $a['failed'] ) );
+		}
+		return $out;
+	}
+
+	/** 一单落在支付维度的哪一行。没追踪到访问时，时段按下单时间算，其余归“查不到”。 */
+	private static function pay_key( array $o, string $dim ): string {
+		$v = $o['visit'];
+		if ( 'amount' === $dim ) {
+			$t = (float) $o['total'];
+			return $t < 100 ? '$100 以下' : ( $t < 200 ? '$100–200' : ( $t < 400 ? '$200–400' : '$400 以上' ) );
+		}
+		if ( in_array( $dim, array( 'hour', 'weekday' ), true ) ) {
+			$ms = $v && ! empty( $v['start_ms'] ) ? (int) $v['start_ms'] : (int) $o['created_ms'];
+			return self::dim_key( $dim, array( 'start_ms' => $ms ) );
+		}
+		return $v ? self::dim_key( $dim, $v ) : '查不到（没追踪到访问）';
 	}
 
 	/** 一段时间的原始数据。 */
@@ -421,7 +517,17 @@ final class Data_Review {
 			case 'in_app':
 				return '' !== (string) $v['in_app'] ? strtoupper( (string) $v['in_app'] ) . ' App 内' : '普通浏览器';
 			case 'state':
-				return '' !== (string) $v['geo_region'] ? (string) $v['geo_region'] : '未知';
+				$region = (string) ( $v['geo_region'] ?? '' );
+				return '' !== $region ? \PeptideCore\Tracking\Plain_Words::region( $region ) : '未知';
+			case 'city':
+				$city = (string) ( $v['geo_city'] ?? '' );
+				return '' !== $city ? trim( \PeptideCore\Tracking\Plain_Words::region( (string) ( $v['geo_region'] ?? '' ) ) . ' ' . $city ) : '未知';
+			case 'network':
+				$net = \PeptideCore\Tracking\Plain_Words::network( (string) ( $v['isp'] ?? '' ), (string) ( $v['ip_type'] ?? '' ) )[0];
+				return '' !== $net ? $net : '查不到';
+			case 'language':
+				$lang = \PeptideCore\Tracking\Plain_Words::language( (string) ( $v['language'] ?? '' ) );
+				return '' !== $lang ? $lang : '未知';
 			case 'newret':
 				return (int) $v['first_visit_id'] === (int) $v['id'] ? '新客（第一次来）' : '回访';
 			case 'hour':
@@ -560,7 +666,7 @@ final class Data_Review {
 	}
 
 	public static function ratio( int $a, int $b ): ?float {
-		return $b > 0 ? $a / $b : null;
+		return $b > 0 ? (float) $a / (float) $b : null;
 	}
 
 	/** 和上一段比：[文字, good|bad|flat]。 */
@@ -598,6 +704,8 @@ final class Data_Review {
 		$key = isset( self::RANGES[ $key ] ) ? $key : '7d';
 		$dim = isset( $_GET['dim'] ) ? sanitize_key( wp_unslash( $_GET['dim'] ) ) : 'creative'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		$dim = isset( self::DIMS[ $dim ] ) ? $dim : 'creative';
+		$pay = isset( $_GET['pay'] ) ? sanitize_key( wp_unslash( $_GET['pay'] ) ) : 'hour'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$pay = isset( self::PAY_DIMS[ $pay ] ) ? $pay : 'hour';
 		$now = (int) floor( microtime( true ) * 1000 );
 
 		$r      = self::range( self::RANGES[ $key ], $now );
@@ -658,6 +766,8 @@ final class Data_Review {
 			echo self::dim_table( self::dim_rows( $p, $dim, $ads ), $dim ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 		echo '</section>';
+		$pay_rows = self::load_payments( $r );
+		echo '<section class="pc-rv-card" id="pc-rv-pay"><h2>支付结果：钱有没有真收到</h2>' . self::payment_html( $pay_rows, $pay, self::SLUG, array( 'range' => $key, 'dim' => $dim ) ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '<p class="pc-rv-foot">更细的报表：<a href="' . esc_url( admin_url( 'admin.php?page=pc-data-operations' ) ) . '">运营数据（旧版明细）</a> · <a href="' . esc_url( admin_url( 'admin.php?page=pc-data-conversion' ) ) . '">转化率详情</a> · <a href="' . esc_url( admin_url( 'admin.php?page=pc-creatives-board' ) ) . '">素材看板</a></p>';
 		echo '</div>';
 	}
@@ -761,7 +871,48 @@ final class Data_Review {
 		return $h . '</tbody></table></div><p class="pc-rv-help">订单按首次点击归到素材（直接回访下单的也算回第一次带它进来的素材）。到站率 = 进站访客 ÷ Meta 链接点击，低于 60% 说明点了广告没打开页面（加载慢或被拦）。疲劳 = 前 5 天 ROAS 不错、最近 2 天掉了一半以上。</p>';
 	}
 
-	private static function dim_table( array $rows, string $dim ): string {
+	/**
+	 * 支付结果：一块独立的卡片，可按时段 / 星期 / 州 / 上网方式 / 系统 / App 内 / 金额切换。
+	 * 成功率明显低于全店平均、且样本够的行标红——那就是“哪个时段 / 哪种人容易失败”。
+	 */
+	public static function payment_html( array $rows, string $dim, string $page, array $url_args ): string {
+		$all    = array( 'paid' => 0, 'failed' => 0, 'abandoned' => 0 );
+		foreach ( $rows as $o ) {
+			++$all[ $o['outcome'] ];
+		}
+		$n = array_sum( $all );
+		if ( ! $n ) {
+			return '<p class="pc-rv-empty">这段时间没有进到支付这一步的订单。</p>';
+		}
+		$avg  = $all['paid'] / $n;
+		$lost = 0.0;
+		foreach ( $rows as $o ) {
+			$lost += 'paid' !== $o['outcome'] ? (float) $o['total'] : 0.0;
+		}
+		$h = '<div class="pc-rv-kpis pc-rv-paykpis">';
+		$h .= self::kpi( '付成了', (string) $all['paid'], array( '', 'flat' ) );
+		$h .= self::kpi( '被拒', (string) $all['failed'], array( '', $all['failed'] ? 'bad' : 'flat' ), '支付通道明确拒付。订单列表里有些显示“已取消”，那是被拒之后超时取消的' );
+		$h .= self::kpi( '打开支付页没付', (string) $all['abandoned'], array( '', $all['abandoned'] ? 'bad' : 'flat' ), '客户点了付款、支付页也打开了，然后没再回来' );
+		$h .= self::kpi( '成功率', self::pct( $avg, 0 ), array( '', $avg >= 0.6 ? 'good' : 'bad' ) );
+		$h .= self::kpi( '没收到的钱', self::money( $lost ), array( '', $lost > 0 ? 'bad' : 'flat' ), '这些单如果都付成了会是多少' );
+		$h .= '</div><div class="pc-rv-dimtabs">';
+		foreach ( self::PAY_DIMS as $k => $label ) {
+			$h .= '<a class="' . ( $k === $dim ? 'is-on' : '' ) . '" href="' . esc_url( add_query_arg( array_merge( $url_args, array( 'page' => $page, 'pay' => $k ) ), admin_url( 'admin.php' ) ) . '#pc-rv-pay' ) . '">' . esc_html( $label ) . '</a>';
+		}
+		$h .= '</div><div class="pc-rv-tablewrap"><table class="pc-rv-table"><thead><tr><th>' . esc_html( self::PAY_DIMS[ $dim ] ) . '</th><th>下单</th><th>付成了</th><th>被拒</th><th>没付</th><th>成功率</th><th>没收到的钱</th></tr></thead><tbody>';
+		$worst = '';
+		foreach ( self::payment_by( $rows, $dim ) as $r ) {
+			// 样本至少 3 单，成功率比全店平均低 20 个点以上才标红，避免一两单就下结论。
+			$bad    = $r['total'] >= 3 && null !== $r['rate'] && $r['rate'] < $avg - 0.2;
+			$worst  = $bad && '' === $worst ? (string) $r['label'] : $worst;
+			$h     .= '<tr' . ( $bad ? ' class="is-bad-row"' : '' ) . '><td>' . esc_html( $r['label'] ) . '</td><td>' . $r['total'] . '</td><td>' . $r['paid'] . '</td><td>' . $r['failed'] . '</td><td>' . $r['abandoned'] . '</td><td class="' . ( $bad ? 'is-bad' : '' ) . '">' . esc_html( self::pct( $r['rate'], 0 ) ) . '</td><td>' . esc_html( self::money( $r['lost'] ) ) . '</td></tr>';
+		}
+		$h .= '</tbody></table></div>';
+		$h .= '<p class="pc-rv-help">' . ( '' !== $worst ? '标红 = 这一行成功率比全店平均低 20 个点以上（至少 3 单），最差的是「' . esc_html( $worst ) . '」。' : '没有哪一行明显更差（标红要求至少 3 单、且比平均低 20 个点）。' ) . '时段按客户进站时间算，没追踪到访问的按下单时间。具体拒付原因要找支付通道要。</p>';
+		return $h;
+	}
+
+	public static function dim_table( array $rows, string $dim ): string {
 		if ( ! $rows ) {
 			return '<p class="pc-rv-empty">这段时间没有访客。</p>';
 		}
@@ -812,6 +963,8 @@ final class Data_Review {
 .pc-rv-table{width:100%;border-collapse:collapse;font-size:13px}.pc-rv-table th{text-align:left;font-weight:600;color:var(--rv-muted);font-size:12px;border-bottom:1px solid var(--rv-line);padding:6px 8px;white-space:nowrap}
 .pc-rv-table td{border-bottom:1px solid #f1f1f1;padding:8px;vertical-align:middle;font-variant-numeric:tabular-nums}
 .pc-rv-table .is-good{color:var(--rv-green)}.pc-rv-table .is-bad{color:var(--rv-red)}
+.pc-rv-table tr.is-bad-row td{background:#fdf3f3}
+.pc-rv-paykpis{margin-bottom:12px}
 .pc-rv-cr{display:flex;gap:8px;align-items:center}.pc-rv-cr img{width:40px;height:40px;border-radius:6px;object-fit:cover}.pc-rv-cr small{display:block;color:var(--rv-muted);font-size:11px;max-width:160px}
 .pc-rv-why{display:block;font-size:11px;color:var(--rv-muted);margin-top:2px;max-width:220px}
 .pc-rv-empty{color:var(--rv-muted)}
