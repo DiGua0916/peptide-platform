@@ -89,7 +89,18 @@
 | --- | --- | --- |
 | 访客追踪（总后台设置，`peptide_core_tracking.enabled`） | 6 家店都开着 | 不变（新代码不写这个选项） |
 | `peptide_core_m6_mode` | 按代码默认是 `off`；**线上实际值 F4 没有核对过**，请 F1 发布前只读看一下：`wp option get peptide_core_m6_mode`（没有这个选项就是 off） | 不变 |
-| `peptide_core_track_ads`、`peptide_core_buyer_data_layout`、`peptide_core_daily_abandoned`、`pc_product_activity` | 没有 | 没有（不设） |
+| `peptide_core_track_ads`、`peptide_core_buyer_data_layout` | 没有 | 没有（不设） |
+| `peptide_core_daily_abandoned`（每日汇总带弃单数） | 没有 | 发布时不设；**F4 发布后，所有者在 F1 那里确认，再逐店打开**（见下面开关计划） |
+| `pc_product_activity`（商品“看过 / 已加购”） | 没有 | 没有（不设）。所有者 11-13 定：商品弹窗里的“看过 / 已加购”先关着，这次不打开 |
+
+### 开关计划（所有者 11-13 定）
+
+1. **每日汇总带弃单数**：总后台报表的三列（`pchq_m10_extras`，F3）在 F4 上线后打开，弃单那一列的数来自这个开关。所以 F4 发布、核对完之后，经所有者在 F1 那里确认，F1 逐店执行 `wp option update peptide_core_daily_abandoned on`（6 家店；先试点店 s0006），再打开总后台的三列。没开这个开关的店，总后台收到的每日汇总里没有弃单几项，那一列是空的，不会是 0。
+   - 打开前要注意 5.3 第 7 条：店里有退款时，弃单列表（`Recovery_Items::list()`，日常会话的）在 HPOS 下会出错，每日汇总那几项也就带不上，那家店的弃单列会是空的。最好先由日常会话修掉（一行），或者打开后在总后台看一眼 6 家店的弃单列有没有数。
+   - 关回去：`wp option delete peptide_core_daily_abandoned`，立刻生效，不改数据。
+2. **商品“看过 / 已加购”接口**：这次不打开（`pc_product_activity` 不设，接口不注册）。
+3. 其余新开关（按广告拆分、投手合并页同屏）不打开；M6 开关按 5.1 的影子期另外安排。
+
 
 ## 4. 回退
 
