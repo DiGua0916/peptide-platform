@@ -1619,8 +1619,9 @@ final class Data_Pages {
 			echo '<div class="wrap pc-data-wrap"><h1>' . esc_html__( 'Data', 'peptide-core' ) . '</h1>' . self::buyer_links() . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buyer_links() 里已经转义。
 			return;
 		}
-		// 合并页：报表上面多一行页签；其余页面的输出和以前一个字节都不差。
-		echo '<div class="wrap pc-data-wrap">' . ( '' !== $buyer_page && 'tabs' === self::buyer_layout() ? self::buyer_tabs( $buyer_page ) : '' ) . '<h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
+		// 合并页：报表上面多一行页签；其余页面的输出和以前一个字节都不差。只有投手合并页在同屏布局下不出页签
+		// （两张报表都在页面上）；管理员的“页面与落地页”（主线 11-14 借用了同一套页签）不受同屏布局开关影响。
+		echo '<div class="wrap pc-data-wrap">' . ( '' !== $buyer_page && count( self::buyer_keys( $buyer_page, $key ) ) < 2 ? self::buyer_tabs( $buyer_page ) : '' ) . '<h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
 		if ( is_callable( array( \PeptideCore\Tracking\Country_Provider::class, 'render_attribution' ) ) ) { \PeptideCore\Tracking\Country_Provider::render_attribution(); }
 	}
 }

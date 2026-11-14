@@ -162,4 +162,10 @@ m6_check( 'buyer: English labels for other locales', array( 'pc-data-funnel-sour
 $GLOBALS['t_user'] = new WP_User( 9, array( 'subscriber' ), array() );
 m6_check( 'no capability, no output', '' === $render( array( 'page' => 'pc-data-funnel-sources' ) ) );
 
+// 主线 11-14 的“页面与落地页”借用了投手合并页的页签：同屏布局开关只管投手的两页，这一页照样有页签。
+$GLOBALS['t_user'] = $admin;
+$GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] = 'stacked';
+m6_check( 'admin: pages-and-landing keeps its tabs even when the buyer layout is stacked', str_contains( $render( array( 'page' => 'pc-data-pages-landing', 'tab' => 'pages' ) ), 'nav-tab-active' ) );
+unset( $GLOBALS['m6_options'][ Data_Pages::BUYER_LAYOUT_OPTION ] );
+
 echo 'PASS ', $GLOBALS['m6_passed'], " buyer data pages (ST-05) assertions\n";
