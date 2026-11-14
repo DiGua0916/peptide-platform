@@ -95,7 +95,7 @@
 
 ### 开关计划（所有者 11-13 定）
 
-1. **每日汇总带弃单数**：总后台报表的三列（`pchq_m10_extras`，F3）在 F4 上线后打开，弃单那一列的数来自这个开关。所以 F4 发布、核对完之后，经所有者在 F1 那里确认，F1 逐店执行 `wp option update peptide_core_daily_abandoned on`（6 家店；先试点店 s0006），再打开总后台的三列。没开这个开关的店，总后台收到的每日汇总里没有弃单几项，那一列是空的，不会是 0。
+1. **每日汇总带弃单数**：总后台报表的三列（`pchq_m10_extras`，F3）在 F4 上线后打开，弃单那一列的数来自这个开关。所以 F4 发布、核对完之后，经所有者在 F1 那里确认，F1 逐店执行 `wp option update peptide_core_daily_abandoned on`（6 家店；先试点店 s0001 主店，所有者在 F1 那边定的，再其余 5 家），再打开总后台的三列。没开这个开关的店，总后台收到的每日汇总里没有弃单几项，那一列是空的，不会是 0。
    - 打开前要注意 5.3 第 7 条：店里有退款时，弃单列表（`Recovery_Items::list()`，日常会话的）在 HPOS 下会出错，每日汇总那几项也就带不上，那家店的弃单列会是空的。最好先由日常会话修掉（一行），或者打开后在总后台看一眼 6 家店的弃单列有没有数。
    - 关回去：`wp option delete peptide_core_daily_abandoned`，立刻生效，不改数据。
 2. **商品“看过 / 已加购”接口**：这次不打开（`pc_product_activity` 不设，接口不注册）。
@@ -114,7 +114,7 @@
 
 ### 5.1 影子期
 
-1. 所有者同意后，F1 逐店 `wp option update peptide_core_m6_mode shadow`（这是改开关，影子档下页面显示的仍是旧数字）。建议先试点店 s0006，两天没问题再其余 5 家。
+1. 所有者同意后，F1 逐店 `wp option update peptide_core_m6_mode shadow`（这是改开关，影子档下页面显示的仍是旧数字）。先试点店 s0001（主店，所有者在 F1 那边定的），两天没问题再其余 5 家。
 2. **观察 7 天**（至少覆盖一个完整的周末；订单少的店延长到 14 天，保证每家至少有 30 张付款订单可比）。
 3. 每天看两样（手册第 3 节的命令）：
    - 对账日志 `Metrics_Switch::log()`：`overview.totals`、`operations.kpis`、`overview.recovery`、`reports.paid_orders`、`reports.conversion`、`reports.visitor_funnel`、`reports.test_order`。每一项的差异都要能用手册第 3 节表里的原因解释；`reports.test_order` 应该一直没有记录。
