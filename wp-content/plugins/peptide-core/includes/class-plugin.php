@@ -68,6 +68,7 @@ final class Plugin {
 		Postal_Assist::register_hooks();
 		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();
+		Cloak_Trust::register_hooks(); // 流量斗篷“已购用户信任 IP”（2026-11-14）
 		Modules\Product_Broadcast::register_hooks();
 		Api\Product_Broadcast_Controller::register_hooks();
 		Activity\Mount::register_hooks();
@@ -192,6 +193,8 @@ final class Plugin {
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();
+			Admin\Data_Review::register_hooks();
+			Admin\Data_Cockpit::register_hooks();
 			Admin\Domains_Page::register_hooks();
 			Admin\Blog_Admin::register_hooks();
 			Admin\Media_Page::register_hooks();

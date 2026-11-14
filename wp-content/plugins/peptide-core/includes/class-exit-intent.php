@@ -478,8 +478,16 @@ final class Exit_Intent {
 		if ( ! self::installed() ) {
 			self::install();
 		}
-		$t = self::table();
-		$wpdb->query( $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared, WordPress.DB.DirectDatabaseQuery
+		$t   = self::table();
+		$sql = $wpdb->prepare( "INSERT INTO {$t} (day, app, event, count, amount) VALUES (%s, %s, %s, 1, %f) ON DUPLICATE KEY UPDATE count = count + 1, amount = amount + VALUES(amount)", $day ?? wp_date( 'Y-m-d' ), self::APP, $event, $amount ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared
+		$suppress = $wpdb->suppress_errors( true );
+		$ok       = $wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		// 2026-11-14：子店从模板复制时带了“已建表”标记却没有表，记录一直静默失败。表不在就建表再记一次。
+		if ( false === $ok && false !== stripos( (string) $wpdb->last_error, "doesn't exist" ) ) {
+			self::install();
+			$wpdb->query( $sql ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared, WordPress.DB.DirectDatabaseQuery
+		}
+		$wpdb->suppress_errors( $suppress );
 	}
 
 	/** @return array<string,array{count:int,amount:float}> 最近 N 天（含今天）每个事件的合计。 */

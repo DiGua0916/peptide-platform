@@ -33,7 +33,7 @@ final class Realtime_Dimensions {
 			foreach ( self::PANELS as $key ) {
 				$raw = $params[ $key ] ?? null;
 				if ( ! array_key_exists( $key, $params ) ) { $windows[ $key ] = 10; }
-				elseif ( ( is_int( $raw ) || is_string( $raw ) ) && in_array( (string) $raw, array( '10', '20', '30' ), true ) ) { $windows[ $key ] = (int) $raw; }
+				elseif ( ( is_int( $raw ) || is_string( $raw ) ) && in_array( (string) $raw, array( '10', '20', '30', '1440' ), true ) /* 1440 = 一天（2026-11-14） */ ) { $windows[ $key ] = (int) $raw; }
 				else { $errors[ $key ] = 'invalid_format'; }
 			}
 		}
