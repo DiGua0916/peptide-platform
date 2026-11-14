@@ -6,9 +6,9 @@
 
 **发什么**
 
-- 分支 `claude/m9-buyer-admin-940389`，最后一笔代码提交是 `758fba8`（11-14，修多规格弹窗的库存短句，见第九节），之后只有文档。基于主线 `3a297df`（11-13 15:01–18:28 UTC 上线的 14 个提交，合并提交 `1ce0d24`，0 冲突）。`origin/main` 上另有一笔 `ee0774f`（实时面板时区，数据会话的，不在 `3a297df` 里），这次没合。
+- 分支 `claude/m9-buyer-admin-940389`，**11-14 起冻结**（见第十节）。基于主线 `02482ce2`（合并提交 `bc804e68`，0 冲突）。最后一笔插件 / 主题代码提交是 `7245ddb`（导出默认带邮箱），之后是比对工具 `tools/release-compare/`（不随插件发布）和文档。
 - 组件：核心插件 `peptide-core`、主题 `peptide-site`。`peptide-panapay`、`peptide-hq` 和线上一样，没有改。
-- 和线上（`3a297df`）相比动了 23 个代码文件（测试另算，+1251 −1055 行）：改 15 个；新增 5 个：`includes/admin/class-buyer-order-export.php`、主题 `inc/front-speed.php`、`inc/product-activity.php`、`inc/product-trust.php`、`assets/product-activity.js`；**删除 3 个**（M11 方案 A 下线的）：`includes/class-order-lookup.php`、`assets/buyer-status.js`、`assets/buyer-status.css`。整目录替换会把它们去掉；万一留在服务器上也无害（没有代码再加载或引用它们）。
+- 和主线（`02482ce2`）相比动了 23 个插件 / 主题代码文件（测试另算）：改 15 个；新增 5 个：`includes/admin/class-buyer-order-export.php`、主题 `inc/front-speed.php`、`inc/product-activity.php`、`inc/product-trust.php`、`assets/product-activity.js`；**删除 3 个**（M11 方案 A 下线的）：`includes/class-order-lookup.php`、`assets/buyer-status.js`、`assets/buyer-status.css`。整目录替换会把它们去掉；万一留在服务器上也无害（没有代码再加载或引用它们）。
 - 入口文件：核心插件入口和 `class-plugin.php` 没有改。主题 `functions.php` 多 3 行 require（`product-trust`、`product-activity`、`front-speed`），三个文件都在包里；整目录替换就满足“入口和类一起发”。
 - 表结构：没有新表、没有新列、没有版本号变化。发布后第一次请求会给投手角色 `pc_media_buyer` 补一项只读权限 `pc_view_campaigns`（写一次 `wp_user_roles`），这是唯一的数据库写入。
 - 热修复包 A（`0840c5d`；F1 的发布分支现在是 `origin/claude/m1-pkg2-hotfix-a` 的 `60de32c`）里“投手打开订单详情不再 403”的那部分，和这个分支里对应的部分逐行相同：11-14 把 `60de32c` 试合进来 0 冲突，投手相关的两个文件合完一个字都没变。主线 `3a297df` 里还没有包 A，所以线上投手点开订单仍是 403。订单这块，这次发布**只**比线上多包 A 这一处（第八节）。
@@ -58,6 +58,7 @@
 **回退**
 
 - 代码：用发布工具把这次换过的目录换回去。退回后，投手角色上多出的 `pc_view_campaigns` 留着不用删：旧代码不认识它，投手打开营销页面仍是 403（本机实测，见第三节）。按“数据库升级不回退”的约定也不去改。
+- 一定要去掉 `pc_view_campaigns` 时：**先退回代码，再删**，每家店 `wp cap remove pc_media_buyer pc_view_campaigns`，再 `wp cap list pc_media_buyer` 确认只剩 `read`、`view_admin_dashboard`。新代码还在时删，下一次请求就会被补回去（11-14 本机实测：新代码下删了再读一次又出现；换回主线 `02482ce2` 的代码后删掉，再读两次都没有）。
 - 开关：打开某个功能后有问题，关开关即可，不动代码（缓存页最多 5 分钟）。这次手动打开的两个：`wp option delete pc_buyer_no_palette`、`wp option delete pc_trust_badges`。退回旧代码时这两个选项留着也无害（线上旧代码不认识它们）。
 - 如果发布后打开过 `pc_buyer_recognition`，退回旧代码之前先关掉它：旧代码在开关打开时会显示已下线的物流卡片和查订单页。
 
@@ -223,3 +224,24 @@
 - 修法（`assets/product-dialog-meta.js`，+9 行）：在 WooCommerce 自己的 `show_variation`、`hide_variation`、`reset_data` 事件上再读一次。文案、样式、换规格时那 300 毫秒里先把旧数字藏起来的做法都没变；简单商品不受影响（不挂这几个事件）。
 - 本机验证（SQLite 副本，应用内浏览器）：修之前直接打开 3 次全空；修之后直接打开 3 个多规格商品和商品链接共 6 次全部显示；在弹窗里依次换 3 个规格，换的那 300 毫秒里短句是隐藏的，之后显示新规格自己的库存（50 / 49 / 50）；关掉弹窗再开另一个商品正常，没有多余的短句。新用例 `product-dialog-meta.cjs`（8 项）在修之后的脚本上通过、在修之前的脚本上失败。44 个地址比对结果不变（这个文件只是脚本内容变了）。
 - **沙盒里请 F1 验**（手机，6 家店任选一家有多规格商品的）：① 用广告链接 `/product/<多规格商品>/` 打开 5 次，每次弹窗里规格下面都有 “N in stock”；② 在弹窗里换规格，短句先消失一下再变成新规格的数字，不会停在旧数字上；③ 简单商品照常显示；④ 在新标签页里打开商品链接、过几秒再切过去看，短句也在。
+
+## 十、新的发布流程和分支冻结（2026-11-14）
+
+所有者改了发布流程（原话“按这个改”）：5 个模块分支不再一个一个发包，由 F1 一起合进主线，**开关全关**，整目录发一次；以后新功能上线就是改开关。对 F5 的影响：
+
+- 分支 `claude/m9-buyer-admin-940389` 已合最新主线 `02482ce2`（合并 `bc804e68`），**从现在起冻结**：F1 告诉我合并完成之前不再加功能；修 bug 会先告诉总协调会话。
+- 第一节“开关状态”里的手动改开关（发布时 `pc_buyer_no_palette`、发布后 `pc_trust_badges`；`pc_buyer_recognition`、`pc_front_speed` 先试点店 s0001）都在整目录发布（开关全关）**之后**按所有者确认执行，顺序不变。
+- 发布本身对数据库只写一处：投手角色补 `pc_view_campaigns`（回退见第一节“回退”）。
+
+**F1 在沙盒复验：44 个地址的比对怎么跑**
+
+工具在 `tools/release-compare/`（`prepare.php`、`compare.py`、`cleanup.php`，说明见同目录 `README.md`）。要点：
+
+1. 沙盒还是旧代码时：`wp eval-file - <配置文件> <投手> <要改密码的投手或 -> <管理员> < tools/release-compare/prepare.php`。它给三个账号各开一个 2 小时的会话，把 cookie 和这份库里的商品 / 订单 / 专辑编号写进配置文件（权限 600，屏幕不打印）。
+2. `python3 compare.py fetch <配置> old1`、再取 `old2`，`diff old1 old2` 应为 44 / 44（量噪音）。
+3. 整目录发布新代码（开关全关）后 `fetch <配置> new`，`diff old1 new --show 5`。
+4. `wp eval-file - <配置文件> < tools/release-compare/cleanup.php` 作废会话，删掉配置文件。
+
+11-14 用这套工具在本机副本上实跑（旧 = 主线 `02482ce2`，新 = F5 分支 `bc804e68` 之后）：旧代码两遍 44 / 44 一致；新旧比 **40 / 44**，4 处差异和第二节相同（投手订单详情 403 → 200；投手订单列表、原生订单页的能力列表多 `pc_view_campaigns`；`buyer/status` 200 → 404）。五个模块合在一起之后还会有别的模块带来的差异，F5 已知的是 F2 只读营销活动让投手菜单多一项“营销活动”（20 个投手地址都会显示差异）、`buyer:pc-promotions` 403 → 200、投手首页多活动卡片，详见工具说明。
+
+**合 `02482ce2` 时核对的重复**：主线这 12 个提交是数据菜单整理（管理员数据菜单只留五项）、复盘页、驾驶舱、访客并进数据、说法改直白。和 F5 只在 `class-admin-menus.php` 有交集（菜单排序那几行，主线的改动原样保留）；投手的数据页由数据模块自己的 `buyer_view()` 处理，主线新加的 `m6-buyer-data-pages-pure`、`data-cockpit-pure`、`data-review-pure` 在合并后的分支上都通过。用例：F5 全过；主题 PHP 33、`.cjs` 59 全过；纯测试 98 个失败 12 个，和主线同一份名单；默认套件 91 过 2 败（`mail-source-observations`、`data-product-created`，都是主线原有）。
