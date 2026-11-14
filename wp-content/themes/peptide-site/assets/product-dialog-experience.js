@@ -232,6 +232,25 @@
     const zoom = node('span', 'vc-dialog-zoom', '↗'); zoom.setAttribute('aria-hidden', 'true');
     productSlide.append(productImg, emptyImage, ribbon, zoom); productSlide.setAttribute('aria-label', 'Enlarge product image');
     track.append(productSlide, reportSlide); media.append(track);
+    // Swipe hint (phones): one dot per visible slide, the current one filled.
+    // Hidden when there is only the product image (no report slide).
+    const dots = node('div', 'vc-dialog-dots'); dots.hidden = true;
+    const dotFor = (slide, label) => { const dot = button('vc-dialog-dot', '', () => track.scrollTo({left:slide.offsetLeft-track.offsetLeft,behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth'})); dot.setAttribute('aria-label', label); return dot; };
+    const dotPairs = [[productSlide, dotFor(productSlide, 'Show product image')], [reportSlide, dotFor(reportSlide, 'Show report')]];
+    dots.append(...dotPairs.map(pair => pair[1])); media.append(dots);
+    let dotFrame = 0;
+    const syncDots = () => {
+      dotFrame = 0;
+      const shown = dotPairs.filter(([slide]) => !slide.hidden && !slide.disabled);
+      dots.hidden = shown.length < 2;
+      if (dots.hidden) return;
+      const left = track.getBoundingClientRect().left;
+      let current = shown[0];
+      for (const pair of shown) { if (Math.abs(pair[0].getBoundingClientRect().left-left) < Math.abs(current[0].getBoundingClientRect().left-left)) current = pair; }
+      for (const pair of dotPairs) { pair[1].hidden = !shown.includes(pair); pair[1].setAttribute('aria-current', pair === current ? 'true' : 'false'); }
+    };
+    track.addEventListener('scroll', () => { if (!dotFrame) dotFrame = requestAnimationFrame(syncDots); }, {passive:true,signal});
+    if (typeof MutationObserver === 'function') { const watch = new MutationObserver(syncDots); watch.observe(reportSlide,{attributes:true,attributeFilter:['hidden','disabled']}); watch.observe(productSlide,{attributes:true,attributeFilter:['hidden','disabled']}); signal?.addEventListener('abort',() => watch.disconnect(),{once:true}); }
     const caption = node('p', 'vc-dialog-media-caption'); media.append(caption);
     const gallery = createGalleryPlayback({track,slides:[productSlide,reportSlide],dialog,media,signal,isActive:() => !root.vcHomeSelectionPending && ![...document.querySelectorAll('dialog[open]')].some(layer => layer !== dialog)});
     restore.move(root.querySelector('.vc-dialog-documents'),null);
