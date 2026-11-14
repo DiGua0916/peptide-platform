@@ -1,6 +1,8 @@
 # M3 / M10 模块发布说明（F3 交给 F1，2026-11-14）
 
-按 F1 首发方案“之后：逐个模块的优化”一节准备。模块顺序 F4 → F2 → F3 → F5，F3 排第三。**本说明不代表可以发布**：发布由 F1 执行，每次要平台所有者确认。
+**2026-11-14 发布流程改了（平台所有者原话“按这个改”）**：5 个模块分支不再一个一个发包，由 F1 一起合进主线，**开关全关**，再整目录发一次；以后新功能上线就是改开关。本分支已合主线 `02482ce2`，**从现在起冻结**：F1 告诉合并完成之前不加功能，修 bug 会先告诉上级会话。冻结时的提交见第一节。
+
+原先按 F1 首发方案“之后：逐个模块的优化”一节准备（模块顺序 F4 → F2 → F3 → F5）；内容仍然适用，只是不再单独发 F3 的包。**本说明不代表可以发布**：发布由 F1 执行，要平台所有者确认。
 
 ## 〇、原则：和线上已有功能重叠的，一律以线上为准
 
@@ -27,7 +29,7 @@
 
 | 项 | 内容 |
 | --- | --- |
-| 分支 / 提交 | `claude/m3-series-361018`，本说明所在的提交（= 主线 `24d1671` + F3 的改动；`24d1671` 已上线。最近一次合并提交 `924eed0`，无冲突） |
+| 分支 / 提交 | `claude/m3-series-361018`，本说明所在的提交（冻结时的提交；= 主线 `02482ce2` + F3 的改动，最后一次合并提交 `d950331f`，无冲突） |
 | 组件 | 店铺 `peptide-core`、总后台 `peptide-hq`。主题、支付插件、运维代理没动 |
 | 代码文件（和线上不同的只有这 7 个） | 店铺：`includes/class-order-report.php`、`includes/class-series-sync.php`；总后台：`includes/class-orders.php`、`includes/class-series-campaigns.php`、`includes/class-series-push.php`、`includes/admin/class-orders-page.php`、`includes/admin/class-report-page.php` |
 | 其余 | 测试（`tests/m3-*`、`tests/m10-*`、`tests/m3-m10-*`）、`tools/catalog/`、文档。共用入口 `class-plugin.php` 和线上相同 |
@@ -122,42 +124,70 @@ wp eval 'echo wp_json_encode(get_option("peptide_core_series")), " cid=", var_ex
 
 | 测试 | 结果 |
 | --- | --- |
-| M3 / M10 纯测试 5 个 | 64 / 35 / 71 / 72 / 50 项全过 |
+| M3 / M10 纯测试 5 个 | 64 / 35 / 71 / 74 / 50 项全过 |
 | 冒烟测试 3 个（本机副本：店铺 WooCommerce 11.2.1、HPOS；总后台 30 家店记录） | 40 / 33 / 104 项全过；总后台那个开关开、关两种状态都覆盖 |
 | 差异报告工具自检 | 7 项全过 |
-| 仓库全部 98 个纯测试 | 线上版（`24d1671`）86 过 / 12 败，发布版 86 过 / 12 败，**是同样的 12 个，没有新增失败**，都不是 M3 / M10 的 |
-| 默认套件 `tests/run-data-observations.cjs` | 线上版（`24d1671`）、发布版都是 82 过 / 2 败（`mail-source-observations`，日常会话的；`data-product-created`，`3a297df` 带进来的），没有新增 |
+| 仓库全部 99 个纯测试 | 线上版（`02482ce2`）87 过 / 12 败，发布版 87 过 / 12 败，**是同样的 12 个，没有新增失败**，都不是 M3 / M10 的 |
+| 默认套件 `tests/run-data-observations.cjs` | 线上版（`02482ce2`）、发布版都是 82 过 / 2 败（`mail-source-observations`，日常会话的；`data-product-created`，`3a297df` 带进来的），没有新增 |
 
 12 个旧失败：peptide-core 的 `client-environment`、`data-dimensions`、`data-product-exposure`、`first-order-offer`；peptide-hq 的 `management-addresses`、`provision-customer-domain`；peptide-panapay 的 `callback-return-status`、`hub-new-account-defaults`、`hub-return-failure-binding`、`hub-return-status-check`、`provider-site-bindings`、`return-cart`（都是 `*-pure`）。
 
 **没有验证的**：MySQL 上的这次比对（本机是 SQLite）；生产 PHP 版本下的耗时。请在沙盒上重跑第七节。
 
-## 七、沙盒上要做的（F1 暂排 11-19 周四北京时间上午，约 1 小时；跟着 F1 的发布顺延）
+## 七、沙盒比对怎么跑（F1 复验用）
 
-“线上版代码”指**沙盒那时的主线**（F1 的打底包和热修复包 A 发出后，就是含这两个包的主线），不是本说明里写的某个旧提交。F3 会在那之前把那时的主线合进本分支，所以“线上版 → 本分支”的差别只剩 F3 的 7 个文件。沙盒用重导的脱敏快照（主店 s0001 + 总后台），F1 导好、换成线上版后通知 F3。
+新流程下，F1 把 5 个分支合进主线后在沙盒复验。F3 这部分要回答一个问题：**合并后的主线（开关全关）和合并前的线上，M3 / M10 的页面和数字是不是一样**。
 
-前提：沙盒有一个总后台和至少一家店，数据是脱敏快照（线上旧版的表结构）。
+- “线上版代码” = 合并前的主线（就是那时生产上跑的版本）。
+- “发布版代码” = F1 合好的主线（含 5 个分支，开关全关）。
+- 沙盒数据 = 重导的脱敏快照（主店 s0001 + 总后台），线上旧版的表结构（`pchq_m10_db = 1`）。
+- 两个脚本都是只读的：不写数据库（自己数写入语句，写在 `meta.json` 的 `writes_during_dump`），不发网络请求。脚本文件取发布版主线里的（本分支已有），放在沙盒上任意位置，用 `wp eval-file` 跑，不用放进插件目录。
 
-1. 沙盒装线上版代码（那时的主线），只读取数（脚本文件取本分支的，放在沙盒上任意位置即可，不用放进插件目录）：
-   `wp eval-file …/peptide-hq/tests/m3-m10-compare-dump.php /tmp/f3/hq-live <起> <止>`；每家店 `wp eval-file …/peptide-core/tests/m3-m10-compare-dump.php /tmp/f3/store-live`
-2. 换成本分支代码，打开总后台任意一页（自动升级），同样取数到 `hq-release`、`store-release`。
-3. `diff -r` 两边。**通过**：`pages/` 下没有任何差别；数据只多新键（`customers / abandoned / abandon_orders / abandon_recovered / abandon_rate / customer_id`）；店铺 `orders_that_would_be_reported_again` 是 0；两个 `meta.json` 的 `writes_during_dump` 都是空的。
-4. 第三节的只读查询前后各跑一次，结果相同（除版本号 1→2）。
-5. 换回那时的主线再取一次，和第 1 步相同；再换回本分支。
-6. 演练手册 `docs/handoffs/m3-m10-sandbox-rehearsal.md` 第 2、4 步（升级重跑、回填）——前两轮已过，这次只确认版本 `1/2`。
+步骤（总后台在总后台目录下跑，店铺在店铺目录下跑；`<F3>` 是脚本所在目录）：
 
+```
+# 1. 沙盒是线上版代码时，先记开关和版本（第三节的三条查询），再取数：
+wp eval-file <F3>/peptide-hq/tests/m3-m10-compare-dump.php   /tmp/f3/hq-live    2026-11-01 2026-11-14
+wp eval-file <F3>/peptide-core/tests/m3-m10-compare-dump.php /tmp/f3/store-live
+
+# 2. 换成发布版代码，打开总后台任意一页（或 wp eval 'echo 1;'），pchq_m10_db 自动从 1 升到 2；再取数：
+wp eval-file <F3>/peptide-hq/tests/m3-m10-compare-dump.php   /tmp/f3/hq-release 2026-11-01 2026-11-14
+wp eval-file <F3>/peptide-core/tests/m3-m10-compare-dump.php /tmp/f3/store-release
+
+# 3. 比：
+diff -r /tmp/f3/hq-live/pages /tmp/f3/hq-release/pages
+diff    /tmp/f3/store-live/data.json /tmp/f3/store-release/data.json
+diff    /tmp/f3/hq-live/data.json /tmp/f3/hq-release/data.json
+```
+
+日期范围选快照里有订单的那几天，两次要用同一个范围。
+
+**通过标准**：
+
+1. `pages/` 下一个差别都没有（系列管理每个系列一页、订单列表、已退款筛选、订单详情、按单号搜索、跨店报表）。
+2. 店铺 `data.json` 完全相同；其中 `orders_that_would_be_reported_again` 是 0（升级后已上报的订单不会重报）。
+3. 总后台 `data.json` 只多这些键：`customers`、`abandoned`、`abandon_orders`、`abandon_recovered`、`abandon_rate`、`customer_id`（开关关着时页面不显示）。别的数字、43 种搜法的结果、筛选、花费、系列和店铺归属都相同。
+4. 两次的 `meta.json` 里 `writes_during_dump` 都是空的；版本从 `1/1/1` 变成 `1/2/1`；`pchq_m10_extras`、`pc_order_report_customer_id` 都是没有（= 关）。
+5. 回退演练（第九节）：换回线上版代码再取一次 `hq-rollback`，`pages/` 和 `hq-live` 相同；再换回发布版。
+
+本机（SQLite）用 `02482ce2` 当线上版跑过一遍，五条都过（本机店铺副本 47 张订单、总后台 10 张，订单和退款是固定造的数据）。沙盒上验的是 MySQL 和真实快照。
+
+旧的演练手册 `docs/handoffs/m3-m10-sandbox-rehearsal.md` 第 2、4 步（升级重跑、回填）前两轮在沙盒已过，这次只确认版本 `1/2`。
 ## 八、发布顺序和发布后核对
 
-- 总后台、店铺谁先都行：开关关着时店铺发的内容和线上一样，旧总后台、新总后台都收。按 F1 的惯例总后台先。
+- 新流程是整目录一次发：总后台、店铺谁先都行（开关关着时店铺上报的内容和线上一样，旧总后台、新总后台都收）。
 - 发布后：总后台打开“订单与退款”和“跨店报表”各一次，看页面和发布前一样（hang- 单号前仍有“#”，报表没有多出列）；第三节的查询再跑一次；巡检里 `series_out_of_sync`、`order_report_lag` 应当照旧。
 
 ## 九、回退
 
-| 情况 | 怎么退 |
-| --- | --- |
-| 发布后有问题 | 换回上一版目录（F1 的发布脚本）。数据库**不用动**：第 2 版多出的列和表，旧代码不读也不受影响（第五节实测）。旧代码会把 `pchq_m10_db` 写回 `1`，下次再发新版时自动重新升级，不会重复加列 |
-| 只是新开关打开后有问题 | `wp option delete pchq_m10_extras` / `wp option delete pc_order_report_customer_id`，立刻回到发布时的样子 |
+这次发布里只有一处会自动改数据库：总后台 `pchq_m10_db` 从 `1` 升到 `2`（代码第一次加载时）。它只做三件事：`pchq_orders` 加一列 `customer_id`（默认空串）、加一个索引 `customer`、新建一张空表 `pchq_abandoned`。不改已有的列，不改、不删任何一行；店铺端没有表结构变化。
 
+| 情况 | 怎么退 | 数据库要不要动 |
+| --- | --- | --- |
+| 发布后发现问题 | 整目录换回上一版（F1 的发布脚本） | **不用动，也不要删列删表。** 旧代码不读多出来的列和表；旧代码加载时看到版本号是 `2`、不等于它的 `1`，会重跑一次它自己的建表（只建缺的，已有的不动）并把版本号写回 `1`。之后照常收订单、标退款、记花费。本机实测：升级 → 回退 → 再升级，订单 / 退款 / 花费行数不变，回退后页面和升级前逐字节相同，回退期间收的订单在再升级后都在 |
+| 回退后再发新版 | 照常发 | 新版看到 `1`，再升一次；列和表已经在，只把版本号写成 `2`，不会重复加列 |
+| 只是打开开关后有问题 | `wp option delete pchq_m10_extras`（总后台）/ `wp option delete pc_order_report_customer_id`（店铺） | 不用。立刻回到发布时的样子 |
+| 极端情况：要把第 2 版的痕迹完全去掉 | 先换回旧代码，再 `ALTER TABLE wp_pchq_orders DROP INDEX customer, DROP COLUMN customer_id; DROP TABLE wp_pchq_abandoned;` | 一般不需要。开关一直关着时 `pchq_abandoned` 是空的、`customer_id` 都是空串，删掉不丢东西；但删之前先确认这一点，并做快照 |
 ## 十、平台所有者已定、按线上保持的两件事（2026-11-14）
 
 平台所有者 2026-11-14 定了（由上级会话转达），都按“以主站为主”保持线上现在的做法，代码不改：
