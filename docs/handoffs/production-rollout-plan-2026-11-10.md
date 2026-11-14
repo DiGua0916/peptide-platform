@@ -874,3 +874,16 @@
 2. 发布记录由工具生成还是仍由我写进本文件；若仍由我写，请把指纹核对结果输出出来。
 3. 发布中途失败或进程被杀时，锁如何释放：查看持锁者、强制解锁的命令，以及锁超时时间。
 4. 应急通道：线上故障且工具不可用时，所有者认可的上线步骤是什么。
+
+### 2026-11-14 开店脚本补上 PC_PANAPAY_DB_HOST（上一节遗留项 1 已闭环）
+所有者指派（经"站点底层优化"会话转达）。解决的是上面"新开店会再踩一次"那条：开店时生成的后台 wp-config 不带 `PC_PANAPAY_DB_HOST`，而后台都装了只加 `p:` 的 `wp-content/db.php`，`Database::open()` 会拒绝运行——这正是 2026-11-14 支付回写中断的成因。
+
+**改了什么**：`admin_create()` 在把 web 配置改成管理通道（`'DB_HOST','127.0.0.1:13361'`）之后，紧跟着插入一行 `define('PC_PANAPAY_DB_HOST',DB_HOST);`，并加了一条 `require(..., 'payment_write_back_configuration')` 断言，漏写就直接开店失败而不是静默上线一个收不到回写的后台。
+
+- 仓库副本：`tools/deployment/provisioning/worker.py`（本次提交）
+- 服务器副本：总后台 54.144.250.46 `/usr/local/lib/vialcove-provision/worker.py`，手工同步，md5 与仓库副本一致 `04465f80764fb2b141538eb13a7a8b6f`
+- 备份：`/usr/local/lib/vialcove-provision/worker.py.bak-20261114-payfix`（改前原件，md5 `db64161ad1289d75555ef5b905b75aeb`）
+- 验证：服务器端 `python3 -m py_compile` 通过；用 s0006 的真实 web 配置字节形式（`define('DB_HOST','localhost');`）做过替换干跑，生成结果正确
+- 该文件不在 5 个组件目录内，`vc-release` 不覆盖、其 `check` 也不会报它，所以属于手工维护项
+
+**未完成**：还没开测试店做端到端验证（开一个店 → 看生成的 wp-config 有这行 → 在该店后台确认一次支付通知回写到位）。按店主"测试一律用主店 s0001，不动子店"的规矩，开新店要先经店主同意，已在等。

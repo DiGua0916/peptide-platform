@@ -792,9 +792,16 @@ def admin_create(r, state, c, secret):
         (t['public'] / 'wp-content/uploads').symlink_to(t['data'] / 'uploads')
     config = response['config']
     config = config.replace("'DB_HOST','localhost'", "'DB_HOST','127.0.0.1:13361'")
+    # wp-content/db.php replaces $wpdb on the admins, so peptide-panapay cannot infer the
+    # write host from the connection any more; it has to be stated explicitly or
+    # Database::open() refuses to run. Omitting this caused the 2026-11-14 write-back outage.
+    config = config.replace(
+        "define('DB_HOST','127.0.0.1:13361');",
+        "define('DB_HOST','127.0.0.1:13361');\ndefine('PC_PANAPAY_DB_HOST',DB_HOST);")
     webdata = str(Path(c['web_data_root']) / t['slug'])
     config = config.replace(webdata, str(t['data']))
     require("'DB_HOST','127.0.0.1:13361'" in config, 'database_channel_configuration')
+    require("define('PC_PANAPAY_DB_HOST',DB_HOST);" in config, 'payment_write_back_configuration')
     write(t['data'] / 'wp-config.php', config, 0o640, t['user'])
     wrapper(t, t['data'] / 'wp-config.php', shared=True)
     certificate(t, t['slug'] + '.' + c['management_domain'])
