@@ -27,6 +27,9 @@ final class Test_Orders {
 		add_action( 'woocommerce_checkout_create_order', array( self::class, 'mark' ), 5 );
 		add_action( 'woocommerce_store_api_checkout_order_processed', array( self::class, 'mark' ), 5 );
 		add_action( 'woocommerce_checkout_order_processed', array( self::class, 'mark' ), 5 );
+		// 2026-11-14 提速：原来在 init 里调 WC()->mailer()，每个请求都把 WooCommerce 全部邮件类建一遍（约 14ms）。
+		// 改成在邮件系统真的被用到时（woocommerce_email_classes）才挂过滤器；万一邮件系统已经先建好了，init 里补挂。
+		add_filter( 'woocommerce_email_classes', array( self::class, 'hook_email_classes' ), PHP_INT_MAX );
 		add_action( 'init', array( self::class, 'hook_emails' ), 30 );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'assets' ), 160 );
 	}
@@ -159,8 +162,19 @@ final class Test_Orders {
 	}
 
 	/** 所有 WooCommerce 邮件（含本插件基于 WC_Email 的邮件）：对象是测试单就不发。 */
+	/** @param array<string,\WC_Email> $emails */
+	public static function hook_email_classes( $emails ) {
+		foreach ( (array) $emails as $email ) {
+			if ( $email instanceof \WC_Email && '' !== (string) $email->id ) {
+				add_filter( 'woocommerce_email_enabled_' . $email->id, array( self::class, 'email_enabled' ), 5, 2 );
+			}
+		}
+		return $emails;
+	}
+
+	/** 只在邮件系统比 init 更早就建好了的时候补挂（正常情况由 hook_email_classes 处理，不再每个请求都建邮件系统）。 */
 	public static function hook_emails(): void {
-		if ( ! function_exists( 'WC' ) || ! WC()->mailer() ) {
+		if ( ! function_exists( 'WC' ) || ! did_action( 'woocommerce_email' ) || ! WC()->mailer() ) {
 			return;
 		}
 		foreach ( WC()->mailer()->get_emails() as $email ) {

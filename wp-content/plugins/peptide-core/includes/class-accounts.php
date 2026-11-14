@@ -183,6 +183,75 @@ final class Accounts {
 	}
 
 	/**
+	 * 老订单补建账户（店主 2026-11-13）：功能上线前用游客身份付款的顾客，按下单邮箱建账户（随机 12 位密码），
+	 * 订单只改“客户”一栏归到这个账户，再发一封英文邮件告诉顾客登录邮箱和密码、登录后能查订单和物流单号、请改密码。
+	 * 测试单、没付款、已归属账户的订单跳过；邮箱已有账户的直接归过去（自己注册、没验证过的不归），不发密码。
+	 * $send = false 只看会怎么处理，不建账户、不改订单、不发信。
+	 *
+	 * @return array{order:string,email:string,result:string}
+	 */
+	public static function invite_existing( \WC_Order $order, bool $send ): array {
+		$email = strtolower( trim( (string) $order->get_billing_email() ) );
+		$out   = array( 'order' => '#' . $order->get_order_number(), 'email' => $email, 'result' => '' );
+		if ( 'shop_order' !== $order->get_type() || $order->get_customer_id() || ! $order->is_paid() || ! is_email( $email )
+			|| ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) ) {
+			$out['result'] = 'skip';
+			return $out;
+		}
+		$user = get_user_by( 'email', $email );
+		if ( $user ) {
+			if ( ! self::trusted_owner( $user ) ) {
+				$out['result'] = 'skip_unverified_account';
+				return $out;
+			}
+			$out['result'] = 'link_existing_account';
+			if ( $send ) {
+				$order->set_customer_id( (int) $user->ID );
+				$order->update_meta_data( self::META, 'linked' );
+				$order->add_order_note( 'Order added to the existing customer account for ' . $email . '.' );
+				$order->save();
+			}
+			return $out;
+		}
+		$out['result'] = 'create_account_and_email';
+		if ( ! $send ) {
+			return $out;
+		}
+		$password = wp_generate_password( 12, false, false );
+		$uid      = self::create_user( $email, $password, $order );
+		if ( is_wp_error( $uid ) ) {
+			$out['result'] = 'failed: ' . $uid->get_error_message();
+			return $out;
+		}
+		update_user_meta( $uid, '_pc_account_source', 'auto_backfill' );
+		$order->set_customer_id( $uid );
+		$order->update_meta_data( self::META, 'invited' );
+		$order->add_order_note( 'Customer account created for ' . $email . ' (existing order). Sign-in details were emailed to the customer.' );
+		$order->save();
+		$mail = self::invite_mail( $order, $email, $password );
+		$sent = class_exists( Mail_Outbox::class ) ? Mail_Outbox::send_manual( array( $email ), $mail['subject'], $mail['body'], $order->get_id() ) : new \WP_Error( 'pc_mail', 'no mailer' );
+		$out['result'] = is_wp_error( $sent ) ? 'created_but_email_failed: ' . $sent->get_error_message() : 'created_and_emailed';
+		return $out;
+	}
+
+	/** 老顾客补建账户的邮件（英文，正式）。 */
+	public static function invite_mail( \WC_Order $order, string $email, string $password ): array {
+		$brand = class_exists( Mail_Outbox::class ) ? Mail_Outbox::brand() : wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
+		$name  = trim( (string) $order->get_billing_first_name() );
+		$login = function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : home_url( '/' );
+		$body  = 'Dear ' . ( '' !== $name ? esc_html( $name ) : 'Customer' ) . ",\n\n"
+			. 'Thank you for your order #' . esc_html( $order->get_order_number() ) . ' with ' . esc_html( $brand ) . ".\n\n"
+			. "To make it easier for you to follow your order, we have created a customer account for you using this email address. Once signed in, you can view your order status and the shipment tracking number at any time.\n\n"
+			. '<strong>Sign in:</strong> <a href="' . esc_url( $login ) . '">' . esc_html( $login ) . "</a><br>\n"
+			. '<strong>Email:</strong> ' . esc_html( $email ) . "<br>\n"
+			. '<strong>Temporary password:</strong> <code>' . esc_html( $password ) . "</code>\n\n"
+			. "For your security, please change this password after your first sign-in under My Account &rarr; Account details.\n\n"
+			. "If you have any questions about your order, simply reply to this email and our team will be glad to help.\n\n"
+			. "Kind regards,<br>\n" . esc_html( $brand ) . ' Customer Service';
+		return array( 'subject' => 'Your ' . $brand . ' account is ready', 'body' => $body );
+	}
+
+	/**
 	 * 可以把游客订单自动归过去的账户：付款时自动建的（证明过这个邮箱能下单付款），
 	 * 或者已经有过付款订单的老顾客、店铺员工。弹窗里自己注册、从没下过单的不算。
 	 */
