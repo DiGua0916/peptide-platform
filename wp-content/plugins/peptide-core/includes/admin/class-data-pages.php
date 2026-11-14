@@ -75,12 +75,31 @@ final class Data_Pages {
 		'pc-data-products-landing' => array( 'products' => 'products', 'landing' => 'landing' ),
 	);
 
+	/**
+	 * 数据栏目第 1 步清理（2026-11-14）：管理员看到的合并页。页面访问、页面商品转化、落地页转化收进一页，用页签切换。
+	 * 投手不用这一页（投手只有上面两页）。
+	 */
+	public const ADMIN_PAGES = array(
+		'pc-data-pages-landing' => array( 'landing' => 'landing', 'pages' => 'pages', 'page_conversion' => 'page_conversion' ),
+	);
+
+	/** 管理员菜单只留这几项，按这个顺序；其余数据页照样能用地址打开，或从别的菜单进。 */
+	public const ADMIN_MENU = array( 'pc-data', 'pc-data-operations', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
+
+	/** 挪到别的菜单下面的数据页：slug => 新的上级菜单。 */
+	public const MOVED = array(
+		'pc-data-apps'             => 'pc-promotions',
+		'pc-data-emails'           => 'pc-mail',
+		'pc-data-visit-classifier' => 'pc-media',
+	);
+
 	public static function register_hooks(): void {
 		\PeptideCore\Tracking\Experiment_Observations::register_hooks();
 		\PeptideCore\Tracking\Visit_Classifications::register_hooks();
 		add_action( 'admin_menu', array( self::class, 'add_menu' ), 60 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ) );
+		add_filter( 'parent_file', array( self::class, 'parent_file' ) );
 	}
 
 	/** REST 路由在任何请求里都要注册（后台页面通过 REST 取数据）。 */
@@ -500,11 +519,54 @@ final class Data_Pages {
 		foreach ( array_keys( self::BUYER_PAGES ) as $slug ) {
 			add_submenu_page( self::SLUG, $labels[ $slug ], $labels[ $slug ], self::CAP, $slug, array( self::class, 'render' ) );
 		}
+		foreach ( array_keys( self::ADMIN_PAGES ) as $slug ) {
+			add_submenu_page( self::SLUG, $labels[ $slug ], $labels[ $slug ], self::CAP, $slug, array( self::class, 'render' ) );
+		}
 		add_action( 'admin_head', static function (): void { remove_submenu_page( self::SLUG, self::PAGES['sources'] ); remove_submenu_page( self::SLUG, self::PAGES['dimension_details'] ); foreach ( array_keys( self::BUYER_PAGES ) as $slug ) { remove_submenu_page( self::SLUG, $slug ); } } );
+		add_action( 'admin_head', array( self::class, 'tidy_admin_menu' ), 20 );
+	}
+
+	/**
+	 * 数据栏目第 1 步清理：菜单只留 ADMIN_MENU 里的几项；应用统计、邮件数据、访问分类挂到营销活动、邮件、后台设置下面。
+	 * 页面本身都还在，原来的地址照样能打开（例如运营数据里“查看详情”跳到的转化率详情、落地页 A/B 分析）。
+	 */
+	public static function tidy_admin_menu(): void {
+		global $submenu;
+		if ( ! is_array( $submenu ) || empty( $submenu[ self::SLUG ] ) ) {
+			return;
+		}
+		$keep = array();
+		$all  = array();
+		foreach ( $submenu[ self::SLUG ] as $item ) {
+			$all[ (string) ( $item[2] ?? '' ) ] = $item;
+		}
+		foreach ( self::ADMIN_MENU as $slug ) {
+			if ( isset( $all[ $slug ] ) ) {
+				$keep[] = $all[ $slug ];
+			}
+		}
+		foreach ( self::MOVED as $slug => $parent ) {
+			if ( isset( $all[ $slug ] ) && ! empty( $submenu[ $parent ] ) ) {
+				$item    = $all[ $slug ];
+				$item[2] = 'admin.php?page=' . $slug;
+				$submenu[ $parent ][] = $item; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+			}
+		}
+		$submenu[ self::SLUG ] = $keep; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+	}
+
+	/** 挪走的页面打开时，左侧菜单高亮它的新上级。 */
+	public static function parent_file( $file ) {
+		$page = self::current_page();
+		return isset( self::MOVED[ $page ] ) && ! self::buyer_view() ? self::MOVED[ $page ] : $file;
 	}
 
 	public static function submenu_file( $file ) {
-		if ( isset( self::BUYER_PAGES[ self::current_page() ] ) ) { return $file; }
+		$page = self::current_page();
+		if ( isset( self::BUYER_PAGES[ $page ] ) ) { return $file; }
+		if ( isset( self::MOVED[ $page ] ) && ! self::buyer_view() ) { return 'admin.php?page=' . $page; }
+		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'landing', 'pages', 'page_conversion' ), true ) ) { return 'pc-data-pages-landing'; }
+		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'conversion', 'experiments' ), true ) ) { return self::PAGES['operations']; }
 		return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? self::PAGES['operations'] : $file;
 	}
 
@@ -516,14 +578,25 @@ final class Data_Pages {
 	/** 当前打开的是哪个数据页面（PAGES 的 key），不是数据页面时为 null。投手的合并页按当前页签对应到原来的页面。 */
 	public static function current_key(): ?string {
 		$page = self::current_page();
-		if ( isset( self::BUYER_PAGES[ $page ] ) ) {
-			return self::BUYER_PAGES[ $page ][ self::buyer_tab( $page ) ];
+		if ( isset( self::merged_pages()[ $page ] ) ) {
+			return self::merged_pages()[ $page ][ self::buyer_tab( $page ) ];
 		}
 		$key  = array_search( $page, self::PAGES, true );
 		return false === $key ? null : (string) $key;
 	}
 
 	// ---------- ST-05：投手的两个合并页 ----------
+
+	/** 用页签切换的合并页：投手的两页，加上管理员的“页面与落地页”（投手打开它时不算合并页）。 */
+	private static function merged_pages(): array {
+		return self::buyer_view() ? self::BUYER_PAGES : self::BUYER_PAGES + self::ADMIN_PAGES;
+	}
+
+	/** 当前打开的合并页 slug，不是合并页时为空。 */
+	private static function merged_page(): string {
+		$page = self::current_page();
+		return isset( self::merged_pages()[ $page ] ) ? $page : '';
+	}
 
 	/** 当前用户是不是投手。Audience 不在时（不带自动加载的纯逻辑测试）一律不是。 */
 	private static function buyer_view(): bool {
@@ -532,7 +605,7 @@ final class Data_Pages {
 
 	/** 合并页当前的页签：地址栏的 tab，没有或不认识时是第一个。 */
 	private static function buyer_tab( string $page ): string {
-		$tabs = self::BUYER_PAGES[ $page ];
+		$tabs = self::merged_pages()[ $page ];
 		$tab  = isset( $_GET['tab'] ) ? sanitize_key( wp_unslash( $_GET['tab'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		return isset( $tabs[ $tab ] ) ? $tab : (string) array_key_first( $tabs );
 	}
@@ -547,6 +620,9 @@ final class Data_Pages {
 			'sources'                  => $zh ? '来源（按广告）' : 'Sources (by ad)',
 			'products'                 => $zh ? '商品' : 'Products',
 			'landing'                  => $zh ? '落地页' : 'Landing pages',
+			'pc-data-pages-landing'    => $zh ? '页面与落地页' : 'Pages and landing pages',
+			'pages'                    => $zh ? '页面访问' : 'Page visits',
+			'page_conversion'          => $zh ? '页面商品转化' : 'Page product conversion',
 		);
 	}
 
@@ -559,7 +635,7 @@ final class Data_Pages {
 		$labels = self::buyer_labels();
 		$active = self::buyer_tab( $page );
 		$html   = '<h2 class="nav-tab-wrapper pc-data-buyer-tabs">';
-		foreach ( array_keys( self::BUYER_PAGES[ $page ] ) as $tab ) {
+		foreach ( array_keys( self::merged_pages()[ $page ] ) as $tab ) {
 			$html .= '<a class="nav-tab' . ( $tab === $active ? ' nav-tab-active' : '' ) . '"' . ( $tab === $active ? ' aria-current="page"' : '' ) . ' href="' . esc_url( self::buyer_url( $page, $tab ) ) . '">' . esc_html( $labels[ $tab ] ) . '</a>';
 		}
 		return $html . '</h2>';
@@ -581,7 +657,7 @@ final class Data_Pages {
 		if ( null === $key || ! current_user_can( self::CAP ) ) {
 			return;
 		}
-		$buyer_page = isset( self::BUYER_PAGES[ self::current_page() ] ) ? self::current_page() : '';
+		$buyer_page = self::merged_page();
 		if ( '' === $buyer_page && self::buyer_view() ) {
 			return; // ST-05：投手直接打开了别的数据页，render() 只给合并页的入口，不加载报表。
 		}
@@ -1483,7 +1559,7 @@ final class Data_Pages {
 		if ( ! current_user_can( self::CAP ) || null === $key ) {
 			return;
 		}
-		$buyer_page = isset( self::BUYER_PAGES[ self::current_page() ] ) ? self::current_page() : '';
+		$buyer_page = self::merged_page();
 		if ( '' === $buyer_page && self::buyer_view() ) {
 			// ST-05：投手直接打开了别的数据页（例如顶层的 pc-data）：只给两个合并页的入口，不显示报表。
 			echo '<div class="wrap pc-data-wrap"><h1>' . esc_html__( 'Data', 'peptide-core' ) . '</h1>' . self::buyer_links() . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buyer_links() 里已经转义。
