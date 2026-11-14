@@ -6,7 +6,8 @@
  *   wp eval-file wp-content/plugins/peptide-core/tests/m6-release-snapshot.php compare <旧.json> <新.json>
  *
  * run 读的东西（不改设置、不改数据；只会删掉、重建报表自己的缓存，让两次读到的都是现算的数）：
- *   - 数据页、概览页、实时访客 / 访客档案 / 访客转化页、像素页：服务端输出的页面外壳和交给页面脚本的配置（window.pcData 等）；
+ *   - 数据页（含主线 11-14 的“页面与落地页”、复盘、今日作战室）、概览页、实时访客 / 访客档案 / 访客转化页、像素页：
+ *     服务端输出的页面外壳和交给页面脚本的配置（window.pcData 等）；
  *   - 这些页面用到的全部 GET 接口（peptide/v1 下的 data/、overview、track/admin、product-activity），时间段用“今天”和给定的日期段；
  *   - 像素：设置（令牌只留指纹）、给浏览器的配置、谁会触发像素、最近 30 张订单的购买事件；
  *   - 指标：今天和给定日期段的汇总、漏斗、每日汇总，总后台每日汇总的弃单数那一段（Hq_Connector::with_abandoned）；
@@ -269,8 +270,12 @@ foreach ( $m6x_who as $who => $user ) {
 	wp_set_current_user( (int) $user->ID );
 	if ( class_exists( Data_Pages::class ) ) {
 		$slugs = array_values( Data_Pages::PAGES );
-		if ( defined( Data_Pages::class . '::BUYER_PAGES' ) ) {
-			foreach ( Data_Pages::BUYER_PAGES as $slug => $tabs ) {
+		$merged = defined( Data_Pages::class . '::BUYER_PAGES' ) ? Data_Pages::BUYER_PAGES : array();
+		if ( defined( Data_Pages::class . '::ADMIN_PAGES' ) ) {
+			$merged += Data_Pages::ADMIN_PAGES; // 主线 11-14：管理员的“页面与落地页”。
+		}
+		if ( $merged ) {
+			foreach ( $merged as $slug => $tabs ) {
 				$slugs[] = $slug;
 				foreach ( array_keys( $tabs ) as $tab ) {
 					$slugs[] = $slug . '&tab=' . $tab;
@@ -280,6 +285,12 @@ foreach ( $m6x_who as $who => $user ) {
 		foreach ( $slugs as $slug ) {
 			parse_str( 'page=' . $slug, $get );
 			$m6x_put( "page/{$who}/{$slug}", $m6x_page( $get, array( Data_Pages::class, 'enqueue' ), array( Data_Pages::class, 'render' ) ) );
+		}
+	}
+	// 主线 11-14 的复盘页、今日作战室（只有服务端输出，没有单独的脚本配置）。
+	foreach ( array( '\\PeptideCore\\Admin\\Data_Review', '\\PeptideCore\\Admin\\Data_Cockpit' ) as $class ) {
+		if ( class_exists( $class ) ) {
+			$m6x_put( "page/{$who}/" . $class::SLUG, $m6x_page( array( 'page' => $class::SLUG ), static function () {}, array( $class, 'render' ) ) );
 		}
 	}
 	if ( class_exists( Overview_Page::class ) ) {
