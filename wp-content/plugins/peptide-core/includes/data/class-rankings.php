@@ -240,7 +240,7 @@ final class Rankings {
 				self::add( $successes, $method, 1 );
 			}
 			if ( ! $paid || null !== $modern ) {
-				continue; // 没付款；或者开关开着——已付款订单的几张表在下面按付款时间另算。
+				continue; // 没付款；或者开关开着——已付款订单的几张表在下面用统一口径的那一批另算（同样按下单时间）。
 			}
 
 			self::tally_paid( $order, $method, $out, $buyers, $visitor_ids, $dimension_orders, $cache );
@@ -570,7 +570,7 @@ final class Rankings {
 	}
 
 	/**
-	 * M6（NF-02）：开关开着时“已付款订单”那几张表用的订单——时间段内付款的（Data\Metrics::paid_orders()，含测试单，调用方排除），
+	 * M6（NF-02）：开关开着时“已付款订单”那几张表用的订单——时间段内下单、收到过支付成功的（Data\Metrics::paid_orders()，含测试单，调用方排除），
 	 * 选了入口域名时再按订单的访问筛一次。关着或影子时返回 null：沿用“时间段内创建、已付款状态”的旧口径；
 	 * 影子顺便把两批订单号的差异记进对账日志（reports.paid_orders，和别的报表是同一条）。
 	 *

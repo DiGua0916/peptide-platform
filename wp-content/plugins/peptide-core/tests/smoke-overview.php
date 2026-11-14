@@ -39,13 +39,29 @@ $h2 = Overview::holidays( strtotime( '2026-12-26 12:00:00 UTC' ) );
 $ok( 'rolls over to next year', 'new_year' === $h2[0]['key'] && '2027-01-01' === $h2[0]['date'] );
 
 // 3. 今天的数字：一笔已付款订单 + 一笔未付款订单 + 一位新注册用户 + 两位访客。
+// 上一次运行中途停了的话，会留下这个临时用户，wp_insert_user() 再建就报错。
+require_once ABSPATH . 'wp-admin/includes/user.php';
+$stale = get_user_by( 'login', 'smoke_overview_user' );
+if ( $stale ) {
+	wp_delete_user( $stale->ID );
+}
 $before  = Overview::range_data( 'today' );
+// 商品：已发布、价格大于 0、不是演示商品的简单商品（含演示商品的订单是测试单，不计入销售）。
 $product = null;
-foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'limit' => 20 ) ) as $p ) {
-	if ( (float) $p->get_price() > 0 ) {
+foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'limit' => -1, 'orderby' => 'ID', 'order' => 'ASC' ) ) as $p ) {
+	if ( (float) $p->get_price() > 0 && '1' !== get_post_meta( $p->get_id(), \PeptideCore\Meta::DEMO_SEED, true ) ) {
 		$product = $p;
 		break;
 	}
+}
+if ( ! $product ) {
+	// 店里没有可用的简单商品（生产店的脱敏快照里全是多规格商品，演示数据里的又都是演示商品）：临时建一个，脚本结束时删掉。
+	require_once __DIR__ . '/m6-smoke-fixtures.php';
+	$product = pc_m6_smoke_temp_product();
+}
+if ( ! $product ) {
+	echo "FAIL fixture product\n";
+	return;
 }
 $paid = wc_create_order();
 $paid->add_product( $product, 2 );
