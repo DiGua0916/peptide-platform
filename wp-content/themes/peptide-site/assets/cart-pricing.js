@@ -152,10 +152,13 @@
     function CheckoutSavings() {
         var storedCart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
         var pricing = storedCart?.extensions?.peptide_core?.sale_savings;
-        if (!pricing || pricing.savings_available === false) return null;
+        // Cleared first so the "You save" line under the Pay button never shows an old amount.
+        window.VialCoveCheckoutSaving = '';
+        if (!pricing) return null;
         var decimals = Number(pricing.currency_minor_unit);
         if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) return null;
-        var total = Number(pricing.total_savings !== undefined ? pricing.total_savings : pricing.sale_savings) + shippingMinor();
+        var items = pricing.savings_available === false ? 0 : Number(pricing.total_savings !== undefined ? pricing.total_savings : pricing.sale_savings);
+        var total = (Number.isFinite(items) ? items : 0) + shippingMinor(); // shipping-tier savings count even without item savings
         var amount = money(total, pricing.currency_code, decimals);
         if (!amount || total <= 0) return null;
         window.VialCoveCheckoutSaving = amount;

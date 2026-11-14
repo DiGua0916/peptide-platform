@@ -21,6 +21,7 @@ body:has(dialog[open]) .vc-help-contact,body:has([data-vc-demo-header] details[o
 @media(prefers-reduced-motion:reduce){.vc-help-float,.vc-help-contact{transition:none;transform:none!important}}
 
 /* 1 号站定稿 P2-3：右下角唯一的客服按钮带文字 “Chat with us”。 */
+.vc-help-widget:has(.vc-help-float__label){width:auto;height:auto}
 .vc-help-widget button.vc-help-float{width:auto;height:52px;padding:0 16px 0 6px;border-radius:999px!important;grid-auto-flow:column;gap:6px}
 .vc-help-float img{width:40px;height:40px}
 .vc-help-float__label{font-size:14px;font-weight:700;line-height:1;color:#17343e;white-space:nowrap}

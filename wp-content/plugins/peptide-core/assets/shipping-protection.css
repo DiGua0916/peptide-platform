@@ -4,3 +4,5 @@
 .pc-ship-protect__box { width: 16px; height: 16px; margin: 0; accent-color: currentColor; }
 .pc-ship-protect__ref { opacity: 0.6; }
 .pc-ship-protect.is-off .pc-ship-protect__now { opacity: 0.6; }
+/* The native fee row is hidden with the hidden attribute; Woo's display:flex would otherwise keep it visible (listed twice). */
+.wc-block-components-totals-item[hidden], .wc-block-components-totals-fees[hidden] { display: none !important; }

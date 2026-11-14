@@ -24,13 +24,14 @@
         const p = cart?.extensions?.peptide_core?.shipping_protection;
         return p && p.enabled === true && typeof p.namespace === 'string' ? p : null;
     };
+    const setText = (node, value) => { if (node && node.textContent !== value) node.textContent = value; }; // no-op writes would loop the observer
     const cartData = () => global.wp?.data?.select?.(KEY)?.getCartData?.();
 
     function hideNativeFee(root, label) {
         root.querySelectorAll('.wc-block-components-totals-fees, .wc-block-components-totals-item').forEach(item => {
             if (item.hasAttribute(ROW)) return;
             const name = item.querySelector('.wc-block-components-totals-item__label');
-            if (name && name.textContent.trim() === label) item.hidden = true;
+            if (name && name.textContent.trim() === label && !item.hidden) item.hidden = true;
         });
     }
 
@@ -55,10 +56,10 @@
             const box = row.querySelector('input');
             if (!busy) box.checked = p.chosen === true;
             box.disabled = busy;
-            row.querySelector('.pc-ship-protect__name').textContent = p.label;
+            setText(row.querySelector('.pc-ship-protect__name'), p.label);
             const ref = row.querySelector('.pc-ship-protect__ref');
-            ref.textContent = p.reference_minor > p.price_minor ? money(p.reference_minor, cart) : '';
-            row.querySelector('.pc-ship-protect__now').textContent = money(p.price_minor, cart);
+            setText(ref, p.reference_minor > p.price_minor ? money(p.reference_minor, cart) : '');
+            setText(row.querySelector('.pc-ship-protect__now'), money(p.price_minor, cart));
             row.classList.toggle('is-off', p.chosen !== true);
             hideNativeFee(root, p.label);
         });

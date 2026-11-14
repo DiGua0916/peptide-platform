@@ -36,6 +36,8 @@
     const store = { get(k) { try { return global.sessionStorage.getItem(k); } catch (_) { return null; } }, set(k, v) { try { global.sessionStorage.setItem(k, v); } catch (_) { /* private mode */ } } };
     const cr = (() => { try { return new URL(global.location.href).searchParams.get('cr') || global.sessionStorage.getItem('pcResaleCr') || ''; } catch (_) { return ''; } })();
     if (cr) store.set('pcResaleCr', cr);
+    // "Only once" (signed off): remembered in localStorage, so a new tab or a later visit does not show it again.
+    const seen = { get() { try { return global.localStorage.getItem(SEEN); } catch (_) { return store.get(SEEN); } }, set(v) { try { global.localStorage.setItem(SEEN, v); } catch (_) { store.set(SEEN, v); } } };
     let last = NaN, pending = null, cartNow = null;
 
     // Lane C tracker (P2-5): whatsapp_click with source dealer_popup / cart_link.
@@ -43,12 +45,13 @@
         try { document.dispatchEvent(new CustomEvent('vc:track', { detail: { type: 'whatsapp_click', data: { source } } })); } catch (_) { /* no tracker */ }
     }
     function otherDialogOpen() {
-        return [...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(el => !el.hasAttribute('data-pc-resale') && el.offsetParent !== null);
+        // Not offsetParent: a modal <dialog> is position:fixed, whose offsetParent is always null.
+        return [...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(el => !el.hasAttribute('data-pc-resale') && !el.hidden && el.getClientRects().length > 0);
     }
     function show(cart) {
-        if (store.get(SEEN)) return;
+        if (seen.get()) return;
         if (otherDialogOpen()) { pending = cart; return; }
-        pending = null; store.set(SEEN, 'shown');
+        pending = null; seen.set('shown');
         const dialog = document.createElement('dialog');
         dialog.className = 'pc-resale'; dialog.setAttribute('data-pc-resale', ''); dialog.setAttribute('aria-labelledby', 'pc-resale-title');
         const href = waUrl(cfg.whatsapp, message(cart, cfg, cr));
@@ -61,7 +64,7 @@
         s.points.forEach(p => { const li = document.createElement('li'); li.textContent = p; dialog.querySelector('ul').append(li); });
         const wa = dialog.querySelector('.pc-resale__wa'); wa.textContent = s.cta; wa.href = href;
         dialog.querySelector('.pc-resale__continue').textContent = s.continue;
-        const close = () => { if (dialog.open) dialog.close(); dialog.remove(); store.set(SEEN, 'closed'); cartLine(); };
+        const close = () => { if (dialog.open) dialog.close(); dialog.remove(); seen.set('closed'); cartLine(); };
         dialog.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
         wa.addEventListener('click', () => { track('dealer_popup'); setTimeout(close, 0); });
         dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
@@ -70,30 +73,33 @@
     }
     function cartLine() {
         const cart = cartNow;
-        const root = document.querySelector('.wc-block-cart');
-        if (!root || !cart || !(itemsMinor(cart) >= cfg.thresholdMinor) || !store.get(SEEN)) { document.querySelector('[data-pc-resale-line]')?.remove(); return; }
-        let line = root.querySelector('[data-pc-resale-line]');
+        // The theme's live cart summary (visible) wins over the native block cart, which the theme hides.
+        const anchor = document.querySelector('.vc-cart-page [data-cart-summary] [data-cart-checkout]') || document.querySelector('.wc-block-cart .wc-block-cart__submit') || document.querySelector('.wc-block-cart');
+        if (!anchor || !cart || !(itemsMinor(cart) >= cfg.thresholdMinor) || !seen.get()) { document.querySelector('[data-pc-resale-line]')?.remove(); return; }
+        let line = document.querySelector('[data-pc-resale-line]');
         if (!line) {
             line = document.createElement('a'); line.setAttribute('data-pc-resale-line', ''); line.className = 'pc-resale-line'; line.target = '_blank'; line.rel = 'noopener';
             line.textContent = s.cartLine;
             line.addEventListener('click', () => track('cart_link'));
-            (root.querySelector('.wc-block-cart__submit') || root).insertAdjacentElement('afterend', line);
+            anchor.insertAdjacentElement('afterend', line);
         }
         line.href = waUrl(cfg.whatsapp, message(cart, cfg, cr));
     }
-    function seenCart(cart, fromAdd) {
+    function seenCart(cart, mutation) {
         const now = itemsMinor(cart);
         cartNow = cart;
-        if (fromAdd && crossed(last, now, cfg.thresholdMinor)) show(cart);
+        // Only an add (or a known increase) can trigger it: removing items from an $800 bag must not.
+        const grew = mutation === true || mutation === 'add-item' || (!!mutation && Number.isFinite(last) && now > last);
+        if (grew && crossed(last, now, cfg.thresholdMinor)) show(cart);
         last = now;
         cartLine();
     }
     // Storefront drawer / product dialog adds.
-    document.addEventListener('vc:cart-updated', event => { const d = event.detail; if (d && d.cart && !d.stale) seenCart(d.cart, !!d.mutation); });
+    document.addEventListener('vc:cart-updated', event => { const d = event.detail; if (d && d.cart && !d.stale) seenCart(d.cart, d.mutation); });
     // Block cart page: quantity changes and the initial load.
     const data = global.wp?.data;
     if (data?.select && data?.subscribe) {
-        const read = () => { const c = data.select('wc/store/cart')?.getCartData?.(); if (c && Array.isArray(c.items)) seenCart(c, Number.isFinite(last)); };
+        const read = () => { const c = data.select('wc/store/cart')?.getCartData?.(); if (c && Array.isArray(c.items)) seenCart(c, Number.isFinite(last) ? 'update' : false); };
         data.subscribe(read, 'wc/store/cart'); read();
     }
     // A popup that waited for another dialog shows once that dialog closes.

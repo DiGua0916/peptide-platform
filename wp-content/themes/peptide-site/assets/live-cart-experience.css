@@ -79,3 +79,8 @@
 .vc-live-cart__summary .vc-live-cart__total-row.is-total strong{font-size:28px;line-height:32px;letter-spacing:-.025em}
 .vc-live-cart__summary .vc-live-cart__total-row.is-saved-total{align-items:center;gap:12px;margin-top:12px;margin-bottom:0;padding:8px 12px;border-radius:8px;background:#fff0f2;font-weight:650}
 .vc-live-cart__summary .vc-live-cart__total-row.is-saved-total strong{font-size:18px;line-height:24px}
+/* Site 1 P0-5: shipping protection row with opt-out checkbox; reference price crossed out. */
+.vc-live-cart__protect-label{display:inline-flex;align-items:center;gap:8px;cursor:pointer;min-height:24px}
+.vc-live-cart__protect-label input{width:18px;height:18px;margin:0;accent-color:#1b7f8e;flex:0 0 auto}
+.vc-live-cart__protect-ref{font-weight:400;opacity:.55;margin-right:2px}
+.vc-live-cart__protect.is-off strong{opacity:.55}

@@ -64,7 +64,7 @@
     if (!data?.select || !data?.dispatch || !data?.subscribe) return;
     const ls = { get() { try { return JSON.parse(global.localStorage.getItem(DRAFT) || 'null'); } catch (_) { return null; } }, set(v) { try { global.localStorage.setItem(DRAFT, JSON.stringify(v)); } catch (_) { /* storage off */ } } };
     const select = () => data.select(KEY), actions = () => data.dispatch(KEY);
-    let restored = false, zipFilledFor = '';
+    let restored = false, zipFilledFor = '', lastSaved = '';
     // The data store keeps the live (being typed) addresses in camelCase on getCustomerData().
     function addresses() {
         const st = select(); const c = st?.getCustomerData?.() || st?.getCartData?.() || null;
@@ -77,7 +77,10 @@
         const { ship, bill } = a;
         const draft = { at: Date.now(), email: bill.email || '', shipping: {} };
         FIELDS.forEach(f => { if (ship[f]) draft.shipping[f] = String(ship[f]); });
-        if (draft.email || Object.keys(draft.shipping).length) ls.set(draft);
+        // Save whenever the entered details change (not on a debounce: checkout's DOM keeps changing, which would postpone it forever).
+        const sig = JSON.stringify([draft.email, draft.shipping]);
+        if (sig === lastSaved || !(draft.email || Object.keys(draft.shipping).length)) return;
+        lastSaved = sig; ls.set(draft);
     }
     function restore() {
         if (restored) return; const a = addresses(); if (!a || !document.querySelector('.wc-block-checkout')) return;
@@ -130,7 +133,8 @@
         const amount = global.VialCoveCheckoutSaving;
         if (amount) {
             if (!save) { save = document.createElement('p'); save.setAttribute('data-pc-pay-save', ''); save.className = 'pc-pay-save'; btn.parentElement.insertAdjacentElement('afterend', save); }
-            save.textContent = 'You save ' + amount + ' on this order';
+            const line = 'You save ' + amount + ' on this order';
+            if (save.textContent !== line) save.textContent = line; // unchanged writes would retrigger the observer
         } else save?.remove();
     }
     // Labels of the payment options the shopper has not picked, as the checkout shows them.
@@ -148,11 +152,10 @@
             (banner.querySelector('.wc-block-components-notice-banner__content') || banner).append(p);
         });
     }
-    let frame = 0, saveTimer = 0;
+    let frame = 0;
     function tick() {
         frame = 0;
-        restore(); zipToState(); phone(); payButton(); paymentHelp();
-        clearTimeout(saveTimer); saveTimer = setTimeout(save, 400);
+        restore(); zipToState(); phone(); payButton(); paymentHelp(); save();
     }
     const schedule = () => { if (!frame) frame = setTimeout(tick, 60); }; // timer, not rAF: also runs in a background tab
     function start() {
