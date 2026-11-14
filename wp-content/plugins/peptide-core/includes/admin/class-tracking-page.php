@@ -26,7 +26,7 @@ final class Tracking_Page {
 	public const AI_SLUG      = 'pc-data-ai'; // 店主 2026-11-13：全站分析师 AI 只放这一页（数据 → AI 分析）。
 
 	public static function register_hooks(): void {
-		add_action( 'admin_menu', array( self::class, 'add_menu' ), 57 );
+		add_action( 'admin_menu', array( self::class, 'add_menu' ), 61 ); // 必须晚于 Data_Pages::add_menu（60）建好“数据”顶层菜单，否则子页面挂不上去，打开报 403。
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_action( 'admin_post_pc_tracking_purge', array( self::class, 'handle_purge' ) );
 		add_action( 'admin_menu', array( self::class, 'add_ai_menu' ), 62 );
@@ -50,10 +50,13 @@ final class Tracking_Page {
 		}
 	}
 
+	/**
+	 * 店主 2026-11-14：去掉“访客数据”这个顶层菜单，两页并进“数据”。
+	 * 投手那边 Staff_Buyer::menu_for_page() 把 pc-visitors* 也算在“数据”里，所以投手看到的位置不变。
+	 */
 	public static function add_menu(): void {
-		add_menu_page( __( 'Visitors', 'peptide-core' ), __( 'Visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ), 'dashicons-visibility', 57 );
-		add_submenu_page( self::SLUG, __( 'Live visitors', 'peptide-core' ), __( 'Live visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ) );
-		add_submenu_page( self::SLUG, __( 'Visitor archive', 'peptide-core' ), __( 'Visitor archive', 'peptide-core' ), 'manage_woocommerce', self::ARCHIVE_SLUG, array( self::class, 'render' ) );
+		add_submenu_page( Data_Pages::SLUG, __( 'Live visitors', 'peptide-core' ), __( 'Live visitors', 'peptide-core' ), 'manage_woocommerce', self::SLUG, array( self::class, 'render' ) );
+		add_submenu_page( Data_Pages::SLUG, __( 'Visitor archive', 'peptide-core' ), __( 'Visitor archive', 'peptide-core' ), 'manage_woocommerce', self::ARCHIVE_SLUG, array( self::class, 'render' ) );
 	}
 
 	private static function view(): string {

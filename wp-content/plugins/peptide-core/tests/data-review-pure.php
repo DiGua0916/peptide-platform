@@ -5,6 +5,11 @@
 define( 'ABSPATH', __DIR__ );
 function esc_html( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES ); }
 function wp_parse_url( $url, $component = -1 ) { return parse_url( $url, $component ); }
+function esc_attr( $t ) { return htmlspecialchars( (string) $t, ENT_QUOTES ); }
+function esc_url( $u ) { return (string) $u; }
+function admin_url( $p = '' ) { return 'https://store.test/wp-admin/' . $p; }
+function add_query_arg( array $a, string $u ) { return $u . '?' . http_build_query( $a ); }
+require dirname( __DIR__ ) . '/includes/tracking/class-plain-words.php';
 require dirname( __DIR__ ) . '/includes/admin/class-data-review.php';
 
 use PeptideCore\Admin\Data_Review as R;
@@ -122,5 +127,39 @@ check( 'delta up is good', array( '▲ 50%', 'good' ) === R::delta( 150, 100 ) )
 check( 'delta down is good for cost', array( '▼ 50%', 'good' ) === R::delta( 50, 100, false ) );
 check( 'delta without previous', 'flat' === R::delta( 5, 0 )[1] && 'flat' === R::delta( null, 3 )[1] );
 check( 'money and pct', '$1,235' === R::money( 1234.5 ) && '—' === R::money( null ) && '12.5%' === R::pct( 0.125 ) );
+
+// ---------- 支付结果（店主 2026-11-14：哪个时段容易失败） ----------
+require_once dirname( __DIR__ ) . '/includes/admin/class-data-cockpit.php';
+$pv = static fn( string $at, array $extra = array() ): array => array_merge( $vis( 1, 1, $at, 3, '', '' ), $extra );
+$pay = array(
+	array( 'outcome' => 'paid',      'created_ms' => $t( '2026-11-13 09:10' ), 'total' => 120.0, 'visit' => $pv( '2026-11-13 09:00', array( 'geo_region' => 'Texas', 'isp' => 'CHARTER-20115', 'ip_type' => 'residential' ) ) ),
+	array( 'outcome' => 'failed',    'created_ms' => $t( '2026-11-13 21:10' ), 'total' => 300.0, 'visit' => $pv( '2026-11-13 21:00', array( 'geo_region' => 'Texas', 'isp' => 'M247 Europe SRL', 'ip_type' => 'vpn' ) ) ),
+	array( 'outcome' => 'failed',    'created_ms' => $t( '2026-11-13 21:40' ), 'total' => 300.0, 'visit' => $pv( '2026-11-13 21:30', array( 'geo_region' => 'Texas', 'isp' => 'M247 Europe SRL', 'ip_type' => 'vpn' ) ) ),
+	array( 'outcome' => 'abandoned', 'created_ms' => $t( '2026-11-13 21:50' ), 'total' => 90.0,  'visit' => $pv( '2026-11-13 21:45', array( 'geo_region' => 'New York', 'isp' => '', 'ip_type' => '' ) ) ),
+	array( 'outcome' => 'paid',      'created_ms' => $t( '2026-11-13 09:40' ), 'total' => 450.0, 'visit' => null ),
+);
+$byh = R::payment_by( $pay, 'hour' );
+check( 'payments grouped by the hour the visit started', 2 === $byh['09:00–09:59']['total'] && 2 === $byh['09:00–09:59']['paid'] && 3 === $byh['21:00–21:59']['total'] && 0 === $byh['21:00–21:59']['paid'] );
+check( 'hours sorted, success rate and money not collected', '09:00–09:59' === array_key_first( $byh ) && 1.0 === $byh['09:00–09:59']['rate'] && 0.0 === $byh['09:00–09:59']['lost'] && 690.0 === $byh['21:00–21:59']['lost'] );
+check( 'an order with no tracked visit still lands in its hour', 2 === $byh['09:00–09:59']['paid'] );
+$byn = R::payment_by( $pay, 'network' );
+check( 'VPN orders group together and all failed', 2 === $byn['M247 Europe SRL · VPN']['total'] && 2 === $byn['M247 Europe SRL · VPN']['failed'] && 0.0 === $byn['M247 Europe SRL · VPN']['rate'] );
+check( 'a missing visit is its own row', 1 === $byn['查不到（没追踪到访问）']['total'] );
+$bya = R::payment_by( $pay, 'amount' );
+check( 'amount buckets in order', array( '$100 以下', '$100–200', '$200–400', '$400 以上' ) === array_keys( $bya ) );
+check( 'the big-ticket bucket', 1 === $bya['$400 以上']['paid'] && 2 === $bya['$200–400']['failed'] );
+$bys = R::payment_by( $pay, 'state' );
+check( 'states are shown in Chinese', isset( $bys['德州'] ) && isset( $bys['纽约州'] ) && 3 === $bys['德州']['total'] );
+$html = R::payment_html( $pay, 'hour', 'pc-data-review', array( 'range' => '7d' ) );
+check( 'the worst hour is flagged', str_contains( $html, 'is-bad-row' ) && str_contains( $html, '21:00–21:59' ) && str_contains( $html, '最差的是「21:00–21:59」' ) );
+check( 'totals shown above the table', str_contains( $html, '>2<' ) && str_contains( $html, '被拒' ) && str_contains( $html, '打开支付页没付' ) );
+check( 'no payments at all says so', str_contains( R::payment_html( array(), 'hour', 'p', array() ), '没有进到支付这一步' ) );
+
+// ---------- 客户维度 ----------
+$cv = array( $vis( 1, 101, '2026-11-12 20:10', 2, '', '', array( 'geo_region' => 'Texas', 'geo_city' => 'Houston', 'isp' => 'T-MOBILE-AS21928', 'ip_type' => 'mobile', 'language' => 'es-419' ) ) );
+$cp = R::compute( array( 'range' => $r7, 'visits' => $cv, 'address' => array(), 'orders' => array(), 'spend' => array() ) );
+check( 'city row carries the state', isset( R::dim_rows( $cp, 'city' )['德州 Houston'] ) );
+check( 'network row says what kind of connection', isset( R::dim_rows( $cp, 'network' )['T-Mobile · 手机网络'] ) );
+check( 'language row in Chinese', isset( R::dim_rows( $cp, 'language' )['西班牙语（拉美）'] ) );
 
 echo "PASS {$passed} data review assertions\n";
