@@ -83,8 +83,8 @@ final class Data_Pages {
 		'pc-data-pages-landing' => array( 'landing' => 'landing', 'pages' => 'pages', 'page_conversion' => 'page_conversion' ),
 	);
 
-	/** 管理员菜单只留这几项，按这个顺序；其余数据页照样能用地址打开，或从别的菜单进。 */
-	public const ADMIN_MENU = array( 'pc-data', 'pc-data-operations', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
+	/** 管理员菜单只留这几项，按这个顺序（第 2 步：运营数据换成复盘，运营数据从复盘底部进）；其余数据页照样能用地址打开，或从别的菜单进。 */
+	public const ADMIN_MENU = array( 'pc-data', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
 
 	/** 挪到别的菜单下面的数据页：slug => 新的上级菜单。 */
 	public const MOVED = array(
@@ -566,8 +566,8 @@ final class Data_Pages {
 		if ( isset( self::BUYER_PAGES[ $page ] ) ) { return $file; }
 		if ( isset( self::MOVED[ $page ] ) && ! self::buyer_view() ) { return 'admin.php?page=' . $page; }
 		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'landing', 'pages', 'page_conversion' ), true ) ) { return 'pc-data-pages-landing'; }
-		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'conversion', 'experiments' ), true ) ) { return self::PAGES['operations']; }
-		return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? self::PAGES['operations'] : $file;
+		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'operations', 'conversion', 'experiments' ), true ) ) { return 'pc-data-review'; } // 第 2 步：运营数据收进复盘下面（复盘页底部有入口）。
+		return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? ( self::buyer_view() ? self::PAGES['operations'] : 'pc-data-review' ) : $file;
 	}
 
 	/** 地址栏里的 page 参数。 */
