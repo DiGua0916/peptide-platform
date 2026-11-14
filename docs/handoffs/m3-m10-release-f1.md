@@ -19,13 +19,15 @@
 | 弃单数（店铺 `Recovery_Items`，F4 的指标读它） | 平台所有者 / F4 | F3 只在开关打开后读 F4 给的数，不自己算 |
 | 系列同步和活动下发 | F3 / F2，线上还没开 | 只在系列同步打开后才走到，现在各店都关着 |
 
-**2026-11-14 再合主线 `3a297df`（已上线的 14 个提交）**：没有冲突，和 F3 的文件不重叠。逐项看了 `1a4c189`（店铺后台订单页：只填 FedEx 单号发货、已发货订单、老顾客补建账户）：它把订单从“处理中”改成“已完成”、写发货记录和单号、给游客订单补建账户；F3 的订单上报只在状态变化时把状态、金额、时间报给总后台，不记发货和单号，总后台订单页也不做发货，所以不重复。发货后订单会照常报一次“已完成”，和线上一样；补建账户改的账户编号不在上报内容里，不会触发重报。合并后用同一份数据和 `3a297df` 重比：页面、数字、店铺上报全部相同。
+**2026-11-14 合到主线 `24d1671`（已上线）**：先后合了 `3a297df`（合并提交 `8ed5bc7`）、`8fac9d3`（`23c778b`，数据菜单）、`24d1671`（`924eed0`，店铺数据复盘页和数据驾驶舱）。都没有冲突，都不碰 F3 的文件；数据复盘页和驾驶舱不读 F3 的订单上报、退款标记、系列和总后台花费，不重复。F1 的打底包和热修复包 A 发出后主线还会前进，到时 F3 再合一次、重跑比对。
+
+其中 `3a297df` 的 14 个提交：没有冲突，和 F3 的文件不重叠。逐项看了 `1a4c189`（店铺后台订单页：只填 FedEx 单号发货、已发货订单、老顾客补建账户）：它把订单从“处理中”改成“已完成”、写发货记录和单号、给游客订单补建账户；F3 的订单上报只在状态变化时把状态、金额、时间报给总后台，不记发货和单号，总后台订单页也不做发货，所以不重复。发货后订单会照常报一次“已完成”，和线上一样；补建账户改的账户编号不在上报内容里，不会触发重报。合并后用同一份数据和 `3a297df` 重比：页面、数字、店铺上报全部相同。
 
 ## 一、发什么
 
 | 项 | 内容 |
 | --- | --- |
-| 分支 / 提交 | `claude/m3-series-361018`，本说明所在的提交（= 主线 `3a297df` + F3 的改动；主线 `3a297df` 已上线。11-14 合并提交 `8ed5bc7`，无冲突） |
+| 分支 / 提交 | `claude/m3-series-361018`，本说明所在的提交（= 主线 `24d1671` + F3 的改动；`24d1671` 已上线。最近一次合并提交 `924eed0`，无冲突） |
 | 组件 | 店铺 `peptide-core`、总后台 `peptide-hq`。主题、支付插件、运维代理没动 |
 | 代码文件（和线上不同的只有这 7 个） | 店铺：`includes/class-order-report.php`、`includes/class-series-sync.php`；总后台：`includes/class-orders.php`、`includes/class-series-campaigns.php`、`includes/class-series-push.php`、`includes/admin/class-orders-page.php`、`includes/admin/class-report-page.php` |
 | 其余 | 测试（`tests/m3-*`、`tests/m10-*`、`tests/m3-m10-*`）、`tools/catalog/`、文档。共用入口 `class-plugin.php` 和线上相同 |
@@ -98,7 +100,7 @@ wp eval 'echo wp_json_encode(get_option("peptide_core_series")), " cid=", var_ex
 | 报表三级数字、各店合计（全部 / 所选日期）、5 种筛选、订单记录、花费、系列和店铺归属 | 相同（发布版的数据里多几个新键，开关关着时页面不显示；去掉新键后完全相同） |
 | 订单与退款：列表、已退款筛选、4 张订单详情、4 个按单号搜索的页面 | 逐字节相同 |
 | 43 种搜法 | 全部相同 |
-| 店铺订单上报（8 张订单的摘要和指纹） | 逐项相同；6 张已上报的订单，升级后**一张都不会重报** |
+| 店铺订单上报（以 `24d1671` 为线上版重比时本机店铺副本有 47 张订单；摘要和指纹） | 逐项相同；已上报的订单升级后**一张都不会重报** |
 | 店铺回填试运行、系列状态、商品导出（5 个商品）、自己和自己比 | 相同 |
 
 ## 五、从线上旧版升级上来
@@ -123,23 +125,25 @@ wp eval 'echo wp_json_encode(get_option("peptide_core_series")), " cid=", var_ex
 | M3 / M10 纯测试 5 个 | 64 / 35 / 71 / 72 / 50 项全过 |
 | 冒烟测试 3 个（本机副本：店铺 WooCommerce 11.2.1、HPOS；总后台 30 家店记录） | 40 / 33 / 104 项全过；总后台那个开关开、关两种状态都覆盖 |
 | 差异报告工具自检 | 7 项全过 |
-| 仓库全部 96 个纯测试 | 线上版 84 过 / 12 败，发布版 84 过 / 12 败，**是同样的 12 个，没有新增失败**，都不是 M3 / M10 的 |
-| 默认套件 `tests/run-data-observations.cjs` | 线上版（`3a297df`）、发布版都是 82 过 / 2 败（`mail-source-observations`，日常会话的；`data-product-created`，`3a297df` 带进来的），没有新增 |
+| 仓库全部 98 个纯测试 | 线上版（`24d1671`）86 过 / 12 败，发布版 86 过 / 12 败，**是同样的 12 个，没有新增失败**，都不是 M3 / M10 的 |
+| 默认套件 `tests/run-data-observations.cjs` | 线上版（`24d1671`）、发布版都是 82 过 / 2 败（`mail-source-observations`，日常会话的；`data-product-created`，`3a297df` 带进来的），没有新增 |
 
 12 个旧失败：peptide-core 的 `client-environment`、`data-dimensions`、`data-product-exposure`、`first-order-offer`；peptide-hq 的 `management-addresses`、`provision-customer-domain`；peptide-panapay 的 `callback-return-status`、`hub-new-account-defaults`、`hub-return-failure-binding`、`hub-return-status-check`、`provider-site-bindings`、`return-cart`（都是 `*-pure`）。
 
 **没有验证的**：MySQL 上的这次比对（本机是 SQLite）；生产 PHP 版本下的耗时。请在沙盒上重跑第七节。
 
-## 七、沙盒上要做的（向 F1 要一个时段，约 1 小时）
+## 七、沙盒上要做的（F1 暂排 11-19 周四北京时间上午，约 1 小时；跟着 F1 的发布顺延）
+
+“线上版代码”指**沙盒那时的主线**（F1 的打底包和热修复包 A 发出后，就是含这两个包的主线），不是本说明里写的某个旧提交。F3 会在那之前把那时的主线合进本分支，所以“线上版 → 本分支”的差别只剩 F3 的 7 个文件。沙盒用重导的脱敏快照（主店 s0001 + 总后台），F1 导好、换成线上版后通知 F3。
 
 前提：沙盒有一个总后台和至少一家店，数据是脱敏快照（线上旧版的表结构）。
 
-1. 沙盒装线上版代码（`3a297df`），只读取数（脚本文件取本分支的，放在沙盒上任意位置即可，不用放进插件目录）：
+1. 沙盒装线上版代码（那时的主线），只读取数（脚本文件取本分支的，放在沙盒上任意位置即可，不用放进插件目录）：
    `wp eval-file …/peptide-hq/tests/m3-m10-compare-dump.php /tmp/f3/hq-live <起> <止>`；每家店 `wp eval-file …/peptide-core/tests/m3-m10-compare-dump.php /tmp/f3/store-live`
 2. 换成本分支代码，打开总后台任意一页（自动升级），同样取数到 `hq-release`、`store-release`。
 3. `diff -r` 两边。**通过**：`pages/` 下没有任何差别；数据只多新键（`customers / abandoned / abandon_orders / abandon_rate / customer_id`）；店铺 `orders_that_would_be_reported_again` 是 0；两个 `meta.json` 的 `writes_during_dump` 都是空的。
 4. 第三节的只读查询前后各跑一次，结果相同（除版本号 1→2）。
-5. 换回 `3a297df` 再取一次，和第 1 步相同；再换回本分支。
+5. 换回那时的主线再取一次，和第 1 步相同；再换回本分支。
 6. 演练手册 `docs/handoffs/m3-m10-sandbox-rehearsal.md` 第 2、4 步（升级重跑、回填）——前两轮已过，这次只确认版本 `1/2`。
 
 ## 八、发布顺序和发布后核对
