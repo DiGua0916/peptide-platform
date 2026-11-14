@@ -182,7 +182,7 @@
    }
    openProduct(config.productId);
   }};
-  if(document.documentElement.classList.contains('pc-acc-gating'))document.addEventListener('pc:gate-closed',bootProduct,{once:true});else bootProduct();
+  if(document.documentElement?.classList?.contains('pc-acc-gating'))document.addEventListener('pc:gate-closed',bootProduct,{once:true});else bootProduct();
  }
  let dirty=false;
  document.addEventListener('input',event=>{if(event.isTrusted&&event.target.closest('form:not([role="search"])'))dirty=true;},true);
