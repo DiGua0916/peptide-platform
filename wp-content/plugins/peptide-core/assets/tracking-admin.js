@@ -446,23 +446,31 @@
 		if ( ! n || ! n.creative && ! n.ad_id ) { return ''; }
 		return [ n.creative ? '素材 ' + n.creative : '', n.ad_id ? '广告 ' + n.ad_id : '', n.placement ].filter( Boolean ).join( ' · ' );
 	}
+	// 店主 2026-11-14：原来十二张卡片平铺，看不出哪张重要，字段也是技术原值（Houston, Texas / America/Los_Angeles / en-US）。
+	// 改成三组：人在哪 / 用什么看的 / 哪来的，每项先给人话，技术原值放小字。
 	function netCards( n, browser ) {
 		if ( ! n || ! ( n.ip || n.model || n.os ) ) { return ''; }
-		var item = function ( label, value ) { return value ? '<div class="pc-trk-card"><span>' + esc( label ) + '</span><b>' + esc( value ) + '</b></div>' : ''; };
-		return '<h2 class="pc-trk-net-title">设备和网络 <small>（最近一次访问）</small></h2><div class="pc-trk-cards pc-trk-net">' +
-			item( '机型', n.model || '看不出（' + ( n.os || '未知系统' ) + '）' ) +
-			item( '系统', ( n.os + ' ' + n.os_version ).trim() ) +
-			item( '浏览器', [ IN_APP[ n.in_app ] && 'Other' === browser ? '' : browser, IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' ) ) +
-			item( 'IP', n.ip ) +
-			item( '国家', n.country ) +
-			item( '地区', [ n.city, n.region ].filter( Boolean ).join( ', ' ) || ( n.ip ? '未装 IP 地理库' : '' ) ) +
-			item( '经纬度', n.lat && n.lon ? n.lat + ', ' + n.lon : '' ) +
-			item( '屏幕', n.screen ? n.screen.replace( 'x', ' × ' ) : '' ) +
-			item( '运营商', n.isp ) +
-			item( '时区', n.timezone ) +
-			item( '语言', n.language ) +
-			item( '来源', sourceText( n ) ) +
-			'</div>';
+		var item = function ( label, value, sub, flag ) {
+			if ( ! value ) { return ''; }
+			return '<div class="pc-trk-card' + ( flag ? ' is-odd' : '' ) + '"><span>' + esc( label ) + '</span><b>' + esc( value ) + '</b>' +
+				( sub ? '<small>' + esc( sub ) + '</small>' : '' ) + '</div>';
+		};
+		var group = function ( title, cards ) { return cards ? '<h3 class="pc-trk-net-group">' + esc( title ) + '</h3><div class="pc-trk-cards pc-trk-net">' + cards + '</div>' : ''; };
+		var device = [ n.model, ( n.os + ' ' + n.os_version ).trim() ].filter( Boolean ).join( ' · ' );
+		var where  = n.place || ( n.ip ? '查不到位置（未装 IP 地理库）' : '' );
+		return '<h2 class="pc-trk-net-title">这位客户 <small>（最近一次访问）</small></h2>' +
+			group( '人在哪', 
+				item( '位置', where, n.lat && n.lon ? n.lat + ', ' + n.lon : '' ) +
+				item( '当地时间', n.local_time, n.timezone ) +
+				item( '网络', n.network || '查不到', n.ip ? 'IP ' + n.ip : '', n.network_odd ) +
+				item( '语言', n.language_text, n.language )
+			) +
+			group( '用什么看的',
+				item( '设备', device || '看不出', '' ) +
+				item( '浏览器', [ IN_APP[ n.in_app ] && 'Other' === browser ? '' : browser, IN_APP[ n.in_app ] || '' ].filter( Boolean ).join( ' · ' ), '' ) +
+				item( '屏幕', n.screen ? n.screen.replace( 'x', ' × ' ) : '', '' )
+			) +
+			group( '哪来的', item( '广告来源', sourceText( n ) || '不是从广告进来的', '' ) );
 	}
 
 	function visitRow( s ) {
