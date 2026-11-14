@@ -3,8 +3,14 @@
 use PeptideCore\Pending_Order as P;
 $ok=0;$n=0;$t=function($c,$m)use(&$ok,&$n){$n++; if($c){$ok++;} else echo "FAIL $m\n";};
 $now=time();
-$t(P::qualifies('pending',true,$now-60,$now),'pending fresh');
-$t(P::qualifies('failed',true,$now-60,$now),'failed fresh');
+$t(!P::qualifies('pending',true,$now-60,$now),'pending fresh: may be paying right now, hidden');
+$t(P::qualifies('pending',true,$now-3600,$now,$now-3600),'pending quiet for an hour shows');
+$t(!P::qualifies('pending',true,$now-3600,$now,$now-120),'pending touched 2 min ago hidden');
+$t(P::qualifies('failed',true,$now-60,$now),'failed fresh shows');
+$t(!P::qualifies('failed',true,$now-3600,$now,$now-3600,$now-300),'failed with a new attempt 5 min ago hidden');
+$t(P::qualifies('failed',true,$now-7200,$now,$now-7200,$now-3600),'failed with an old attempt shows');
+$t(P::live_attempt_at(['active'=>'a','attempts'=>['a'=>['state'=>'created','created_at'=>$now-100],'b'=>['state'=>'failed','created_at'=>$now-10],'c'=>['state'=>'unknown','created_at'=>$now-50]]])===$now-50,'latest live attempt');
+$t(P::live_attempt_at('')===0 && P::live_attempt_at(['attempts'=>'x'])===0,'no or bad attempt data');
 $t(!P::qualifies('checkout-draft',true,$now-60,$now),'draft excluded');
 $t(!P::qualifies('pending',true,$now-73*3600,$now),'old excluded');
 $t(!P::qualifies('processing',false,$now-60,$now),'paid excluded');
@@ -14,6 +20,9 @@ $o = wc_create_order(['customer_id'=>$uid]); $o->add_product(wc_get_product(10),
 $r = P::for_visitor();
 $t($r && $r['order_id']===$o->get_id() && $r['state']==='failed' && $r['items']===2 && str_contains($r['pay_url'],'order-pay') ,'failed order found '.json_encode($r));
 $t(!isset($r['email']) && !isset($r['address']), 'no personal data');
+$o->update_meta_data('_pc_panapay_sessions',['active'=>'a','attempts'=>['a'=>['state'=>'created','created_at'=>time()]]]); $o->save();
+$t(null===P::for_visitor(),'failed order with a payment just started is hidden');
+$o->delete_meta_data('_pc_panapay_sessions'); $o->save();
 sleep(1);
 $p = wc_create_order(['customer_id'=>$uid]); $p->add_product(wc_get_product(10),1); $p->calculate_totals(); $p->update_status('processing');
 $t(null===P::for_visitor(),'hidden after a later paid order');
