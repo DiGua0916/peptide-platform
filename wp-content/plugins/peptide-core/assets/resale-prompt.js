@@ -38,6 +38,10 @@
     if (cr) store.set('pcResaleCr', cr);
     let last = NaN, pending = null, cartNow = null;
 
+    // Lane C tracker (P2-5): whatsapp_click with source dealer_popup / cart_link.
+    function track(source) {
+        try { document.dispatchEvent(new CustomEvent('vc:track', { detail: { type: 'whatsapp_click', data: { source } } })); } catch (_) { /* no tracker */ }
+    }
     function otherDialogOpen() {
         return [...document.querySelectorAll('dialog[open], [role="dialog"][aria-modal="true"]')].some(el => !el.hasAttribute('data-pc-resale') && el.offsetParent !== null);
     }
@@ -59,7 +63,7 @@
         dialog.querySelector('.pc-resale__continue').textContent = s.continue;
         const close = () => { if (dialog.open) dialog.close(); dialog.remove(); store.set(SEEN, 'closed'); cartLine(); };
         dialog.querySelectorAll('[data-close]').forEach(b => b.addEventListener('click', close));
-        wa.addEventListener('click', () => { global.document.dispatchEvent(new CustomEvent('vc:visitor-action', { detail: { action: 'whatsapp_click', source: 'resale_prompt' } })); setTimeout(close, 0); });
+        wa.addEventListener('click', () => { track('dealer_popup'); setTimeout(close, 0); });
         dialog.addEventListener('cancel', event => { event.preventDefault(); close(); });
         document.body.append(dialog);
         try { dialog.showModal(); } catch (_) { dialog.setAttribute('open', ''); }
@@ -72,6 +76,7 @@
         if (!line) {
             line = document.createElement('a'); line.setAttribute('data-pc-resale-line', ''); line.className = 'pc-resale-line'; line.target = '_blank'; line.rel = 'noopener';
             line.textContent = s.cartLine;
+            line.addEventListener('click', () => track('cart_link'));
             (root.querySelector('.wc-block-cart__submit') || root).insertAdjacentElement('afterend', line);
         }
         line.href = waUrl(cfg.whatsapp, message(cart, cfg, cr));

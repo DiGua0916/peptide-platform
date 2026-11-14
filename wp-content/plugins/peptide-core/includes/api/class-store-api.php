@@ -74,6 +74,8 @@ final class Store_Api {
 					// 1 号站 P0-5：分档运费进度条和运费险。
 					'shipping_tiers' => \PeptideCore\Shipping\Discounts::tiers_for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
 					'shipping_protection' => \PeptideCore\Shipping\Protection::for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
+					// 1 号站 P1-1：首页「订单待付款」条的数据（A 线渲染）。
+					'pending_order' => \PeptideCore\Pending_Order::for_visitor(),
 					// 满减（PROMO-01）：已用上的活动和下一档提示，结构同 peptide_core_get_promotion_progress()。
 					'promotion'    => \PeptideCore\Promotions::progress(),
 					'activity_listener' => \PeptideCore\Activity\Progress::for_cart(),
@@ -106,6 +108,10 @@ final class Store_Api {
 					'shipping_protection' => array(
 						'description' => __( 'Optional shipping protection fee: whether it applies, whether the shopper kept it, price and crossed-out reference (minor units).', 'peptide-core' ),
 						'type' => 'object', 'context' => array( 'view', 'edit' ), 'readonly' => true,
+					),
+					'pending_order' => array(
+						'description' => __( 'The visitor\'s unpaid order (pending or failed, under 72 hours): state, total (minor units), item count and payment link. Null when none.', 'peptide-core' ),
+						'type' => array( 'object', 'null' ), 'context' => array( 'view', 'edit' ), 'readonly' => true,
 					),
 					'activity_listener' => array(
 						'description' => __( 'Selected promotion milestones for the current WooCommerce cart session. Informational only.', 'peptide-core' ),
