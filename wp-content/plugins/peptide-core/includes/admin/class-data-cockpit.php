@@ -216,7 +216,9 @@ final class Data_Cockpit {
 			}
 			echo '</ul></section>';
 		} else {
-			echo '<p class="pc-ck-ok">' . Data_Review::tag( '没有异常', 'green' ) . ' 像素、支付、流量、素材都没发现问题。</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			$px_level = (string) ( $extra['pixel']['level'] ?? '' );
+			$px_text  = 'ok' === $px_level ? '像素回传正常，' : ( 'none' === $px_level ? '（本店后台还没填 Facebook 像素，回传没法在这里检查）' : '' );
+			echo '<p class="pc-ck-ok">' . Data_Review::tag( '没有异常', 'green' ) . ' ' . esc_html( 'none' === $px_level ? '支付、流量、素材都没发现问题' . $px_text . '。' : $px_text . '支付、流量、素材都没发现问题。' ) . '</p>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		}
 
 		echo '<div class="pc-rv-grid"><section class="pc-rv-card"><h2>钱漏在哪一步</h2>' . Data_Review::funnel_html( $p, $q ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
