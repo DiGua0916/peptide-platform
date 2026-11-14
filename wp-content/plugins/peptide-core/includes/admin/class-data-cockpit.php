@@ -265,6 +265,19 @@ final class Data_Cockpit {
 
 		echo '<section class="pc-rv-card"><h2>素材：该加预算的、该关的</h2><p class="pc-rv-help">表里的数字是所选时段的；建议按<b>最近 3 天</b>算（一天的样本太小，容易看错）。规则：ROAS ≥ 2.5 加预算；花了 $40 还没单或 ROAS &lt; 1 关掉；最近 2 天 ROAS 掉一半以上 = 疲劳；花费不到 $40 且不到 3 单 = 样本不足。</p>';
 		echo Data_Review::creative_table( $cr, $tr, $cr3, '建议（按最近 3 天）' ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		// 店主 2026-11-14：要能看“一整天、整个站点”的客户构成，而不是一个个客户点进去看。
+		$dim = isset( $_GET['dim'] ) ? sanitize_key( wp_unslash( $_GET['dim'] ) ) : 'state'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$dim = isset( Data_Review::DIMS[ $dim ] ) ? $dim : 'state';
+		echo '<section class="pc-rv-card" id="pc-rv-dim"><h2>这些客户是谁</h2><div class="pc-rv-dimtabs">';
+		foreach ( Data_Review::DIMS as $k => $label ) {
+			echo '<a class="' . ( $k === $dim ? 'is-on' : '' ) . '" href="' . esc_url( add_query_arg( array( 'page' => self::SLUG, 'range' => $key, 'dim' => $k ), admin_url( 'admin.php' ) ) . '#pc-rv-dim' ) . '">' . esc_html( $label ) . '</a>';
+		}
+		echo '</div>' . ( 'creative' === $dim ? Data_Review::creative_table( $cr, $tr, $cr3, '建议（按最近 3 天）' ) : Data_Review::dim_table( Data_Review::dim_rows( $p, $dim, $ads ), $dim ) ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+
+		$pay = isset( $_GET['pay'] ) ? sanitize_key( wp_unslash( $_GET['pay'] ) ) : 'hour'; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$pay = isset( Data_Review::PAY_DIMS[ $pay ] ) ? $pay : 'hour';
+		echo '<section class="pc-rv-card" id="pc-rv-pay"><h2>支付结果：钱有没有真收到</h2>' . Data_Review::payment_html( Data_Review::load_payments( $r ), $pay, self::SLUG, array( 'range' => $key, 'dim' => $dim ) ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 		echo '</div>';
 	}
 

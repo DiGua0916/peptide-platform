@@ -85,6 +85,23 @@ final class Query {
 			'ad_id'      => $str( 'utm_content' ),
 			'placement'  => $str( 'placement' ),
 			'source'     => $str( 'source_class' ),
+		) + self::plain( $s );
+	}
+
+	/**
+	 * 同样的数据再给一份“人话版”（店主 2026-11-14）：后台直接显示这几个，技术原值收在下面一行小字里。
+	 *
+	 * @return array{place:string,network:string,network_odd:bool,local_time:string,language_text:string}
+	 */
+	private static function plain( array $s ): array {
+		$str              = static fn( string $k ): string => (string) ( $s[ $k ] ?? '' );
+		[ $net, $odd ]    = Plain_Words::network( $str( 'isp' ), $str( 'ip_type' ) );
+		return array(
+			'place'         => Plain_Words::place( $str( 'geo_country' ), $str( 'geo_region' ), $str( 'geo_city' ) ),
+			'network'       => $net,
+			'network_odd'   => $odd,
+			'local_time'    => Plain_Words::clock( $str( 'timezone' ), Tracker::now_ms() ),
+			'language_text' => Plain_Words::language( $str( 'language' ) ),
 		);
 	}
 
