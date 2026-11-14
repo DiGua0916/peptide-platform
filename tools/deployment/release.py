@@ -335,6 +335,34 @@ class Release:
                     return False, detail
         return True, ""
 
+    # --- 每一组之前：线上和主线有没有在发布过程中变 ---
+    def live_hashes(self, copy):
+        _, out, _ = self.remotes[copy["host"]].agent("hash", copy["root"], *components_for(copy), check=False)
+        return {line.split("\t")[0]: line.split("\t")[1] for line in out.strip().splitlines() if line.count("\t") >= 2}
+
+    def mainline_problem(self):
+        """--mainline 给了的话：重新取一次，主线必须仍然包含在要发的提交里（主线前进了、包里没有，就会把线上的新改动盖掉）。"""
+        ref = getattr(self.args, "mainline", "")
+        if not ref:
+            return ""
+        remote = ref.split("/", 1)[0] if "/" in ref else "origin"
+        subprocess.run(["git", "-C", REPO, "fetch", "-q", remote], capture_output=True, timeout=120)
+        tip = subprocess.run(["git", "-C", REPO, "rev-parse", ref], capture_output=True, text=True).stdout.strip()
+        inside = subprocess.run(["git", "-C", REPO, "merge-base", "--is-ancestor", tip, self.commit], capture_output=True).returncode == 0
+        return "" if tip and inside else f"主线 {ref} 现在是 {tip[:8] or '读不到'}，不包含在要发的提交 {self.commit[:8]} 里（发布过程中主线前进了）"
+
+    def precheck(self, unit):
+        """2026-11-14 加：发布过程中别的会话又往生产推过（主线也跟着变），整目录替换会把它盖掉。每一组换之前都重新核对。"""
+        problem = self.mainline_problem()
+        if problem:
+            return problem
+        changed = []
+        for copy in unit["copies"]:
+            now = self.live_hashes(copy)
+            before = self.before.get(copy["key"], {})
+            changed += [f"{copy['key']} {comp}" for comp, digest in now.items() if comp in before and before[comp] != digest]
+        return ("这些副本在发布开始之后被别人改过：" + "，".join(changed)) if changed else ""
+
     # --- G4 ---
     def g4_hashes(self, units):
         want = expected_hashes(self.components)
@@ -375,6 +403,10 @@ class Release:
             if not self.args.allow_same_version:
                 raise Failed(message + "。抬高版本号后重新打包（沙盒试装可以加 --allow-same-version）。")
             say("  提示：" + message)
+        self.before = {copy["key"]: self.live_hashes(copy) for unit in units for copy in unit["copies"]}
+        problem = self.mainline_problem()
+        if problem:
+            raise Failed(problem + "。基于新的主线重新打包后再发。")
         self.record_start(self.components_file)
         if self.env.get("db_snapshot"):
             for host, dbs in self.env["db_snapshot"].items():
@@ -383,6 +415,13 @@ class Release:
         failure = None
         for unit in units:
             since = int(time.time())
+            problem = self.precheck(unit)
+            if problem:
+                say(f"  停止：{problem}")
+                for copy in unit["copies"]:
+                    self.record_site(copy["key"], "failed", "没有动：" + problem)
+                failure = (unit, problem)
+                break
             try:
                 self.apply_unit(unit)
                 ok, detail = self.check_unit(unit, since)
@@ -459,6 +498,7 @@ def main():
     parser.add_argument("--allow-unpushed", action="store_true")
     parser.add_argument("--allow-same-version", action="store_true")
     parser.add_argument("--rollback-all-on-failure", action="store_true")
+    parser.add_argument("--mainline", default="", help="例如 origin/codex/checkout-acceptance-20261105：开始前和每一组之前都核对主线仍包含在要发的提交里")
     parser.add_argument("--workdir", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "vialcove-release"))
     args = parser.parse_args()
     inventory = json.load(open(args.inventory, encoding="utf-8"))

@@ -64,6 +64,7 @@ class FakeRemote:
     log = []
     fail_on = None       # (子串) 命中时返回失败
     hashes = {}
+    change_after_first_apply = False
 
     def __init__(self, name, cfg):
         self.name = name
@@ -78,6 +79,12 @@ class FakeRemote:
             return 0, '{"lock":null,"latest":null}\n', ""
         if "pchq-release start" in command:
             return 0, '{"id":7}\n', ""
+        if " apply " in command and FakeRemote.change_after_first_apply:
+            FakeRemote.change_after_first_apply = False
+            FakeRemote.pending_change = True
+        elif FakeRemote.__dict__.get("pending_change") and " hash " in command:
+            FakeRemote.hashes = {k: "CHANGED" for k in FakeRemote.hashes}
+            FakeRemote.pending_change = False
         if " hash " in command:
             comps = [c for c in command.split() if c.startswith(("plugins/", "themes/"))]
             return 0, "".join(f"{c}\t{FakeRemote.hashes.get(c, 'x')}\t1\n" for c in comps), ""
@@ -114,6 +121,7 @@ def unit(name, stage="G1", host="a", kind="store"):
 class FlowTest(unittest.TestCase):
     def setUp(self):
         FakeRemote.log, FakeRemote.fail_on = [], None
+        FakeRemote.change_after_first_apply, FakeRemote.pending_change = False, False
         FakeRemote.hashes = {"plugins/peptide-core": "H1", "plugins/peptide-hq": "H2"}
         release.say = lambda text: None
 
@@ -128,6 +136,22 @@ class FlowTest(unittest.TestCase):
         self.assertTrue(self.commands("pchq-release finish 7 done"))
         self.assertEqual({"one/x": "ok", "two/x": "ok", "hq/x": "ok"}, r.results)
         self.assertTrue(self.commands(" prune "))
+
+    def test_someone_else_changed_a_copy_during_the_release_stops_before_it(self):
+        FakeRemote.change_after_first_apply = True
+        r = make([unit("one"), unit("two", host="b"), unit("three")])
+        self.assertEqual(1, r.run())
+        self.assertEqual(["/srv/one"], [c.split(" apply t1 ")[1].split()[0] for c in self.commands(" apply t1 ")])
+        self.assertEqual("failed", r.results["two/x"])
+        self.assertEqual(0, len(self.commands(" rollback ")))
+
+    def test_mainline_moved_stops_before_next_unit(self):
+        r = make([unit("one"), unit("two", host="b")])
+        calls = iter(["", "", "主线前进了"])
+        r.mainline_problem = lambda: next(calls)
+        self.assertEqual(1, r.run())
+        self.assertEqual(1, len(self.commands(" apply t1 ")))
+        self.assertEqual("failed", r.results["two/x"])
 
     def test_failed_health_check_rolls_back_that_unit_and_stops(self):
         FakeRemote.fail_on = "https://two/"

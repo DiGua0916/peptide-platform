@@ -57,9 +57,20 @@ $labels = static fn( array $a ): array => array_map( static fn( $x ) => $x[0], $
 check( 'healthy period has no alerts', array() === C::alerts( $p(), $p(), array( 'C0001' => $cr() ), array(), array( 'any_spend' => true, 'spend_yesterday' => true, 'pixel' => array( 'level' => 'ok' ) ) ) );
 check( 'loss when ROAS under 1 with real spend', array( '亏钱' ) === $labels( C::alerts( $p( array( 'roas' => 0.8, 'revenue' => 80.0 ) ), $p(), array(), array() ) ) );
 check( 'no loss alert on small spend', array() === C::alerts( $p( array( 'spend' => 30.0, 'roas' => 0.5, 'revenue' => 15.0 ) ), $p(), array(), array() ) );
-$a = C::alerts( $p(), $p(), array(), array(), array( 'failed' => 4 ) );
-check( 'payment failures, red when failures beat orders', array( '支付失败' ) === $labels( $a ) && 'red' === $a[0][1] && str_contains( $a[0][2], '4 笔' ) );
-check( 'one failure is not an alert', array() === C::alerts( $p(), $p(), array(), array(), array( 'failed' => 1 ) ) );
+$a = C::alerts( $p( array( 'n_orders' => 1 ) ), $p(), array(), array(), array( 'pay' => array( 'failed' => 4, 'abandoned' => 0 ) ) );
+check( 'declines, red when they beat paid orders', array( '支付被拒' ) === $labels( $a ) && 'red' === $a[0][1] && str_contains( $a[0][2], '4 笔' ) );
+check( 'one decline is not an alert', array() === C::alerts( $p(), $p(), array(), array(), array( 'pay' => array( 'failed' => 1 ) ) ) );
+$a = C::alerts( $p( array( 'n_orders' => 1 ) ), $p(), array(), array(), array( 'pay' => array( 'failed' => 0, 'abandoned' => 5 ) ) );
+check( 'opened the payment page and never paid', array( '打开支付页没付' ) === $labels( $a ) && str_contains( $a[0][2], '5 个客户' ) );
+check( 'abandons below the paid count are not an alert', array() === C::alerts( $p( array( 'n_orders' => 9 ) ), $p(), array(), array(), array( 'pay' => array( 'abandoned' => 4 ) ) ) );
+
+// 口径：付款被拒以后订单会被超时取消，订单状态就不是 failed 了，所以优先看支付尝试。
+$att = static fn( array $states ): array => array( 'attempts' => array_map( static fn( $s ) => array( 'state' => $s ), $states ) );
+check( 'a decline later cancelled still counts as a decline', 'failed' === C::payment_outcome( $att( array( 'failed' ) ), 'cancelled' ) );
+check( 'order status failed with no attempt record', 'failed' === C::payment_outcome( '', 'failed' ) );
+check( 'opened the payment page, never came back', 'abandoned' === C::payment_outcome( $att( array( 'created' ) ), 'cancelled' ) );
+check( 'paid wins over any earlier decline', 'paid' === C::payment_outcome( $att( array( 'failed', 'paid' ) ), 'cancelled' ) && 'paid' === C::payment_outcome( '', 'processing' ) );
+check( 'never reached payment', 'none' === C::payment_outcome( '', 'cancelled' ) && 'none' === C::payment_outcome( array(), 'pending' ) );
 check( 'low landing rate on enough clicks', array( '点了没进站' ) === $labels( C::alerts( $p(), $p(), array( 'C0001' => $cr( array( 'clicks' => 50, 'visitors' => 20, 'land' => 0.4 ) ) ), array() ) ) );
 check( 'low landing rate needs 20 clicks', array() === C::alerts( $p(), $p(), array( 'C0001' => $cr( array( 'clicks' => 10, 'visitors' => 3, 'land' => 0.3 ) ) ), array() ) );
 $fat = array( 'C0001' => array( 'recent' => 0.5, 'before' => 3.0, 'before_orders' => 4, 'recent_spend' => 50.0 ) );
