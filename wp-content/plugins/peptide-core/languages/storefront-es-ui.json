@@ -439,6 +439,14 @@
     "Add 1 box": "Agregar 1 caja",
     "Open WhatsApp support": "Abrir asistencia de WhatsApp",
     "Reached.": "Alcanzado.",
-    "黑色星期五": "Black Friday"
+    "黑色星期五": "Black Friday",
+    "Batch COA": "COA del lote",
+    " · Batch COA": " · COA del lote",
+    "BATCH COA": "COA DEL LOTE",
+    " batch report": " informe del lote",
+    "View full report ↗": "Ver informe completo ↗",
+    "Latest published report for this product and specification. Results apply to the lot named in the report.": "Informe publicado más reciente para este producto y presentación. Los resultados corresponden al lote indicado en el informe.",
+    "Results apply to the lot named in the report.": "Los resultados corresponden al lote indicado en el informe.",
+    "Lot ": "Lote "
   }
 }

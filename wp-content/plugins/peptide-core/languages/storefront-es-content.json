@@ -1605,6 +1605,18 @@
     "✔️ Sports medicine and recovery specialists": "✔️ Especialistas en medicina deportiva y recuperación",
     "✔️ Sports medicine clinics and rehabilitation centers": "✔️ Clínicas de medicina deportiva y centros de rehabilitación",
     "✔️ Wellness centers and recovery-focused spas": "✔️ Centros de bienestar y spas centrados en la recuperación",
-    "❌ No (benzyl alcohol cytotoxic)": "❌ No (alcohol bencílico citotóxico)"
+    "❌ No (benzyl alcohol cytotoxic)": "❌ No (alcohol bencílico citotóxico)",
+    "How do I read the COA for this lot?": "¿Cómo leo el COA de este lote?",
+    "Each report lists the lot number, test date, laboratory and HPLC purity. Match the lot number on your vial label with the report shown on this page, or search for it in the COA library.": "Cada informe indica el número de lote, la fecha de análisis, el laboratorio y la pureza por HPLC. Compara el número de lote de la etiqueta del vial con el informe que aparece en esta página o búscalo en la biblioteca de COA.",
+    "Which lot will I receive?": "¿Qué lote recibiré?",
+    "Orders ship from current stock. The lot number is printed on the vial label, and batch information appears in your order details after shipment.": "Los pedidos se envían desde el inventario actual. El número de lote está impreso en la etiqueta del vial y la información del lote aparece en los detalles de tu pedido después del envío.",
+    "How is my order shipped?": "¿Cómo se envía mi pedido?",
+    "Orders ship with FedEx. The shipping cost and delivery estimate for your address are shown at checkout before you pay.": "Los pedidos se envían con FedEx. El costo de envío y la estimación de entrega para tu dirección se muestran en el pago antes de pagar.",
+    "How should unopened vials be stored?": "¿Cómo se deben conservar los viales sin abrir?",
+    "Keep unopened vials sealed at 2–8 °C, dry and protected from light.": "Conserva los viales sin abrir sellados a 2–8 °C, en un lugar seco y protegidos de la luz.",
+    "What if my order arrives damaged or incomplete?": "¿Qué pasa si mi pedido llega dañado o incompleto?",
+    "Contact our support team with your order number and photos of the package. We will review it with you.": "Contacta a nuestro equipo de soporte con tu número de pedido y fotos del paquete. Lo revisaremos contigo.",
+    "Is this product for human or veterinary use?": "¿Este producto es para uso humano o veterinario?",
+    "No. It is supplied for laboratory research use only and is not intended for human or animal consumption.": "No. Se suministra solo para uso en investigación de laboratorio y no está destinado al consumo humano ni animal."
   }
 }
