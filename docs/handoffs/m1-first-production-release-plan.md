@@ -345,6 +345,16 @@ F1 的建议是方案甲，理由是原则本身——素材相关的文件现�
 | `pc_buyer_extras`（投手导出、退款列、WhatsApp 客服按钮） | 先关着 | 不开 |
 | 总后台报表三列 `pchq_m10_extras` | F4 上线后打开 | F3 发布后、F4 上线后（开关要所有者确认） |
 
+## 发布范围（2026-11-14 写明）
+
+F1 的发布工具只整目录替换 5 个组件目录：`plugins/peptide-core`、`plugins/peptide-hq`、`plugins/peptide-panapay`、`plugins/peptide-ops`、`themes/peptide-site`（发布代理只认这 5 个名字，别的一律拒绝）。**`wp-content/db.php`、各份 `wp-config.php`（包括 `shared/wp-config.php`）、`mu-plugins`、`uploads` 都不在替换范围内**，发布既不会改它们，也不会把它们换回旧版。
+
+## 待所有者定：开店模板带着 db.php，但新店的 wp-config 缺 PC_PANAPAY_DB_HOST
+
+- 11-13 后台提速时，各店后台的 `wp-content/db.php`（手工放的，不在组件目录里）把数据库连接换成了复用连接；支付插件的 `Database::open()` 因此打不开，后台收不到支付通知（11-13 17:35 起）。站点会话 11-14 在 6 份店铺后台的 `shared/wp-config.php` 里加了 `define( 'PC_PANAPAY_DB_HOST', DB_HOST );` 修好了。
+- 后台开店模板（`/srv/vialcove-provision-template/…-admin/source/wp-content/db.php`）也带着这个 db.php，但开店时生成的 wp-config 没有这一行：**下次开新店会出现同样的回写中断**。
+- 两种修法，请所有者选：①（站点会话和 F1 都倾向这个）开店脚本 `tools/deployment/provisioning/` 生成 wp-config 时一并写这一行——这是 F1 负责的目录，F1 来改，先在沙盒开一次店验证；② 改支付插件的 `Database::open()`，让它认复用连接——改支付核心，影响面大。
+
 ## 回退办法
 
 | 情况 | 怎么退 | 多久 |
