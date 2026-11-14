@@ -84,7 +84,7 @@ final class Data_Pages {
 	);
 
 	/** 管理员菜单只留这几项，按这个顺序（第 2 步：运营数据换成复盘，从复盘底部进；第 3 步：实时数据换成今日作战室，从作战室顶部进。第一项决定顶层“数据”点进去是哪页）；其余数据页照样能用地址打开，或从别的菜单进。 */
-	public const ADMIN_MENU = array( 'pc-data-cockpit', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
+	public const ADMIN_MENU = array( 'pc-data-cockpit', 'pc-data-review', 'pc-visitors', 'pc-visitors-archive', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
 
 	/** 挪到别的菜单下面的数据页：slug => 新的上级菜单。 */
 	public const MOVED = array(
