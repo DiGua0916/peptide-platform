@@ -67,6 +67,7 @@ final class Plugin {
 		First_Order_Offer::register_hooks();
 		Postal_Assist::register_hooks();
 		Checkout_Assist::register_hooks();
+		Commerce_Speed::register_hooks();
 		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();
 		Cloak_Trust::register_hooks(); // 流量斗篷“已购用户信任 IP”（2026-11-14）
