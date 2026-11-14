@@ -50,8 +50,17 @@
       if (availability.className !== classes) availability.className = classes;
       text(availability,value); lastVariation = variation; lastStock = stock;
     }
+    // WooCommerce draws the chosen variation's availability 300 ms after found_variation
+    // (add-to-cart-variation.js waits before $singleVariation.html()). The dialog's own refreshes
+    // can all land before that, leaving the stock line empty. Read it again on Woo's own
+    // "variation drawn / cleared" events; only the timing changes, not the text or its style.
+    const $ = window.jQuery;
+    const wooDrawn = 'show_variation.vcProductMeta hide_variation.vcProductMeta reset_data.vcProductMeta';
+    const onWooDrawn = () => update();
+    if (variations && $) $(form).on(wooDrawn, onWooDrawn);
     function destroy() {
       if (disposed) return; disposed = true; signal?.removeEventListener('abort',destroy);
+      if (variations && $) $(form).off('.vcProductMeta');
       for (const [control,hidden] of suppressed) control.hidden = hidden;
       strip.remove(); if (!hadClass) root.classList.remove('vc-product-meta-ready');
     }
