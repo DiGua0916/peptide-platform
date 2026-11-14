@@ -886,4 +886,6 @@
 - 验证：服务器端 `python3 -m py_compile` 通过；用 s0006 的真实 web 配置字节形式（`define('DB_HOST','localhost');`）做过替换干跑，生成结果正确
 - 该文件不在 5 个组件目录内，`vc-release` 不覆盖、其 `check` 也不会报它，所以属于手工维护项
 
+**离线验证（2026-11-14 补）**：加了回归测试 `test_admin_config_declares_payment_write_back_host`，它用 worker 自己的 `configuration()` 生成真实 web 配置，再走 `admin_create()` 的同一套替换，断言 `PC_PANAPAY_DB_HOST` 出现且只出现一次、排在 `DB_HOST` 之后（它是裸常量引用，顺序错了 PHP 会炸）、配置里不再残留 `localhost`，并断言 worker.py 源码里那条 `require` 断言还在。把 worker.py 回退到修复前，这个测试会失败——确认它真的在守这件事。仓库测试套件在本机 39 个用例，失败数与修复前完全一致（2 failures / 10 errors，都是本机环境造成的既有失败，与本改动无关）。
+
 **未完成**：还没开测试店做端到端验证（开一个店 → 看生成的 wp-config 有这行 → 在该店后台确认一次支付通知回写到位）。按店主"测试一律用主店 s0001，不动子店"的规矩，开新店要先经店主同意，已在等。
