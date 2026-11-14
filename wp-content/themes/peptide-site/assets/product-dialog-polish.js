@@ -113,8 +113,18 @@
     if(url.searchParams.has('rest_route'))url.searchParams.set('rest_route',url.searchParams.get('rest_route').replace(/\/?$/,'/')+id);else url.pathname=url.pathname.replace(/\/?$/,'/')+id;
     request=new AbortController();const active=request,timeout=setTimeout(()=>active.abort(),12000);
     try {
-     const headers={Accept:'application/json'};if(global.vcHomeQuickView?.wpNonce)headers['X-WP-Nonce']=global.vcHomeQuickView.wpNonce;
-     const response=await fetch(url.href,{credentials:'same-origin',cache:'no-store',signal:active.signal,headers});if(!response.ok)throw new Error('Read failed');const data=await response.json();
+     // 1 号站定稿 P0-1：首页有缓存时，页面里的 REST nonce 可能已过期，读商品会被拒（403），于是出现 “Product could not load”。
+     // 被拒时去掉 nonce 再读一次（商品资料本来就是公开的）；网络偶发失败再自动重试一次，都不行才显示重试卡片。
+     let response=null,lastError=null;
+     for(let attempt=0;attempt<3&&!response;attempt++){
+      if(attempt)await new Promise(done=>setTimeout(done,500*attempt));
+      if(ticket!==intent||active.signal.aborted)break;
+      const headers={Accept:'application/json'};if(attempt===0&&global.vcHomeQuickView?.wpNonce)headers['X-WP-Nonce']=global.vcHomeQuickView.wpNonce;
+      try{const r=await fetch(url.href,{credentials:'same-origin',cache:'no-store',signal:active.signal,headers});if(r.ok)response=r;else lastError=new Error('Read failed '+r.status);}
+      catch(error){if(active.signal.aborted)throw error;lastError=error;}
+     }
+     if(!response){try{document.dispatchEvent(new CustomEvent('vc:track',{detail:{type:'product_load_failed',data:{productId:id,reason:String(lastError?.message||'unknown').slice(0,60)}}}));}catch(_){}throw lastError||new Error('Read failed');}
+     const data=await response.json();
      if(Number(data.id)!==id||typeof data.html!=='string')throw new Error('Wrong product');
      const fragment=document.createElement('template');fragment.innerHTML=data.html;template=fragment.content.firstElementChild;
      if(fragment.content.children.length!==1||template?.tagName!=='TEMPLATE'||template.dataset.vcQuickProduct!==String(id)||template.content.firstElementChild?.dataset.vcProductId!==String(id))throw new Error('Invalid template');
