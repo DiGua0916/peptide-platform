@@ -144,6 +144,17 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-dialog .vc-dialog-ribbon{position:absolute;top:24px;right:-52px;width:192px;padding:8px 0;transform:rotate(45deg);background:#be293c;color:#fff;font-size:24px;font-weight:750;line-height:32px;letter-spacing:-.02em;text-align:center;pointer-events:none;box-shadow:0 4px 10px #8f162426}
 .vc-product-dialog .vc-dialog-zoom{position:absolute;bottom:0;right:0;display:grid;place-items:center;width:44px;height:44px;border-radius:50%;background:white;color:var(--ink);font-size:28px;line-height:1;border:1px solid var(--line)}
 .vc-product-dialog .vc-dialog-media-caption{margin:12px 0 0;color:var(--ink);font-size:14px;font-weight:600;line-height:20px}
+/* Swipe hint under the gallery: phones only, one dot per visible slide, current one is a pill. */
+.vc-product-dialog .vc-dialog-dots{display:none}
+.vc-product-dialog .vc-dialog-dots[hidden],.vc-product-dialog .vc-dialog-dot[hidden]{display:none!important}
+@media (max-width:767px){
+.vc-product-dialog .vc-dialog-dots{display:flex;justify-content:center;align-items:center;gap:2px;margin:8px 0 0}
+.vc-product-dialog .vc-dialog-dot{display:grid;place-items:center;width:24px;height:24px;padding:0;margin:0;border:0;border-radius:12px;background:transparent;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.vc-product-dialog .vc-dialog-dot::before{content:"";display:block;width:7px;height:7px;border-radius:4px;background:#c4ced1;transition:width 200ms ease,background-color 200ms ease}
+.vc-product-dialog .vc-dialog-dot[aria-current=true]::before{width:18px;background:var(--ink)}
+.vc-product-dialog .vc-dialog-dot:focus-visible{outline:2px solid var(--ink);outline-offset:0}
+}
+@media (prefers-reduced-motion:reduce){.vc-product-dialog .vc-dialog-dot::before{transition:none}}
 .vc-product-dialog .vc-dialog-report-label{position:absolute;left:8px;bottom:8px;padding:8px 12px;background:#fff;color:var(--ink);font-size:11px;font-weight:600;letter-spacing:.04em}
 .vc-product-dialog.woocommerce div.product .summary>.price{font-size:36px;font-weight:700;letter-spacing:-.03em;margin:0 0 8px}
 .vc-product-dialog.woocommerce div.product .summary>.price .vc-sale-badge{display:none}
