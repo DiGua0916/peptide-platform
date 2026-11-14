@@ -976,7 +976,7 @@ currency, visitor, visit, buyer
     - F2 的只读代码不在这份代码里，或者 F2 认为这个账号能改（例如有人用过滤器 `pc_marketing_can_manage` 放开）：上表第一行也是 403，菜单里没有“营销活动”。也就是说 F5 这一层只在“F2 给的确实是只读列表”时才放行。
     - 投手打开这三个页面时，页面顶部和浏览器标签显示“营销活动”（`Staff_Buyer::campaigns_title()`），不显示给能改的人看的“满减活动 / 优惠码 / 运费折扣”。
   - **请 F2 保持**：上面几个方法的名字和含义；只读列表里不出现新建、编辑、启停、删除的入口。以后只读列表要加会用到 `action` 参数的筛选、或者要调接口（REST、admin-ajax），请先告诉 F5——投手的接口名单里现在没有营销相关的，会被挡成 403。
-  - 投手首页上原有的“当前活动”（读 `\PeptideCore\Pricing\Campaigns::running()`）不变。
+  - 投手首页上原有的“当前活动”（读 `\PeptideCore\Pricing\Campaigns::running()`）不变；平台所有者 2026-11-14 同意它随 M4 出现（F2 的代码在线上时自动显示）。
   - 用例：`m9-buyer-scope-pure`（F2 的代码不在时的行为和各种拒绝的地址）、`m9-buyer-campaigns-pure`（用假的 `Marketing` 顶替 F2 的类，验证接起来之后的菜单、权限、标题）。F2 的 `m4-campaigns-readonly-pure` 在两个分支合起来的代码上 50 项全过。
 - （以下是 2026-11-13 之前的说法，留作记录）营销活动（F2 的约定）：`Admin_Menus::add_menus()` 已改为用 `Marketing::can_view()` 和 `Marketing::menu_cap()`（F2 的代码合进来之前沿用原判断）。当时投手**没有**拿到 `pc_view_campaigns`，营销页面也不在投手的名单里；PRD 要求的“只读的当前活动”放在投手首页，读 `\PeptideCore\Pricing\Campaigns::running()`。F2 如果希望投手能打开只读的营销页面，告诉 F5 把 `pc-promotions`、`pc-coupons`、`pc-shipping-discounts` 加进名单。
 
@@ -1028,7 +1028,7 @@ currency, visitor, visit, buyer
 - 投手的订单列表：和线上（主线 `Order_List`，11-13 改版）一样，F5 不去掉任何列；`Admin_Menus::buyer_order_columns()` 排在 `Order_List::columns()`（999）之后（1000），只在 `pc_buyer_extras` 打开时最后加“退款状态”。来源和物流单号用线上列表自己的“来源”“物流单号”两列（2026-11-14 起，原来代替“来源”的“来源广告”和补的“运单号”已去掉）。订单号点开的是主线的订单详情页。
 - 订单详情页（主线的 `pc-order`）对投手只读：`Admin_Menus::buyer_order_detail_styles()` 把订单复制、退款、作废、编辑、发货、手动发送邮件、卖家备注的保存、标签增删、“结账成功页 / 订单追踪页”藏起来，并拦住页面上表单的提交（= 热修复包 A）。**页面是日常会话的，F5 没有改它的输出**，真正的限制是 M9-1 里的服务端名单。
 - 退款状态（列表、详情页顶部提示、导出）：`Admin_Menus::refund_facts( \WC_Order )` 返回 `array{label,amount}`。两个来源都算，取大的：F3 写的 `_pc_refund_state`（`none / partial / full`）和 `_pc_refund_cents`（美分；不产生 WooCommerce 退款对象），以及订单上 WooCommerce 的已退金额。`label` 是“已退款 / 部分退款 / 无”。
-- **订单导出（ST-03）**：`Admin\Buyer_Order_Export`。投手的订单列表上方选付款日期 → 下载 CSV（UTF-8 带 BOM）。只含已付款、非测试单的订单；一次最多 92 天、5000 行，不填日期是最近 30 天；列：订单号、下单时间、付款时间、订单状态、订单金额、币种、商品、件数、国家、来源广告、`utm_source / campaign / content / term`、承运商、运单号、退款状态、退款金额。**不含电话和地址；顾客邮箱默认也不含**（平台所有者 2026-11-12 还没定，先按不带）。要带邮箱只有一处开关：这家店的选项 `pc_buyer_export_email` 设为 `on`（`wp option update pc_buyer_export_email on`，或过滤器 `pc_buyer_export_with_email`），打开后“顾客邮箱”排在件数后面。以 `= + - @` 开头的内容前面加单引号（防表格公式）。每次导出记一条操作日志（`order / export`）。管理员用同一个地址也能导。
+- **订单导出（ST-03）**：`Admin\Buyer_Order_Export`。投手的订单列表上方选付款日期 → 下载 CSV（UTF-8 带 BOM）。只含已付款、非测试单的订单；一次最多 92 天、5000 行，不填日期是最近 30 天；列：订单号、下单时间、付款时间、订单状态、订单金额、币种、商品、件数、国家、来源广告、`utm_source / campaign / content / term`、承运商、运单号、退款状态、退款金额。**不含电话和地址；顾客邮箱默认带**（平台所有者 2026-11-14 定“带邮箱”）。邮箱只有一处开关：这家店的选项 `pc_buyer_export_email`，没设置或 `on` 都带，设 `off`（或 `0`、`no`）才不带（`Buyer_Order_Export::email_wanted()`；过滤器 `pc_buyer_export_with_email` 可覆盖），“顾客邮箱”排在件数后面。整个导出在 `pc_buyer_extras` 后面，所有者 11-14 定先关着。以 `= + - @` 开头的内容前面加单引号（防表格公式）。每次导出记一条操作日志（`order / export`）。管理员用同一个地址也能导。
 - WooCommerce 原生订单页（带 `pc_native`）的只读处理和线上同一版本（去掉“订单操作”框、隐藏按钮、输入框不可点；顶部提示“只能查看”）。
 - 店铺信息页面 `admin.php?page=pc-store-info`：投手能改对外英文品牌名、客服 WhatsApp、客服邮箱和自己的密码；后台店铺名称（`blogname`）和域名只读。
   - 对外英文品牌名（平台所有者 2026-11-10 确认可改）：选项 `pc_public_brand`（2–40 个英文字符，可留空），读取用 `\PeptideCore\Admin\Store_Settings::public_brand()`。主题的 `vc_brand_name()` 已经读它（网页标题、Logo 替代文字、页脚版权）；留空时和以前一样。**不写 `blogname`**：那是总后台管理的内部名称，11-08 已定不上前台、不反向同步。
@@ -1070,7 +1070,7 @@ currency, visitor, visit, buyer
 | 日常会话（`Accounts::assets()`；**生产冻结，之后再接**） | 输出 `window.pcAccounts.signup` 时再加一个条件：`\PeptideCore\Pricing\Popups::suppressed()` 为真时不弹注册弹窗（类不存在时照旧）。进站的 18+ 确认不受影响 | 买过但没登录的顾客回访时仍会看到注册弹窗 |
 | 日常会话（`Cloak_Trust`，主线 `8cdb833`；**生产冻结，之后再接**） | 线上已经给付过款的设备发签名 cookie `pc_buyer_trust`（付款成功页、付过款的顾客登录时），和 M11 的 `pc_buyer` 是同一件事。按“重复的以主站为主”，请加一个公开方法（例如 `Cloak_Trust::trusted_order(): ?\WC_Order`，就是现在私有的 `cookie_order()`）；F5 随后让 `Buyer_Status::known()` 改读它，不再写 `pc_buyer`（约 0.5 天） | M11 仍用自己的 `pc_buyer`（开关默认关，线上不会两套同时出现） |
 | 日常会话（`Campaign_Announcement`、`Modules\Product_Broadcast` 等 F2 没覆盖的弹出内容，可选） | 同样读 `Popups::suppressed()`。付款成功弹窗（`Paid_Popup`）不属于营销弹窗，不用改 | 这些内容对已购顾客照常出现 |
-| F1（开关） | 沙盒测过、平台所有者确认之后，试点店打开：`wp option update pc_buyer_recognition on`。回退：`wp option delete pc_buyer_recognition`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见下一段） | — |
+| F1（开关） | 沙盒测过、平台所有者确认之后，试点店（主店 s0001）先开一周，没问题再开其余 5 家（所有者 2026-11-14 定）：`wp option update pc_buyer_recognition on`。回退：`wp option delete pc_buyer_recognition`。前台匿名访客的缓存页最多 5 分钟后才跟着变（见下一段） | — |
 
 **开关和设置多久生效（F1 2026-11-10 沙盒验收时发现，主线已有的情况）。** 首页缓存的失效钩子只在定义了 `PEPTIDE_CORE_PAGE_CACHE` 的那份安装里注册；生产 6 家店的后台那份都没有定义。所以在店铺后台或用后台那份跑 WP-CLI 改 `pc_buyer_recognition`、`pc_entry_address`，或投手在“店铺信息”里改对外品牌名、WhatsApp、邮箱之后，匿名访客看到的缓存页最多 5 分钟后才变。验收和上线时：等 5 分钟，或者用带任意参数的地址（例如 `/?nocache=1`）看。带 `pc_buyer` cookie 的顾客不走缓存，立刻生效。`class-page-cache.php` 归日常会话，F1 已告知。
 
@@ -1089,6 +1089,7 @@ currency, visitor, visit, buyer
 - **FE-03 信任条**（`inc/product-trust.php`，2026-11-12）：按店开关 `pc_trust_badges`（值 `on` 才生效，**默认关**，过滤器 `vc_trust_badges_enabled`），功能声明 `m14.trust_badges => 1`。打开后商品弹窗内容最前面输出一条：`Secure checkout`（只在本次请求是 HTTPS 或店铺地址是 `https://` 时）和结账实际接受的支付标志（`\VialCove\Panapay\Payment_Icons::data( $gateway->payment_icons() )`，只取已启用的支付方式；过滤器 `vc_trust_payment_icons`，结果只留本站地址的图片，最多 9 个）。没有自由文字。两样都没有时不输出。需要支付插件配合的只有一点：`Payment_Icons::data()` 的返回形状（`id / label / url`）不要改。
   - **平台所有者 2026-11-14 定：“发布后直接开”**，按现在的英文措辞，6 家店一起开。代码默认仍关；F1 在发布后请所有者确认再写 `pc_trust_badges = on`。
 - **NF-07 落地页提速**（同一个开关 `pc_front_speed`，2026-11-12 第三轮）：
+  - **平台所有者 2026-11-14 定**：沙盒用手机量一次首屏时间，确实变快、页面没乱，先在试点店 s0001 开 `pc_front_speed`，没问题再开其余 5 家。
   - 商品落地页（`/?vc_product=<ID>`）：`wp_footer`（优先级 5）里印出 `vc_home_quick_view_template( $product )`，也就是 `GET vialcove/v1/home-product/<ID>` 返回的那个 `<template data-vc-quick-product="<ID>">`。`home-quick-view.js` 的 `loadTemplate()` 和 `product-dialog-polish.js` 的 `openProduct()` 本来就先找页面里有没有这个模板，有就不请求。**这两处“先找页面里的模板”的写法请保留**；改了的话落地页不会坏（退回去请求接口），只是提速失效。`wp_head`（优先级 2）里另有一条 `<link rel="preload" as="image" media="(max-width: 767px)">`，取 `vc_home_quick_view_image()` 的 `src / srcset / sizes`。商品落地页不延后样式。
   - 专辑落地页（`/?vc_catalog_category=<ID>`，以及 `vc_catalog_q`）：首页那 11 个样式，加 `vc-home-quick-view`、`vialcove-product-dialog-interaction`、`vc-product-dialog-polish` 3 个，不再挡首屏。
   - 预览、编辑器框架（`pc_template_preview`、`pc_frame`）不动。
@@ -1098,6 +1099,7 @@ currency, visitor, visit, buyer
   - 开关全关时，前台 HTML 和主线的差别只有这两个脚本地址后面的版本号。
 - **多规格商品弹窗的库存短句**（`assets/product-dialog-meta.js`，2026-11-14，`758fba8`，不在开关后面；所有者定修并进这次发布）：WooCommerce 11 在 `found_variation` 之后 `setTimeout` 300 毫秒才画规格内容并触发 `show_variation`，弹窗自己的刷新可能都早于它。`createVcProductMetaStrip()` 现在在表单的 `show_variation` / `hide_variation` / `reset_data`（jQuery 命名空间 `.vcProductMeta`，`destroy()` 时解绑）上再读一次。只改时机：文案、样式、换规格时先隐藏旧数字的规则不变；简单商品不挂这些事件。
 - **FE-03 “看过 / 已加购”**（`inc/product-activity.php`、`assets/product-activity.js`，2026-11-12）：按店开关 `pc_product_activity`（值 `on` 才生效，**默认关**），下限 `pc_product_activity_min`（整数 1–1000，默认 5），功能声明 `m14.product_activity => 1`。只显示接口给的真实数字，低于下限不显示。**需要 F4 提供接口**，约定如下：
+  - **平台所有者 2026-11-14 定：先关着**（线上已有首页榜单和购买播报）。代码随发布，开关不开。
   - `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读；变体商品传父商品 ID。
   - 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`。
   - `viewing`：最近 `viewing_minutes` 分钟内看过这件商品（打开商品弹窗或商品页；各规格都算在父商品上）的去重访客数。建议 10 分钟。`added`：最近 `added_hours` 小时内把这件商品加进购物车的去重访客数。建议 24 小时。
