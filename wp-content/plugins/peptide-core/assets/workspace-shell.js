@@ -6,7 +6,7 @@
   if (typeof document !== 'undefined') api.start();
 }(function () {
   'use strict';
-  const pages = new Set(['pc-overview','pc-data','pc-data-operations','pc-data-products','pc-data-pages','pc-data-page-conversion','pc-data-apps','pc-data-landing','pc-data-sources','pc-data-dimensions','pc-data-conversion','pc-data-emails','pc-data-experiments','pc-visitors','pc-visitors-stats','pc-store-design','pc-promotions','pc-shipping','pc-media','pc-apps','wc-orders']);
+  const pages = new Set(['pc-overview','pc-data','pc-data-operations','pc-data-products','pc-data-pages','pc-data-page-conversion','pc-data-apps','pc-data-landing','pc-data-sources','pc-data-dimensions','pc-data-conversion','pc-data-emails','pc-data-experiments','pc-visitors','pc-data-ai','pc-store-design','pc-promotions','pc-shipping','pc-media','pc-apps','wc-orders']);
   function canonical(value, base) {
     try {
       const url = new URL(value, base), origin = new URL(base);
@@ -69,6 +69,17 @@
         const parent = a.closest('#adminmenu > li');
         if (parent) { parent.classList.add('wp-has-current-submenu','wp-menu-open'); parent.classList.remove('wp-not-current-submenu'); }
       });
+      // Pages kept out of the menu name the entry that stands for them (meta pc-menu-current = that entry's page slug).
+      const alias = doc.querySelector('meta[name="pc-menu-current"]');
+      if (alias && !document.querySelector('#adminmenu a[aria-current="page"]')) {
+        const a = Array.from(document.querySelectorAll('#adminmenu .wp-submenu a[href]')).find(x => { try { const u = new URL(x.href, base); return u.origin === new URL(base).origin && u.searchParams.get('page') === alias.content; } catch (_) { return false; } });
+        if (a) {
+          a.closest('li')?.classList.add('current');
+          a.setAttribute('aria-current','page');
+          const parent = a.closest('#adminmenu > li');
+          if (parent) { parent.classList.add('wp-has-current-submenu','wp-menu-open'); parent.classList.remove('wp-not-current-submenu'); }
+        }
+      }
     }
     function watch(frame) {
       const doc = frame.contentDocument;

@@ -83,9 +83,10 @@ final class Board {
 			'pageviews'        => null,
 			'interactions'     => null,
 			'scrolled'         => null,
+			'scroll_depth'     => 0, // 2026-11-13：这次访问最深滚到百分之几（素材人群画像用）
 			'timezone'         => (string) ( $visit['timezone'] ?? '' ),
 			'language'         => (string) ( $visit['language'] ?? '' ),
-			'ip_country'       => '',
+			'ip_country'       => 1 === preg_match( '/\A[A-Z]{2}\z/', (string) ( $visit['geo_country'] ?? '' ) ) ? (string) $visit['geo_country'] : '', // 2026-11-13：IP 库查到的国家优先
 			'carted'           => $stage >= 2,
 			'checkout'         => $stage >= 3,
 			'products'         => array(),
@@ -120,6 +121,9 @@ final class Board {
 			}
 			if ( 'scroll' === $type || 'product_scroll' === $type ) {
 				$f['scrolled'] = true;
+				if ( 'scroll' === $type ) {
+					$f['scroll_depth'] = max( $f['scroll_depth'], min( 100, (int) ( $data['depth'] ?? 0 ) ) );
+				}
 			}
 			if ( 'product_view' === $type && (int) ( $e['product_id'] ?? 0 ) > 0 ) {
 				$f['products'][] = (int) $e['product_id'];
@@ -185,6 +189,7 @@ final class Board {
 		$untagged = array();
 		$ad_day   = array();
 		$aud      = array();
+		$prof     = array(); // 2026-11-13：每条素材的人群画像（Audience）
 		foreach ( $by_visitor as $vid => $list ) {
 			usort( $list, static fn( $a, $b ) => array( (int) $a['start_ms'], (int) $a['id'] ) <=> array( (int) $b['start_ms'], (int) $b['id'] ) );
 			// 回访、以前看过的商品、到这次为止来了几次。
@@ -219,6 +224,7 @@ final class Board {
 			foreach ( self::audience_keys( $anchor ) as $group => $value ) {
 				$aud[ $group ][ $value ][ $tier ] = ( $aud[ $group ][ $value ][ $tier ] ?? 0 ) + 1;
 			}
+			Audience::add( $prof, $code, Audience::keys( $anchor ), $tier, $facts, self::behavior( $after ) );
 			foreach ( self::row_keys( $dim, $anchor, $code, $ads, $crs, $labels ) as $key => $label ) {
 				$rows[ $key ] = self::add( $rows[ $key ] ?? self::zero( $label, self::row_meta( $dim, $key, $code, $crs ) ), $tier, $facts, $vid );
 			}
@@ -272,7 +278,24 @@ final class Board {
 			'paid'            => (int) $total['visitors'],
 			'ad_day_visitors' => $counts,
 			'audience'        => self::audience_table( $aud ),
+			'profiles'        => Audience::finish( $prof ),
 		);
+	}
+
+	/** 访客从归因那次起的浏览行为：总停留、总页数、最深滚动。 @return array{dwell_ms:?int,pageviews:int,scroll_depth:int} */
+	public static function behavior( array $visits ): array {
+		$dwell = null;
+		$pv    = 0;
+		$depth = 0;
+		foreach ( $visits as $v ) {
+			$f = (array) ( $v['features'] ?? array() );
+			if ( null !== ( $f['dwell_ms'] ?? null ) ) {
+				$dwell = (int) $dwell + (int) $f['dwell_ms'];
+			}
+			$pv   += (int) ( $f['pageviews'] ?? 0 );
+			$depth = max( $depth, (int) ( $f['scroll_depth'] ?? 0 ) );
+		}
+		return array( 'dwell_ms' => $dwell, 'pageviews' => $pv, 'scroll_depth' => $depth );
 	}
 
 	/** 人群分布要看的维度（取归因的那次访问）。 */
@@ -646,6 +669,31 @@ final class Board {
 		return '各步都没有明显流失。';
 	}
 
+	/**
+	 * 这一行对应的 Meta 广告编号（纯函数，“复制广告编号”用）：素材 = 用了这个素材的广告；广告 = 自己；广告组 = 组里的广告。
+	 *
+	 * @param array<string,array<string,string>> $ads catalog() 的 ads
+	 * @return string[]
+	 */
+	public static function ad_ids_for( string $dim, string $key, array $ads ): array {
+		$out = array();
+		if ( 'ad' === $dim ) {
+			$id = substr( $key, 3 );
+			return Contract::valid_meta_id( $id ) ? array( $id ) : array();
+		}
+		foreach ( $ads as $ad_id => $ad ) {
+			$ad_id = (string) $ad_id;
+			if ( ! Contract::valid_meta_id( $ad_id ) ) {
+				continue;
+			}
+			if ( ( 'creative' === $dim && (string) ( $ad['code'] ?? '' ) === $key ) || ( 'adset' === $dim && 'adset:' . (string) ( $ad['adset_id'] ?? '' ) === $key ) ) {
+				$out[] = $ad_id;
+			}
+		}
+		sort( $out );
+		return $out;
+	}
+
 	public const SORTS = array( 'roas' => '按 ROAS', 'spend' => '按花费', 'orders' => '按订单', 'visitors' => '按访客' );
 
 	/**
@@ -800,15 +848,24 @@ final class Board {
 		$events_t   = \PeptideCore\Tracking\Schema::table( 'events' );
 		$out        = array( 'visits' => array(), 'visitors' => array(), 'ads' => array(), 'creatives' => array(), 'spend' => array(), 'orders' => array(), 'labels' => array() );
 		if ( ! \PeptideCore\Tracking\Schema::installed() ) {
-			return $out;
+			return $out + array( 'error' => true ); // 2026-11-13：没就绪也算“读不出”，日报不能当成空的发出去
 		}
+		$err  = false;
+		$seen = static function () use ( $wpdb, &$err ): void {
+			if ( '' !== (string) $wpdb->last_error ) {
+				$err = true;
+			}
+		};
+		$wpdb->last_error = '';
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, in_app, device, pageviews, stage, order_id';
+		$seen();
+		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id, ua, os, os_version, device_model, screen, isp, geo_city';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 			$in   = implode( ',', $chunk );
 			$rows = (array) $wpdb->get_results( $wpdb->prepare( "SELECT {$cols} FROM {$visits_t} WHERE visitor_id IN ({$in}) AND start_ms < %d ORDER BY start_ms, id", $ms[1] ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$seen();
 			foreach ( $rows as $r ) {
 				$out['visits'][ (int) $r['id'] ] = $r;
 				$owners[ (int) $r['id'] ]        = (int) $r['visitor_id'];
@@ -816,6 +873,7 @@ final class Board {
 			foreach ( (array) $wpdb->get_results( "SELECT id, first_visit_id, last_paid_visit_id FROM {$visitors_t} WHERE id IN ({$in})", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$out['visitors'][ (int) $r['id'] ] = array( 'first_visit_id' => (int) $r['first_visit_id'], 'last_paid_visit_id' => (int) $r['last_paid_visit_id'] );
 			}
+			$seen();
 		}
 		// 事件明细：只取判断意向要用的类型。
 		$types  = "'page_view','product_view','product_click','product_intent','variant_select','module_click','add_to_cart','add_to_cart_attempt','checkout_view','checkout_submit_attempt','cart_view','cart_open','product_favorite','product_share','video_play','scroll','product_scroll'";
@@ -825,6 +883,7 @@ final class Board {
 			foreach ( (array) $wpdb->get_results( "SELECT visit_id, type, page_type, path, product_id, data FROM {$events_t} WHERE visit_id IN ({$in}) AND type IN ({$types}) ORDER BY occurred_ms, id", ARRAY_A ) as $e ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 				$events[ (int) $e['visit_id'] ][] = $e;
 			}
+			$seen();
 		}
 		$status = array();
 		try {
@@ -848,7 +907,10 @@ final class Board {
 				$out['orders'][ $oid ] = (int) round( max( 0.0, (float) $order->get_total() - (float) $order->get_total_refunded() ) * 100 );
 			}
 		}
-		return array_merge( $out, self::catalog(), array( 'spend' => self::spend( $day_from, $day_to ) ) );
+		$wpdb->last_error = '';
+		$out = array_merge( $out, self::catalog(), array( 'spend' => self::spend( $day_from, $day_to ) ) );
+		$seen();
+		return $out + array( 'error' => $err );
 	}
 
 	/** 素材、广告、词表中文名。 */

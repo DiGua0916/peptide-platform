@@ -734,6 +734,9 @@ final class Admin_Menus {
 		if ( 'wc-orders' === $page ) {
 			// 待处理订单 = 处理中的订单列表；打开某一张订单时仍算“全部订单”。
 			$status = isset( $_GET['status'] ) ? sanitize_key( wp_unslash( $_GET['status'] ) ) : ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( 'wc-completed' === $status ) {
+				return Order_List::SHIPPED; // 店主 2026-11-13：已发货订单单独一个子菜单。
+			}
 			return self::PENDING; // 订单菜单只剩待处理和弃单，打开任何订单页都算在“待处理订单”下。 // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 		}
 		// 商品菜单里隐藏的页面：批次算“检测报告”，添加商品、品牌、属性算“商品管理”。

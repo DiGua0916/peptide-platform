@@ -23,8 +23,23 @@ final class Country_Provider {
 		return null;
 	}
 
-	/** Resolve configuration without invoking Woo's integration constructor/updater/getters. */
+	/**
+	 * 2026-11-14：子店没有配置 PC_DATA_GEOIP_DATABASE、也没有 WooCommerce 的 MaxMind 国家库，国家一直是“无法判断”。
+	 * 前两种都没有可读文件时，用访客追踪同一份 DB-IP 城市库（uploads/peptide-geoip/，每月自动更新，里面也有国家）。
+	 */
 	private static function database_path(): ?string {
+		$path = self::configured_path();
+		if ( null !== $path && is_file( $path ) && is_readable( $path ) ) { return $path; }
+		if ( class_exists( Ip_Network::class ) ) {
+			$city = Ip_Network::databases()['city'] ?? null;
+			$city = self::local_path( $city );
+			if ( null !== $city && is_file( $city ) && is_readable( $city ) ) { return $city; }
+		}
+		return $path;
+	}
+
+	/** Resolve configuration without invoking Woo's integration constructor/updater/getters. */
+	private static function configured_path(): ?string {
 		if ( defined( 'PC_DATA_GEOIP_DATABASE' ) ) {
 			$explicit = constant( 'PC_DATA_GEOIP_DATABASE' );
 			if ( '' !== $explicit ) { return self::local_path( $explicit ); }
@@ -64,11 +79,13 @@ final class Country_Provider {
 
 	/** Fixed license credit only for an explicitly attributed, readable local resource. */
 	public static function attribution(): ?array {
-		if ( ! defined( 'PC_DATA_GEOIP_ATTRIBUTION' ) || 'db-ip' !== constant( 'PC_DATA_GEOIP_ATTRIBUTION' ) || ! defined( 'PC_DATA_GEOIP_DATABASE' ) || '' === constant( 'PC_DATA_GEOIP_DATABASE' ) ) { return null; }
 		try {
 			$path = self::database_path();
 			if ( null === $path || ! is_file( $path ) || ! is_readable( $path ) ) { return null; }
 		} catch ( \Throwable $error ) { return null; }
+		$declared = defined( 'PC_DATA_GEOIP_ATTRIBUTION' ) && 'db-ip' === constant( 'PC_DATA_GEOIP_ATTRIBUTION' ) && defined( 'PC_DATA_GEOIP_DATABASE' ) && '' !== constant( 'PC_DATA_GEOIP_DATABASE' );
+		// 用的是 DB-IP 的库（包括上面退回的城市库）就按它的许可写出处。
+		if ( ! $declared && false === stripos( basename( (string) realpath( $path ) ), 'dbip' ) ) { return null; }
 		return array( 'label' => 'IP Geolocation by DB-IP', 'url' => 'https://db-ip.com' );
 	}
 
