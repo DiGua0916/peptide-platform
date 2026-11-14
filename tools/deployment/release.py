@@ -103,7 +103,10 @@ def production_units(registry, cfg, templates):
         for side in ("web", "admin"):
             rule = cfg[side]
             root = rule["main"] if slug == main else rule["tenant"].format(slug=slug)
-            copies.append({"key": f"{slug}/{side}", "host": rule["host"], "root": root, "kind": "store", "owner": "keep"})
+            copy = {"key": f"{slug}/{side}", "host": rule["host"], "root": root, "kind": "store", "owner": "keep"}
+            if side == "admin" and rule.get("user"):
+                copy["wp_user"] = rule["user"].format(slug=slug, num=slug.lstrip("s"))   # 店铺后台 FPM 池的运行账号，例如 vcs0006
+            copies.append(copy)
         return {"name": slug, "stage": stage, "copies": copies, "store_url": site.get("public_url", "").rstrip("/"), "management_url": site.get("management_url", "").rstrip("/"), "site_id": site.get("id"), "check": check}
 
     by_slug = {s["slug"]: s for s in stores}
@@ -158,10 +161,20 @@ class Release:
         remote.run(f"chmod 644 {REMOTE_DIR}/components.json")
         code, out, err = self.hq_wp("pchq-release start --label={} --commit={} --modules={} --operator={} --kind={} --manifest={}".format(
             shlex.quote(self.label), shlex.quote(self.commit[:12]), shlex.quote(self.args.modules), shlex.quote(self.args.operator), "emergency" if self.args.emergency else "normal", REMOTE_DIR + "/components.json"), check=False)
+        waited = 0
+        while code != 0 and "已有发布在进行" in (err or out) and waited < getattr(self.args, "wait_lock", 0) * 60:
+            if waited == 0:
+                say("  发布锁被占用，排队等待（最多 %d 分钟）：%s" % (self.args.wait_lock, (err or out).strip()[-200:]))
+            time.sleep(30)
+            waited += 30
+            code, out, err = self.hq_wp("pchq-release start --label={} --commit={} --modules={} --operator={} --kind={} --manifest={}".format(
+                shlex.quote(self.label), shlex.quote(self.commit[:12]), shlex.quote(self.args.modules), shlex.quote(self.args.operator), "emergency" if self.args.emergency else "normal", REMOTE_DIR + "/components.json"), check=False)
         if code != 0:
             message = (err or out).strip()[-300:]
             if "已有发布在进行" in message:
-                raise Failed("发布锁被占用：" + message)
+                raise Failed("有发布正在进行，发布锁被占用：" + message + "。用 vc-release status 看是谁，等它完成后再发（或加 --wait-lock 排队）。")
+            if self.env.get("require_lock", self.args.env == "production"):
+                raise Failed("拿不到发布锁（总后台没有记下这次发布）：" + message + "。没有锁不发。")
             say("提示：总后台没有记下这次发布（" + message + "）。继续，但没有发布锁和发布记录。")
             return
         self.record_id = json.loads(out.strip().splitlines()[-1])["id"]
@@ -291,6 +304,23 @@ class Release:
             say("  " + order[0])
         return done.returncode == 0, "；".join(bad[:3]) or done.stderr[-200:]
 
+    def check_payment_callback(self, unit):
+        """2026-11-14 加：支付通知能不能送到店铺后台。在后台副本上以站点账号签一个探测请求，POST 到自己的
+        /pc-panapay/v1/store/event：签名、防重放（要写支付库，正是 11-13 断掉的那一步）都走真实路径，
+        事件内容故意不合法，所以不会改任何订单。期望 400 hub_event_invalid；503 = 支付库打不开。"""
+        for copy in unit["copies"]:
+            if not copy.get("wp_user"):
+                continue
+            remote = self.remotes[copy["host"]]
+            remote.put(os.path.join(HERE, "checks", "payment_callback_probe.php"), REMOTE_DIR + "/payment_callback_probe.php")
+            remote.run(f"chmod 644 {REMOTE_DIR}/payment_callback_probe.php")
+            code, out, err = remote.run(f"cd /tmp && sudo -u {shlex.quote(copy['wp_user'])} -H wp --path={shlex.quote(copy['root'])} eval-file {REMOTE_DIR}/payment_callback_probe.php", check=False, timeout=120)
+            line = (out.strip().splitlines() or [err.strip()[-200:]])[-1]
+            say(f"  收款回写（{copy['key']}）：{line}")
+            if not line.startswith("PASS"):
+                return False, f"{copy['key']} 收不到支付通知：{line}"
+        return True, ""
+
     def check_hq_poll(self, unit):
         if unit.get("site_id") is None:
             return True, ""
@@ -312,9 +342,9 @@ class Release:
         kind = unit.get("check", "none")
         checks = [lambda: self.check_health(unit), lambda: self.check_fatals(unit, since)]
         if kind == "prod_full":
-            checks += [lambda: self.check_prod(unit, quick=False), lambda: self.check_hq_poll(unit)]
+            checks += [lambda: self.check_prod(unit, quick=False), lambda: self.check_hq_poll(unit), lambda: self.check_payment_callback(unit)]
         elif kind == "prod_quick":
-            checks += [lambda: self.check_prod(unit, quick=True), lambda: self.check_hq_poll(unit)]
+            checks += [lambda: self.check_prod(unit, quick=True), lambda: self.check_hq_poll(unit), lambda: self.check_payment_callback(unit)]
         elif kind == "critical_path":
             checks += [lambda: self.check_critical_path(unit["check_host"])]
         for run in checks:
@@ -498,6 +528,7 @@ def main():
     parser.add_argument("--allow-unpushed", action="store_true")
     parser.add_argument("--allow-same-version", action="store_true")
     parser.add_argument("--rollback-all-on-failure", action="store_true")
+    parser.add_argument("--wait-lock", type=int, default=0, help="发布锁被占用时排队等待的分钟数（默认 0 = 直接拒绝）")
     parser.add_argument("--mainline", default="", help="例如 origin/codex/checkout-acceptance-20261105：开始前和每一组之前都核对主线仍包含在要发的提交里")
     parser.add_argument("--workdir", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "vialcove-release"))
     args = parser.parse_args()

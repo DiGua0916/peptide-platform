@@ -65,6 +65,9 @@ class FakeRemote:
     fail_on = None       # (子串) 命中时返回失败
     hashes = {}
     change_after_first_apply = False
+    locked_times = 0
+    no_hq_command = False
+    probe = "PASS ok"
 
     def __init__(self, name, cfg):
         self.name = name
@@ -78,7 +81,14 @@ class FakeRemote:
         if "pchq-release status" in command:
             return 0, '{"lock":null,"latest":null}\n', ""
         if "pchq-release start" in command:
+            if FakeRemote.locked_times > 0:
+                FakeRemote.locked_times -= 1
+                return 1, "", "Error: 已有发布在进行（编号 3）"
+            if FakeRemote.no_hq_command:
+                return 1, "", "Error: 'pchq-release' is not a registered wp command."
             return 0, '{"id":7}\n', ""
+        if "payment_callback_probe.php" in command and "eval-file" in command:
+            return 0, FakeRemote.probe + "\n", ""
         if " apply " in command and FakeRemote.change_after_first_apply:
             FakeRemote.change_after_first_apply = False
             FakeRemote.pending_change = True
@@ -122,6 +132,7 @@ class FlowTest(unittest.TestCase):
     def setUp(self):
         FakeRemote.log, FakeRemote.fail_on = [], None
         FakeRemote.change_after_first_apply, FakeRemote.pending_change = False, False
+        FakeRemote.locked_times, FakeRemote.no_hq_command, FakeRemote.probe = 0, False, "PASS ok"
         FakeRemote.hashes = {"plugins/peptide-core": "H1", "plugins/peptide-hq": "H2"}
         release.say = lambda text: None
 
@@ -152,6 +163,37 @@ class FlowTest(unittest.TestCase):
         self.assertEqual(1, r.run())
         self.assertEqual(1, len(self.commands(" apply t1 ")))
         self.assertEqual("failed", r.results["two/x"])
+
+    def test_lock_held_refuses_without_touching_anything(self):
+        FakeRemote.locked_times = 1
+        r = make([unit("one")])
+        with self.assertRaises(release.Failed):
+            r.run()
+        self.assertEqual(0, len(self.commands(" apply ")))
+
+    def test_lock_held_waits_in_queue_when_asked(self):
+        FakeRemote.locked_times = 2
+        r = make([unit("one")], wait_lock=5)
+        release.time.sleep = lambda s: None
+        self.assertEqual(0, r.run())
+        self.assertEqual(1, len(self.commands(" apply t1 ")))
+
+    def test_production_without_lock_refuses(self):
+        FakeRemote.no_hq_command = True
+        r = make([unit("one")])
+        r.env["require_lock"] = True
+        with self.assertRaises(release.Failed):
+            r.run()
+        self.assertEqual(0, len(self.commands(" apply ")))
+
+    def test_payment_callback_probe_failure_rolls_back_the_store(self):
+        FakeRemote.probe = "FAIL HTTP 503 payment_database_unavailable"
+        u = unit("one"); u["check"] = "prod_quick"; u["copies"][0]["wp_user"] = "vcs0001"; u["store_url"] = "https://x"
+        r = make([u])
+        r.check_prod = lambda unit, quick: (True, "")
+        r.check_hq_poll = lambda unit: (True, "")
+        self.assertEqual(1, r.run())
+        self.assertEqual(1, len(self.commands(" rollback t1 /srv/one")))
 
     def test_failed_health_check_rolls_back_that_unit_and_stops(self):
         FakeRemote.fail_on = "https://two/"

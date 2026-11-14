@@ -39,7 +39,7 @@
         "pilot": "s0006",
         "main_slug": "s0001",
         "web": {"host": "web", "main": "/srv/vialcove/current", "tenant": "/srv/vialcove/tenants/{slug}/public"},
-        "admin": {"host": "admin", "main": "/srv/vialcove/store-admin/current", "tenant": "/srv/vialcove/tenant-admin/{slug}/public"},
+        "admin": {"host": "admin", "main": "/srv/vialcove/store-admin/current", "tenant": "/srv/vialcove/tenant-admin/{slug}/public", "user": "vcs{num}"},
         "hq": {"host": "admin", "root": "/srv/vialcove/hq/current/public", "url": "<总后台地址>"}
       }
     }
