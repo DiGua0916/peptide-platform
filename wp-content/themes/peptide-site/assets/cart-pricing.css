@@ -173,3 +173,8 @@
         overflow-wrap: anywhere;
     }
 }
+
+/* Site 1 P1-6: compact checkout savings line (stamp + one sentence). */
+.vc-checkout-pricing section.vc-cart-savings--compact { display: flex; align-items: center; gap: 14px; padding: 10px 14px; grid-template-columns: none; }
+.vc-cart-savings--compact .vc-stamp-impact { flex: 0 0 auto; transform: scale(.72); transform-origin: left center; margin-right: -18px; }
+.vc-cart-savings__headline { margin: 0; font-weight: 800; font-size: 1.05rem; line-height: 1.3; color: var(--vc-sale, #c8323d); }

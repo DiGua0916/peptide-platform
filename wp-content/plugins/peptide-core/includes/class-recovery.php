@@ -532,6 +532,7 @@ final class Recovery {
 		if ( WC()->customer && '' === (string) WC()->customer->get_billing_email() ) {
 			WC()->customer->set_billing_email( (string) $r['email'] );
 		}
+		self::restore_address( $r );
 		$email = self::email( max( 1, (int) $r['stage'] ) );
 		$code  = $email ? $email->coupon() : '';
 		if ( '' !== $code && ! WC()->cart->has_discount( $code ) ) {
@@ -541,6 +542,33 @@ final class Recovery {
 		$set = array( 'clicked_ms' => self::now_ms(), 'updated_ms' => self::now_ms(), 'note' => 'clicked' );
 		$wpdb->update( self::table(), $set, array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		return $added;
+	}
+
+	/**
+	 * 1 号站 P1-1：恢复链接把姓名、地址、电话也填回，客户回来不用重填。
+	 * 地址取自弃单时的购物会话（WooCommerce 会话还在的时候）。只填当前为空的字段，不覆盖客户这次已经填的。
+	 */
+	private static function restore_address( array $r ): void {
+		$key = (string) ( $r['session_key'] ?? '' );
+		if ( '' === $key || ! WC()->customer || ! class_exists( Recovery_Items::class ) ) {
+			return;
+		}
+		$data    = Recovery_Items::session_data( $key );
+		$changed = false;
+		foreach ( array( 'billing' => 'set_billing_', 'shipping' => 'set_shipping_' ) as $group => $setter ) {
+			foreach ( array( 'first_name', 'last_name', 'company', 'address_1', 'address_2', 'city', 'state', 'postcode', 'country', 'phone' ) as $field ) {
+				$value  = trim( (string) ( $data[ $group ][ $field ] ?? '' ) );
+				$getter = 'get_' . $group . '_' . $field;
+				if ( '' === $value || ! method_exists( WC()->customer, $setter . $field ) || ! method_exists( WC()->customer, $getter ) || '' !== (string) WC()->customer->$getter() ) {
+					continue;
+				}
+				WC()->customer->{ $setter . $field }( $value );
+				$changed = true;
+			}
+		}
+		if ( $changed ) {
+			WC()->customer->save();
+		}
 	}
 
 	// ---------- 付款 ----------
