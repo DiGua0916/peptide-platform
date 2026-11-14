@@ -194,6 +194,8 @@ final class Plugin {
 			Admin\Pixels_Page::register_hooks();
 			Admin\Seo_Page::register_hooks();
 			Admin\Data_Pages::register_hooks();
+			Admin\Data_Review::register_hooks();
+			Admin\Data_Cockpit::register_hooks();
 			Admin\Domains_Page::register_hooks();
 			Admin\Blog_Admin::register_hooks();
 			Admin\Media_Page::register_hooks();
