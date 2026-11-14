@@ -156,7 +156,9 @@
   restoreCatalog();
   const layers=global.history.state?.__vcCommerceLayers?.layers;
   if(global.location.hash==='#vc-products'&&!idValue(config.productId)&&!layers?.length)document.querySelector('[data-vc-catalog]')?.scrollIntoView({block:'start',behavior:'instant'});
-  if(idValue(config.productId)){
+  // 1 号站定稿 P0-2：年龄确认还没点时，广告带来的商品先不打开（否则会盖在年龄弹窗上，看起来像年龄弹窗自己消失），
+  // 也不开始计时，确认后再打开。
+  const bootProduct=()=>{if(idValue(config.productId)){
    // A refreshed history layer may intentionally be a different product or
    // only the bag. The old deep-link query does not own that newer selection.
    if(Array.isArray(layers)&&layers.length&&!layers.some(layer=>layer.kind==='product'&&Number(layer.productId)===idValue(config.productId)))return;
@@ -169,7 +171,8 @@
     status('loading',true);waitPresented(id,14500).then(root=>{if(ticket===intent){if(root)clearRecovery();else status('failed');}});return;
    }
    openProduct(config.productId);
-  }
+  }};
+  if(document.documentElement.classList.contains('pc-acc-gating'))document.addEventListener('pc:gate-closed',bootProduct,{once:true});else bootProduct();
  }
  let dirty=false;
  document.addEventListener('input',event=>{if(event.isTrusted&&event.target.closest('form:not([role="search"])'))dirty=true;},true);

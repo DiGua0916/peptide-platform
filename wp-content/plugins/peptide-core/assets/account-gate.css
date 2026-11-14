@@ -29,3 +29,8 @@ html.pc-acc-lock, html.pc-acc-lock body { overflow: hidden; }
 .pc-acc__err { margin: 0; color: #b91c1c; font-size: 13.5px; }
 .pc-acc-login-signup { margin-top: 14px; }
 @media (min-width: 600px) { .pc-acc__box { padding: 34px 32px 24px; } }
+
+/* 1 号站定稿 P1-9 / P0-2：研究用途勾选框、老客户登录一行。 */
+.pc-acc__ruo { display: flex; gap: 10px; align-items: flex-start; text-align: left; margin: 0 0 14px; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 10px; font-size: 13.5px; color: #222; cursor: pointer; }
+.pc-acc__ruo input { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #111; }
+.pc-acc__returning { margin: 14px 0 0; text-align: center; }

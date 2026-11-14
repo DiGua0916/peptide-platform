@@ -29,6 +29,8 @@ final class Accounts {
 		add_action( 'woocommerce_payment_complete', array( self::class, 'ensure_for_order' ), 5 );
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
 		add_action( 'wp_enqueue_scripts', array( self::class, 'assets' ), 160 );
+		// 1 号站定稿 P0-2：年龄确认没点之前，商品弹窗不许叠上来。头部先打一个标记，商品弹窗脚本看到就等 pc:gate-closed。
+		add_action( 'wp_head', array( self::class, 'gate_flag' ), 1 );
 		add_action( 'wp_footer', array( self::class, 'render' ), 45 );
 		add_action( 'woocommerce_login_form_end', array( self::class, 'login_form_signup' ) );
 		add_action( 'woocommerce_account_dashboard', array( self::class, 'dashboard_orders' ), 5 );
@@ -442,6 +444,22 @@ final class Accounts {
 		return empty( $_GET['pc_paid'] ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 	}
 
+	/**
+	 * 1 号站定稿 P0-2：页面一开始就判断这位访客是否还要过年龄确认（30 天内确认过的不用）。
+	 * 要过的话给 <html> 加 pc-acc-gating，商品弹窗脚本会等 pc:gate-closed 再打开，两个弹窗不会叠在一起。
+	 * 只读 localStorage，不写 cookie，首页缓存照常；年龄弹窗脚本如果没加载出来，页面加载 4 秒后自动放行，避免商品永远打不开。
+	 */
+	public static function gate_flag(): void {
+		if ( ! self::front_page_ok() || ! self::settings()['gate'] ) {
+			return;
+		}
+		$js = "(function(d){var h=d.documentElement,need=true;try{var t=parseInt(localStorage.getItem('pcAgeOk')||'0',10);need=!(t>0&&Date.now()-t<30*864e5);}catch(e){}"
+			. "if(!need)return;h.classList.add('pc-acc-gating');"
+			. "window.addEventListener('load',function(){setTimeout(function(){if(h.classList.contains('pc-acc-gating')&&!d.querySelector('dialog[data-pc-gate][open]')){h.classList.remove('pc-acc-gating');d.dispatchEvent(new CustomEvent('pc:gate-closed'));}},4000);});"
+			. "})(document);";
+		wp_print_inline_script_tag( $js, array( 'id' => 'pc-acc-gate-flag' ) );
+	}
+
 	public static function assets(): void {
 		if ( ! self::front_page_ok() ) {
 			return;
@@ -525,10 +543,16 @@ final class Accounts {
 			<button type="button" class="pc-acc__inline" data-pc-doc="privacy" aria-expanded="false">Privacy Policy</button>, including the use of cookies.</p>
 		<div class="pc-acc__doc" data-pc-doc-body="terms" hidden><h3>Terms of Use</h3><?php echo self::policy_html( $p['terms'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 逐段转义。 ?></div>
 		<div class="pc-acc__doc" data-pc-doc-body="privacy" hidden><h3>Privacy Policy</h3><?php echo self::policy_html( $p['privacy'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 逐段转义。 ?></div>
+		<?php /* 1 号站定稿 P1-9：保留原版式，加一个“仅供研究使用”勾选框，勾上才能进入（措辞待法务审核）。 */ ?>
+		<label class="pc-acc__ruo"><input type="checkbox" data-pc-gate-ruo> <span>I understand these products are for laboratory research use only.</span></label>
 		<div class="pc-acc__actions">
-			<button type="button" class="pc-acc__btn pc-acc__btn--primary" data-pc-gate-yes>I'm <?php echo (int) $age; ?> or older, enter</button>
+			<button type="button" class="pc-acc__btn pc-acc__btn--primary" data-pc-gate-yes disabled aria-disabled="true">I'm <?php echo (int) $age; ?> or older, enter</button>
 			<button type="button" class="pc-acc__btn pc-acc__btn--ghost" data-pc-gate-no>I'm under <?php echo (int) $age; ?>, leave</button>
 		</div>
+		<?php if ( $s['signup'] ) : ?>
+		<?php /* 1 号站定稿 P0-2：老客户从这里直接登录（打开同一个登录 / 注册弹窗）。 */ ?>
+		<p class="pc-acc__small pc-acc__returning">Returning customer? <button type="button" class="pc-acc__inline" data-pc-gate-signin>Sign in</button></p>
+		<?php endif; ?>
 	</div>
 </dialog>
 <?php endif; ?>
