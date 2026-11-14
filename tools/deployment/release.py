@@ -95,8 +95,7 @@ def production_units(registry, cfg, templates):
         raise Failed(f"试点店 {pilot} 不在总后台的店铺注册表里（现有：{sorted(known)}）。")
     if main not in known:
         raise Failed(f"主店 {main} 不在总后台的店铺注册表里。")
-    if pilot == main:
-        raise Failed("试点店不能是主店。")
+    # 2026-11-14：平台所有者定试点店用主店 s0001（原来不允许）。试点就是主店时，主店第一个发、完整检查加观察，后面不再重复。
 
     def unit(entry, stage, check):
         slug, site = entry["slug"], entry["site"]
@@ -111,7 +110,8 @@ def production_units(registry, cfg, templates):
     units = [unit(by_slug[pilot], "G2", "prod_full")]
     for slug in sorted(known - {pilot, main}):
         units.append(unit(by_slug[slug], "G3", "prod_quick"))
-    units.append(unit(by_slug[main], "G3", "prod_quick"))
+    if pilot != main:
+        units.append(unit(by_slug[main], "G3", "prod_quick"))
     template_copies = [{"key": f"template/{side}", "host": cfg[side]["host"], "root": templates[side], "kind": "store", "owner": "keep"} for side in ("web", "admin") if templates.get(side)]
     if template_copies:
         units.append({"name": "templates", "stage": "G3", "copies": template_copies, "check": "none"})
