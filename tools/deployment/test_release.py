@@ -43,11 +43,15 @@ class PlanTest(unittest.TestCase):
         self.assertNotIn("s0002", names)
         self.assertIn("s0011", names)
 
-    def test_pilot_must_exist_and_not_be_main(self):
+    def test_pilot_must_exist(self):
         with self.assertRaises(release.Failed):
             release.production_units([site(2, "s0001")], CFG, {})
-        with self.assertRaises(release.Failed):
-            release.production_units(REGISTRY, dict(CFG, pilot="s0001"), {})
+
+    def test_main_store_as_pilot_goes_first_once(self):
+        units = release.production_units(REGISTRY, dict(CFG, pilot="s0001"), {"web": "/tpl/web", "admin": "/tpl/admin"})
+        self.assertEqual(["s0001", "s0006", "s0007", "s0008", "templates", "hq"], [u["name"] for u in units])
+        self.assertEqual(("G2", "prod_full"), (units[0]["stage"], units[0]["check"]))
+        self.assertEqual(["/srv/vialcove/current", "/srv/vialcove/store-admin/current"], [c["root"] for c in units[0]["copies"]])
 
     def test_components_by_kind_and_expected_hashes(self):
         self.assertIn("plugins/peptide-hq", release.components_for({"kind": "hq"}))
