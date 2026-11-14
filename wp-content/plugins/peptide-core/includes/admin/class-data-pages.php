@@ -83,8 +83,8 @@ final class Data_Pages {
 		'pc-data-pages-landing' => array( 'landing' => 'landing', 'pages' => 'pages', 'page_conversion' => 'page_conversion' ),
 	);
 
-	/** 管理员菜单只留这几项，按这个顺序（第 2 步：运营数据换成复盘，运营数据从复盘底部进）；其余数据页照样能用地址打开，或从别的菜单进。 */
-	public const ADMIN_MENU = array( 'pc-data', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
+	/** 管理员菜单只留这几项，按这个顺序（第 2 步：运营数据换成复盘，从复盘底部进；第 3 步：实时数据换成今日作战室，从作战室顶部进。第一项决定顶层“数据”点进去是哪页）；其余数据页照样能用地址打开，或从别的菜单进。 */
+	public const ADMIN_MENU = array( 'pc-data-cockpit', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' );
 
 	/** 挪到别的菜单下面的数据页：slug => 新的上级菜单。 */
 	public const MOVED = array(
@@ -100,6 +100,18 @@ final class Data_Pages {
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ) );
 		add_filter( 'parent_file', array( self::class, 'parent_file' ) );
+		add_action( 'admin_head', array( self::class, 'menu_alias_meta' ) );
+	}
+
+	/** 不在菜单里的数据页（例如实时数据、运营数据）告诉外层工作台该高亮哪一项（workspace-shell.js 读这个 meta）。 */
+	public static function menu_alias_meta(): void {
+		if ( null === self::current_key() && ! isset( self::MOVED[ self::current_page() ] ) ) {
+			return;
+		}
+		$file = (string) self::submenu_file( '' );
+		if ( '' !== $file && $file !== self::current_page() ) {
+			echo '<meta name="pc-menu-current" content="' . esc_attr( str_replace( 'admin.php?page=', '', $file ) ) . '">' . "\n";
+		}
 	}
 
 	/** REST 路由在任何请求里都要注册（后台页面通过 REST 取数据）。 */
@@ -566,6 +578,7 @@ final class Data_Pages {
 		if ( isset( self::BUYER_PAGES[ $page ] ) ) { return $file; }
 		if ( isset( self::MOVED[ $page ] ) && ! self::buyer_view() ) { return 'admin.php?page=' . $page; }
 		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'landing', 'pages', 'page_conversion' ), true ) ) { return 'pc-data-pages-landing'; }
+		if ( ! self::buyer_view() && 'realtime' === self::current_key() ) { return 'pc-data-cockpit'; } // 第 3 步：实时数据收进今日作战室下面。
 		if ( ! self::buyer_view() && in_array( self::current_key(), array( 'operations', 'conversion', 'experiments' ), true ) ) { return 'pc-data-review'; } // 第 2 步：运营数据收进复盘下面（复盘页底部有入口）。
 		return in_array( self::current_key(), array( 'sources', 'dimension_details' ), true ) ? ( self::buyer_view() ? self::PAGES['operations'] : 'pc-data-review' ) : $file;
 	}

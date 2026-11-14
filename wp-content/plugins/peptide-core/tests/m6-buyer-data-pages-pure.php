@@ -70,10 +70,10 @@ m6_check( 'admin: the two merged pages are reachable but hidden from the menu', 
 
 // 数据栏目第 1 步清理：菜单只留五项，三个页面挂到别的菜单下。
 $GLOBALS['submenu'] = array( 'pc-promotions' => array( array( 'Spend-and-save', 'manage_woocommerce', 'pc-promotions' ) ), 'pc-mail' => array( array( '发件箱', 'manage_woocommerce', 'pc-mail' ) ), 'pc-media' => array( array( 'Media library', 'manage_woocommerce', 'pc-media' ) ), 'pc-data' => array() );
-foreach ( array( 'pc-data-ai', 'pc-data-visit-classifier', 'pc-data-review' ) as $extra ) { $GLOBALS['t_submenu'][ $extra ] = $extra; }
+foreach ( array( 'pc-data-ai', 'pc-data-visit-classifier', 'pc-data-review', 'pc-data-cockpit' ) as $extra ) { $GLOBALS['t_submenu'][ $extra ] = $extra; }
 foreach ( $GLOBALS['t_submenu'] as $slug => $title ) { $GLOBALS['submenu']['pc-data'][] = array( $title, 'manage_woocommerce', $slug ); }
 Data_Pages::tidy_admin_menu();
-m6_check( 'admin: the data menu keeps five entries in order', array( 'pc-data', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' ) === array_column( $GLOBALS['submenu']['pc-data'], 2 ) );
+m6_check( 'admin: the data menu keeps five entries in order', array( 'pc-data-cockpit', 'pc-data-review', 'pc-data-products', 'pc-data-pages-landing', 'pc-data-ai' ) === array_column( $GLOBALS['submenu']['pc-data'], 2 ) );
 m6_check( 'admin: app statistics, email data and visit classification move to other menus', 'admin.php?page=pc-data-apps' === end( $GLOBALS['submenu']['pc-promotions'] )[2] && 'admin.php?page=pc-data-emails' === end( $GLOBALS['submenu']['pc-mail'] )[2] && 'admin.php?page=pc-data-visit-classifier' === end( $GLOBALS['submenu']['pc-media'] )[2] );
 $_GET = array( 'page' => 'pc-data-emails' );
 m6_check( 'admin: a moved page highlights its new menu', 'pc-mail' === Data_Pages::parent_file( 'pc-data' ) && 'admin.php?page=pc-data-emails' === Data_Pages::submenu_file( 'x' ) );
@@ -81,6 +81,8 @@ $_GET = array( 'page' => 'pc-data-experiments' );
 m6_check( 'admin: hidden A/B page still opens and highlights the review page', 'experiments' === Data_Pages::current_key() && 'pc-data-review' === Data_Pages::submenu_file( 'x' ) );
 $_GET = array( 'page' => 'pc-data-operations' );
 m6_check( 'admin: the old operations page now sits under the review page', 'pc-data-review' === Data_Pages::submenu_file( 'x' ) );
+$_GET = array( 'page' => 'pc-data' );
+m6_check( 'admin: the realtime page now sits under the cockpit', 'realtime' === Data_Pages::current_key() && 'pc-data-cockpit' === Data_Pages::submenu_file( 'x' ) );
 foreach ( array( '' => 'landing', 'pages' => 'pages', 'page_conversion' => 'page_conversion' ) as $tab => $key ) {
 	$_GET = array_filter( array( 'page' => 'pc-data-pages-landing', 'tab' => $tab ) );
 	m6_check( "admin: pages-and-landing tab '{$tab}' shows the {$key} report", $key === Data_Pages::current_key() );

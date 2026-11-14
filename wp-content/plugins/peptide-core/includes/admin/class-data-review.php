@@ -124,13 +124,13 @@ final class Data_Review {
 	}
 
 	/** 有没有导入过任何花费（决定页面要不要提示去导入）。 */
-	private static function any_spend(): bool {
+	public static function any_spend(): bool {
 		global $wpdb;
 		return self::spend_installed() && (bool) $wpdb->get_var( 'SELECT 1 FROM ' . CS::table( 'daily_spend' ) . ' LIMIT 1' ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 	}
 
 	/** @return array<string,array{code:string,adset:string,campaign:string,name:string}> */
-	private static function load_ads(): array {
+	public static function load_ads(): array {
 		global $wpdb;
 		if ( ! self::spend_installed() ) {
 			return array();
@@ -206,7 +206,7 @@ final class Data_Review {
 	}
 
 	/** 一段时间的原始数据。 */
-	private static function load( array $r ): array {
+	public static function load( array $r ): array {
 		$visits = self::load_visits( $r );
 		return array(
 			'range'   => $r,
@@ -256,7 +256,7 @@ final class Data_Review {
 	public static function compute( array $raw ): array {
 		$visits  = $raw['visits'];
 		$orders  = $raw['orders'];
-		$spend   = self::spend_by_ad( $raw['spend'], $raw['range'] );
+		$spend   = $raw['spend_ad'] ?? self::spend_by_ad( $raw['spend'], $raw['range'] ); // 今日作战室按小时摊算后传进来
 		$address = $raw['address'];
 		$total   = array_sum( array_column( $spend, 'spend' ) );
 		$clicks  = array_sum( array_column( $spend, 'clicks' ) );
@@ -574,11 +574,11 @@ final class Data_Review {
 		return array( ( $d >= 0 ? '▲ ' : '▼ ' ) . number_format( abs( $d ) * 100, 0 ) . '%', $good ? 'good' : ( $bad ? 'bad' : 'flat' ) );
 	}
 
-	private static function kpi( string $label, string $value, array $delta, string $hint = '' ): string {
+	public static function kpi( string $label, string $value, array $delta, string $hint = '' ): string {
 		return '<div class="pc-rv-kpi"><span class="pc-rv-kpi__label">' . esc_html( $label ) . ( $hint ? ' <i title="' . esc_attr( $hint ) . '">?</i>' : '' ) . '</span><b>' . esc_html( $value ) . '</b><em class="is-' . esc_attr( $delta[1] ) . '">' . esc_html( $delta[0] ) . '</em></div>';
 	}
 
-	private static function tag( string $text, string $color ): string {
+	public static function tag( string $text, string $color ): string {
 		return '<span class="pc-rv-tag is-' . esc_attr( $color ) . '">' . esc_html( $text ) . '</span>';
 	}
 
@@ -663,7 +663,7 @@ final class Data_Review {
 	}
 
 	/** 素材编号 => [备注, 缩略图]。 */
-	private static function creative_meta(): array {
+	public static function creative_meta(): array {
 		$out = array();
 		if ( ! class_exists( \PeptideCore\Creatives\Creatives::class ) ) {
 			return $out;
@@ -674,7 +674,7 @@ final class Data_Review {
 		return $out;
 	}
 
-	private static function funnel_html( array $p, array $q ): string {
+	public static function funnel_html( array $p, array $q ): string {
 		$f     = $p['funnel'];
 		$steps = array( 'visitors' => '进站', 'view' => '看商品', 'cart' => '加购', 'checkout' => '去结账', 'address' => '填完地址', 'paid' => '付款' );
 		$keys  = array_keys( $steps );
@@ -747,15 +747,16 @@ final class Data_Review {
 		return $h . '</tbody></table><p class="pc-rv-help"><a href="' . esc_url( admin_url( 'admin.php?page=pc-data-products' ) ) . '">全部商品明细 →</a></p>';
 	}
 
-	private static function creative_table( array $cr, array $tr ): string {
+	/** $basis：给建议用的数字（今日作战室用最近 3 天，表里显示所选时段）。 */
+	public static function creative_table( array $cr, array $tr, ?array $basis = null, string $why = '' ): string {
 		if ( ! $cr ) {
 			return '<p class="pc-rv-empty">这段时间没有带素材编号的访客，也没有导入花费。</p>';
 		}
-		$h = '<div class="pc-rv-tablewrap"><table class="pc-rv-table"><thead><tr><th>素材</th><th>花费</th><th>进站</th><th>到站率</th><th>加购</th><th>订单</th><th>销售额</th><th>ROAS</th><th>单单成本</th><th>建议（最近 3 天看趋势）</th></tr></thead><tbody>';
+		$h = '<div class="pc-rv-tablewrap"><table class="pc-rv-table"><thead><tr><th>素材</th><th>花费</th><th>进站</th><th>到站率</th><th>加购</th><th>订单</th><th>销售额</th><th>ROAS</th><th>单单成本</th><th>' . esc_html( '' !== $why ? $why : '建议' ) . '</th></tr></thead><tbody>';
 		foreach ( $cr as $r ) {
-			$v   = self::verdict( $r, $tr[ $r['code'] ] ?? null );
+			$v   = self::verdict( $basis[ $r['code'] ] ?? $r, $tr[ $r['code'] ] ?? null );
 			$img = '' !== $r['thumb'] ? '<img src="' . esc_url( $r['thumb'] ) . '" alt="">' : '';
-			$h  .= '<tr><td><div class="pc-rv-cr">' . $img . '<div><b>' . esc_html( $r['code'] ) . '</b>' . ( '' !== $r['note'] ? '<small>' . esc_html( $r['note'] ) . '</small>' : '' ) . '</div></div></td><td>' . esc_html( $r['spend'] > 0 ? self::money( $r['spend'] ) : '—' ) . '</td><td>' . (int) $r['visitors'] . '</td><td class="' . ( null !== $r['land'] && $r['land'] < 0.6 ? 'is-bad' : '' ) . '">' . esc_html( self::pct( $r['land'], 0 ) ) . '</td><td>' . (int) $r['cart'] . '</td><td>' . (int) $r['orders'] . '</td><td>' . esc_html( self::money( $r['revenue'] ) ) . '</td><td><b class="' . ( null !== $r['roas'] ? ( $r['roas'] >= 2 ? 'is-good' : ( $r['roas'] < 1 ? 'is-bad' : '' ) ) : '' ) . '">' . esc_html( null === $r['roas'] ? '—' : number_format( $r['roas'], 2 ) ) . '</b></td><td>' . esc_html( self::money( $r['cpa'] ) ) . '</td><td>' . self::tag( $v[0], $v[1] ) . '<span class="pc-rv-why">' . esc_html( $v[2] ) . '</span></td></tr>';
+			$h  .= '<tr><td><div class="pc-rv-cr">' . $img . '<div><b>' . esc_html( $r['code'] ) . '</b>' . ( '' !== $r['note'] ? '<small>' . esc_html( $r['note'] ) . '</small>' : '' ) . '</div></div></td><td>' . esc_html( $r['spend'] > 0 ? self::money( $r['spend'] ) : '—' ) . '</td><td>' . (int) $r['visitors'] . '</td><td class="' . ( null !== $r['land'] && $r['land'] < 0.6 ? 'is-bad' : '' ) . '">' . esc_html( self::pct( $r['land'], 0 ) ) . '</td><td>' . (int) $r['cart'] . '</td><td>' . (int) $r['orders'] . '</td><td>' . esc_html( self::money( $r['revenue'] ) ) . '</td><td><b class="' . ( null !== $r['roas'] ? ( $r['roas'] >= 2 ? 'is-good' : ( $r['roas'] < 1 ? 'is-bad' : '' ) ) : '' ) . '">' . esc_html( null === $r['roas'] ? '—' : number_format( $r['roas'], 2 ) ) . '</b></td><td>' . esc_html( self::money( $r['cpa'] ) ) . '</td><td>' . self::tag( $v[0], $v[1] ) . '<span class="pc-rv-why">' . esc_html( ( null !== $basis && isset( $basis[ $r['code'] ] ) ? '近 3 天：' : '' ) . $v[2] ) . '</span></td></tr>';
 		}
 		return $h . '</tbody></table></div><p class="pc-rv-help">订单按首次点击归到素材（直接回访下单的也算回第一次带它进来的素材）。到站率 = 进站访客 ÷ Meta 链接点击，低于 60% 说明点了广告没打开页面（加载慢或被拦）。疲劳 = 前 5 天 ROAS 不错、最近 2 天掉了一半以上。</p>';
 	}
@@ -780,7 +781,7 @@ final class Data_Review {
 		return $h . '</tbody></table></div><p class="pc-rv-help">绿色 = 这一列里转化最好的几行（至少 10 个访客）。订单算在下单那次访问上' . ( $spend ? '，广告组按首次点击归' : '' ) . '。</p>';
 	}
 
-	private static function styles(): void {
+	public static function styles(): void {
 		echo '<style>
 .pc-rv{--rv-line:#e5e5e5;--rv-muted:#6b7280;--rv-green:#0a7d38;--rv-red:#c0262d;--rv-orange:#b45309;--rv-blue:#1d4ed8;max-width:1280px}
 .pc-rv h1{font-size:24px;margin:0;padding:0}.pc-rv h2{font-size:15px;margin:0 0 10px}
