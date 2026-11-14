@@ -19,7 +19,10 @@
       "path": "wp-content/plugins/peptide-core/tests/data-product-created.cjs",
       "core": true,
       "node_test": true,
-      "status": "final-source-gate"
+      "status": "skipped",
+      "previous_status": "final-source-gate",
+      "owner": "日常会话",
+      "skip_reason": "主线 6d191df（数据页、访客页去掉重复的商品 / AI 区块）之后断言 numeric33/default10 contract unchanged 不成立；11-14 F1 发现，主线同样失败"
     },
     {
       "name": "data-product-user-ratios-node",
