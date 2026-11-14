@@ -85,7 +85,7 @@ final class Data_Cockpit {
 
 	/**
 	 * @param array $p 所选时段  @param array $q 前一段  @param array $cr3 最近 3 天的素材  @param array $tr 素材趋势
-	 * @param array $extra failed（支付失败单数）、pixel（Health::current() 的结果）、spend_yesterday（昨天有没有导入花费）、any_spend
+	 * @param array $extra pay（payment_outcomes() 的结果）、pixel（Health::current() 的结果）、spend_yesterday（昨天有没有导入花费）、any_spend
 	 * @return array<int,array{0:string,1:string,2:string}> [标签, 颜色, 说明]
 	 */
 	public static function alerts( array $p, array $q, array $cr3, array $tr, array $extra = array() ): array {
@@ -97,9 +97,14 @@ final class Data_Cockpit {
 		if ( $p['has_spend'] && $p['spend'] >= 40 && null !== $p['roas'] && $p['roas'] < 1 ) {
 			$out[] = array( '亏钱', 'red', sprintf( 'ROAS %.2f：花了 %s，只卖了 %s。看下面素材表，先关掉标红的。', $p['roas'], Data_Review::money( $p['spend'] ), Data_Review::money( $p['revenue'] ) ) );
 		}
-		$failed = (int) ( $extra['failed'] ?? 0 );
+		$pay       = (array) ( $extra['pay'] ?? array() );
+		$failed    = (int) ( $pay['failed'] ?? 0 );
+		$abandoned = (int) ( $pay['abandoned'] ?? 0 );
 		if ( $failed >= 2 ) {
-			$out[] = array( '支付失败', $failed >= 3 && $failed > $p['n_orders'] ? 'red' : 'orange', sprintf( '这段时间有 %d 笔付款失败（成功 %d 单）。去订单里看失败原因，必要时换支付通道。', $failed, $p['n_orders'] ) );
+			$out[] = array( '支付被拒', $failed > $p['n_orders'] ? 'red' : 'orange', sprintf( '这段时间有 %d 笔付款被支付通道拒了（成功 %d 单）。订单列表里有些会显示“已取消”——那是没付成以后超时取消的，原因还是被拒。具体拒付代码要找支付通道要。', $failed, $p['n_orders'] ) );
+		}
+		if ( $abandoned >= 3 && $abandoned > $p['n_orders'] ) {
+			$out[] = array( '打开支付页没付', 'orange', sprintf( '%d 个客户点了付款、打开了支付页，然后就没再回来（成功 %d 单）。先在手机上自己走一遍支付页，看是不是加载慢、报错或要求的信息太多。', $abandoned, $p['n_orders'] ) );
 		}
 		foreach ( $cr3 as $r ) {
 			$v    = Data_Review::verdict( $r, $tr[ $r['code'] ] ?? null );
@@ -124,17 +129,51 @@ final class Data_Cockpit {
 	// 取数（只读）
 	// ======================================================================
 
-	/** 时段里付款失败的订单数（不含测试单）。 */
-	private static function failed_orders( array $r ): int {
+	/**
+	 * 一单的支付结果（纯函数）。
+	 *
+	 * 只看订单状态会漏：付款被拒以后，订单还会被“未付款超时”改成已取消，failed 就被覆盖掉了。
+	 * 所以优先看支付网关记下的每次尝试（订单的 _pc_panapay_sessions），没有记录时才退回订单状态。
+	 *
+	 * @param mixed  $sessions 订单的支付尝试记录
+	 * @param string $status   订单状态
+	 * @return string paid（付成了）| failed（被拒）| abandoned（打开支付页没付）| none（没走到支付）
+	 */
+	public static function payment_outcome( $sessions, string $status ): string {
+		$states = array();
+		if ( is_array( $sessions ) && ! empty( $sessions['attempts'] ) && is_array( $sessions['attempts'] ) ) {
+			foreach ( $sessions['attempts'] as $a ) {
+				$states[] = is_array( $a ) ? (string) ( $a['state'] ?? '' ) : '';
+			}
+		}
+		if ( in_array( 'paid', $states, true ) || in_array( $status, array( 'processing', 'completed' ), true ) ) {
+			return 'paid';
+		}
+		if ( in_array( 'failed', $states, true ) || 'failed' === $status ) {
+			return 'failed';
+		}
+		if ( array_intersect( $states, array( 'created', 'unknown', 'creating' ) ) ) {
+			return 'abandoned';
+		}
+		return 'none';
+	}
+
+	/** 时段里下的单按支付结果分组（不含测试单）。 @return array{paid:int,failed:int,abandoned:int} */
+	private static function payment_outcomes( array $r ): array {
+		$out = array( 'paid' => 0, 'failed' => 0, 'abandoned' => 0 );
 		if ( ! function_exists( 'wc_get_orders' ) ) {
-			return 0;
+			return $out;
 		}
-		$n = 0;
-		foreach ( (array) wc_get_orders( array( 'status' => array( 'failed' ), 'limit' => 200, 'type' => 'shop_order', 'date_created' => intdiv( $r['from'], 1000 ) . '...' . intdiv( $r['to'], 1000 ) ) ) as $o ) {
-			$test = class_exists( \PeptideCore\Data\Metrics_Overlay::class ) ? \PeptideCore\Data\Metrics_Overlay::is_test_order( $o ) : false;
-			$n   += $test ? 0 : 1;
+		foreach ( (array) wc_get_orders( array( 'status' => array( 'failed', 'cancelled', 'pending', 'processing', 'completed', 'on-hold' ), 'limit' => 200, 'type' => 'shop_order', 'date_created' => intdiv( $r['from'], 1000 ) . '...' . intdiv( $r['to'], 1000 ) ) ) as $o ) {
+			if ( ! $o instanceof \WC_Order || ( class_exists( \PeptideCore\Data\Metrics_Overlay::class ) && \PeptideCore\Data\Metrics_Overlay::is_test_order( $o ) ) ) {
+				continue;
+			}
+			$k = self::payment_outcome( $o->get_meta( '_pc_panapay_sessions' ), $o->get_status() );
+			if ( isset( $out[ $k ] ) ) {
+				++$out[ $k ];
+			}
 		}
-		return $n;
+		return $out;
 	}
 
 	/** 某一天（美国中部日期）有没有导入花费。 */
@@ -176,7 +215,7 @@ final class Data_Cockpit {
 		$any_spend = Data_Review::any_spend();
 		$yday      = Data_Review::ymd( $today - 1 );
 		$extra     = array(
-			'failed'          => self::failed_orders( $r ),
+			'pay'             => self::payment_outcomes( $r ),
 			'pixel'           => class_exists( \PeptideCore\Pixels\Health::class ) ? \PeptideCore\Pixels\Health::current() : array(),
 			'any_spend'       => $any_spend,
 			'spend_yesterday' => $any_spend && self::has_spend_on( $yday ),

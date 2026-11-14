@@ -177,8 +177,11 @@ def full(store, management, gateway):
     if rates and not any(r.get("selected") for r in rates):
         cart.call("POST", "/cart/select-shipping-rate", {"package_id": cart.cart["shipping_rates"][0]["package_id"], "rate_id": rates[0]["rate_id"]})
     methods = cart.cart.get("payment_methods", [])
-    method = gateway if gateway in methods else (methods[0] if methods else "")
-    check("有可用的付款方式" + (f"（期望 {gateway}）" if gateway else ""), bool(method) and (not gateway or method == gateway), f"可用：{methods}")
+    # 生产上的付款方式编号是“pc_panapay_<账户哈希>”，一家店可能有几个（2026-11-14 第一次在生产跑时因为只认完全相同而误停）：
+    # 期望 pc_panapay 时，pc_panapay 本身或以 pc_panapay_ 开头的都算，取第一个。
+    matching = [m for m in methods if not gateway or m == gateway or m.startswith(gateway + "_")]
+    method = matching[0] if matching else ""
+    check("有可用的付款方式" + (f"（期望 {gateway} 或 {gateway}_…）" if gateway else ""), bool(method), f"可用：{methods}")
     if not method:
         return
     total = cart.cart.get("totals", {}).get("total_price")
