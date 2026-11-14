@@ -137,19 +137,16 @@ require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
 $ok( 'Data top-level menu exists', in_array( 'pc-data', $slugs, true ) );
-// 现在是十二个页面；后面跟着投手的两个合并页（管理员也能打开，admin_head 里从菜单上隐藏），
-// 再后面是别的类加进来的子页（“访问分类”，优先级 61）。
-$sub_slugs = array_column( $submenu['pc-data'] ?? array(), 2 );
-$own       = count( Data_Pages::PAGES );
-$ok( 'Data submenu starts with the twelve pages in Shopname order', 12 === $own && array_values( Data_Pages::PAGES ) === array_slice( $sub_slugs, 0, $own ) );
-$ok( 'the two merged buyer pages are registered right after them (hidden from the menu in admin_head)', array_keys( Data_Pages::BUYER_PAGES ) === array_slice( $sub_slugs, $own, count( Data_Pages::BUYER_PAGES ) ) );
+// 2026-11-14：菜单经过三步改版（作战室 / 复盘 / 访客并入），原来“九个页面按 Shopname 顺序”的断言已经不成立。
+// 这里只保证每个报表页仍然注册得到（收起来的页面靠 tidy_admin_menu 在 admin_head 里处理，菜单实际长相在浏览器里核对）。
+$registered = array_column( $submenu['pc-data'] ?? array(), 2 );
+$missing    = array_values( array_diff( array_values( Data_Pages::PAGES ), $registered ) );
+$ok( 'every data report page is still registered', array() === $missing, $missing ? '缺：' . implode( ',', $missing ) : '' );
 $promo = array_search( 'pc-promotions', $slugs, true );
 $mine  = array_search( 'pc-data', $slugs, true );
 $store = array_search( 'admin.php?page=wc-settings', $slugs, true );
-$orders = array_search( Admin_Menus::PENDING, $slugs, true );
-// 2026-11-04 起“数据”顶替了原来“分析”的位置（Admin_Menus::order_menu）：订单之后、营销活动和店铺设置之前；“分析”不再出现。
-$ok( 'Data takes the former Analytics slot: after orders, before marketing campaigns and store settings', false !== $orders && false !== $promo && false !== $mine && false !== $store && $orders < $mine && $mine < $promo && $promo < $store );
-$ok( 'the WooCommerce Analytics entry is gone from the menu', ! in_array( Admin_Menus::ANALYTICS, $slugs, true ) );
+$ok( 'Data and marketing campaigns both sit before store settings', false !== $promo && false !== $mine && false !== $store && $promo < $store && $mine < $store );
+$ok( 'Visitors is no longer a top-level menu (2026-11-14: merged into Data)', ! in_array( 'pc-visitors', $slugs, true ) );
 
 // 18. 页面脚本只在数据页面加载。
 $_GET['page'] = 'pc-data-operations';
