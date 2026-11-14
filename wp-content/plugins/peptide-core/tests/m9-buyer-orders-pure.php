@@ -70,8 +70,11 @@ namespace {
 	check( 'row values land in the right columns', 'hang-131189201' === $by['订单号'] && '199.50' === $by['订单金额'] && '3' === $by['件数'] && 'US' === $by['国家'] && '123456789012' === $by['运单号'] && '部分退款' === $by['退款状态'] && '30.00' === $by['退款金额'] );
 	check( 'ad names cannot inject a formula', "'=HYPERLINK(\"x\")" === $by['utm_campaign'] );
 	check( 'missing values are empty, amounts are zero', array_fill( 0, 18, '' ) !== ( $empty = \PeptideCore\Admin\Buyer_Order_Export::row( array() ) ) && '0.00' === $empty[4] && '0' === $empty[7] && '0.00' === $empty[17] && '' === $empty[0] );
-	// 顾客邮箱默认不导（平台所有者还没定）；这家店把选项 pc_buyer_export_email 设成 on 才带。
-	check( 'no customer email by default', ! in_array( '顾客邮箱', $columns, true ) && ! in_array( 'jane@example.com', $row, true ) );
+	// 顾客邮箱：平台所有者 2026-11-14 定“带邮箱”，默认带；这家店把选项 pc_buyer_export_email 设成 off 才不带。
+	check( 'without the email flag the row has no email', ! in_array( '顾客邮箱', $columns, true ) && ! in_array( 'jane@example.com', $row, true ) );
+	$wanted = static fn( $v ): bool => \PeptideCore\Admin\Buyer_Order_Export::email_wanted( $v );
+	check( 'email is included by default and with on', $wanted( 'on' ) && $wanted( 'ON' ) && $wanted( '' ) );
+	check( 'a store can turn the email off', ! $wanted( 'off' ) && ! $wanted( ' Off ' ) && ! $wanted( '0' ) && ! $wanted( 'no' ) );
 	$columns_e = \PeptideCore\Admin\Buyer_Order_Export::columns( true );
 	$row_e     = \PeptideCore\Admin\Buyer_Order_Export::row( $facts, true );
 	check( 'email column is added only when the store asks for it', 19 === count( $columns_e ) && 19 === count( $row_e ) && '顾客邮箱' === $columns_e[8] && 'jane@example.com' === array_combine( $columns_e, $row_e )['顾客邮箱'] );
@@ -80,7 +83,7 @@ namespace {
 	check( 'limits', 92 === \PeptideCore\Admin\Buyer_Order_Export::MAX_DAYS && 5000 === \PeptideCore\Admin\Buyer_Order_Export::MAX_ROWS );
 	$export_src = (string) file_get_contents( $inc . '/admin/class-buyer-order-export.php' );
 	check( 'export checks who is asking and the nonce before reading orders', strpos( $export_src, 'Staff_Buyer::can_use()' ) < strpos( $export_src, 'check_admin_referer( self::NONCE )' ) && strpos( $export_src, 'check_admin_referer( self::NONCE )' ) < strpos( $export_src, 'wc_get_orders(' ) );
-	check( 'one switch decides the email column, off unless the option says on', 'pc_buyer_export_email' === \PeptideCore\Admin\Buyer_Order_Export::OPTION_EMAIL && false !== strpos( $export_src, "'on' === (string) get_option( self::OPTION_EMAIL, 'off' )" ) && false !== strpos( $export_src, "\$with_email ? (string) \$order->get_billing_email() : ''" ) );
+	check( 'one switch decides the email column, on unless the store says off', 'pc_buyer_export_email' === \PeptideCore\Admin\Buyer_Order_Export::OPTION_EMAIL && false !== strpos( $export_src, "self::email_wanted( get_option( self::OPTION_EMAIL, 'on' ) )" ) && false !== strpos( $export_src, '$email = self::with_email();' ) );
 	check( 'export skips test orders and unpaid orders', false !== strpos( $export_src, 'Test_Orders::is_test_order( $order )' ) && false !== strpos( $export_src, '! $order->get_date_paid()' ) );
 
 	echo "PASS {$checks} buyer order list / refund / export checks\n";

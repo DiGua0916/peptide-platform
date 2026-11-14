@@ -6,8 +6,9 @@
  * - 只导已付款的订单（按付款时间），测试单不导。
  * - 一次最多 92 天、5000 行；不填日期时是最近 30 天。
  * - 列：订单号、时间、状态、金额、商品、国家、来源广告、运单、退款。不含电话和地址。
- * - 顾客邮箱默认不导（平台所有者 2026-11-12 还没定）。要带上：这家店的选项 pc_buyer_export_email 设为 on
- *   （wp option update pc_buyer_export_email on），或用过滤器 pc_buyer_export_with_email。只有这一处开关。
+ * - 顾客邮箱：平台所有者 2026-11-14 定“带邮箱”，默认带。某家店不要：选项 pc_buyer_export_email 设为 off
+ *   （wp option update pc_buyer_export_email off），或用过滤器 pc_buyer_export_with_email。只有这一处开关。
+ *   整个导出仍在 Staff_Buyer::OPTION_EXTRAS（pc_buyer_extras，默认关）后面，那个开关关着时没有导出。
  * - 以 = + - @ 开头的内容前面加一个单引号，表格软件不会把它当公式执行。
  * - 每次导出记一条操作日志（谁、哪段日期、多少行）。
  *
@@ -40,9 +41,14 @@ final class Buyer_Order_Export {
 		add_action( 'admin_notices', array( self::class, 'form' ), 20 );
 	}
 
-	/** 这家店的导出带不带顾客邮箱。默认不带。 */
+	/** 这家店的导出带不带顾客邮箱。默认带（平台所有者 2026-11-14）。 */
 	public static function with_email(): bool {
-		return (bool) apply_filters( 'pc_buyer_export_with_email', 'on' === (string) get_option( self::OPTION_EMAIL, 'off' ) );
+		return (bool) apply_filters( 'pc_buyer_export_with_email', self::email_wanted( get_option( self::OPTION_EMAIL, 'on' ) ) );
+	}
+
+	/** 选项的值 → 带不带邮箱（不读数据库，测试里直接调用）：没设置、on 都带；off、0、no 不带。 */
+	public static function email_wanted( $value ): bool {
+		return ! in_array( strtolower( trim( (string) $value ) ), array( 'off', '0', 'no' ), true );
 	}
 
 	/** 表头。 */
