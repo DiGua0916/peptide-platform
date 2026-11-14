@@ -569,6 +569,13 @@ final class Accounts {
 			<button type="submit" class="pc-acc__btn pc-acc__btn--primary" data-pc-submit>Create account</button>
 		</form>
 		<button type="button" class="pc-acc__btn pc-acc__btn--ghost" data-pc-switch>I already have an account</button>
+		<?php
+		// 1 号站定稿 P1-2：不想注册也能查物流（复用 M11 的查订单页）。
+		$track = class_exists( Order_Lookup::class ) && method_exists( Order_Lookup::class, 'page_url' ) ? (string) Order_Lookup::page_url() : '';
+		if ( '' !== $track ) :
+			?>
+		<a class="pc-acc__btn pc-acc__btn--text" href="<?php echo esc_url( $track ); ?>">Track an order without an account &rarr;</a>
+		<?php endif; ?>
 		<button type="button" class="pc-acc__btn pc-acc__btn--text" data-pc-signup-skip>Skip for now</button>
 	</div>
 </dialog>

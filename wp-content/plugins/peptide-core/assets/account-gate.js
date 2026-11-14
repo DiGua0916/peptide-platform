@@ -253,6 +253,13 @@
 		if ( t ) {
 			e.preventDefault();
 			openSignup( 'signup' );
+			return;
+		}
+		// 1 号站定稿 P1-2：顶栏 “Sign in” 打开同一个弹窗的登录模式。
+		var s = e.target.closest && e.target.closest( '[data-pc-open-signin]' );
+		if ( s && signup ) {
+			e.preventDefault();
+			openSignup( 'login' );
 		}
 	} );
 	window.pcAccountsOpen = openSignup;

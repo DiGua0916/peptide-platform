@@ -19,3 +19,11 @@ body:has(dialog[open]) .vc-help-contact,body:has([data-vc-demo-header] details[o
 @media(hover:hover){.vc-help-float:hover{transform:translateY(-2px);box-shadow:0 8px 24px #17343e24}}
 @media(max-width:767px){.vc-campaign-announcement{font-size:12px;line-height:16px}.vc-campaign-announcement .vc-demo-part-wrap{gap:4px 8px}}
 @media(prefers-reduced-motion:reduce){.vc-help-float,.vc-help-contact{transition:none;transform:none!important}}
+
+/* 1 号站定稿 P2-3：右下角唯一的客服按钮带文字 “Chat with us”。 */
+.vc-help-widget button.vc-help-float{width:auto;height:52px;padding:0 16px 0 6px;border-radius:999px!important;grid-auto-flow:column;gap:6px}
+.vc-help-float img{width:40px;height:40px}
+.vc-help-float__label{font-size:14px;font-weight:700;line-height:1;color:#17343e;white-space:nowrap}
+/* 1 号站定稿 P1-2：顶栏没登录时显示 “Sign in” 文字。 */
+.vc-demo-account.has-label{display:inline-flex;align-items:center;gap:6px;width:auto;padding-inline:8px}
+.vc-demo-account-label{font-size:13px;font-weight:700;white-space:nowrap}
