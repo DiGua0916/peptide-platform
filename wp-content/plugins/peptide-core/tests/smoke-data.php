@@ -131,11 +131,16 @@ require ABSPATH . 'wp-admin/menu.php';
 
 $slugs = array_column( $menu, 2 );
 $ok( 'Data top-level menu exists', in_array( 'pc-data', $slugs, true ) );
-$ok( 'Data submenu has the nine pages in Shopname order', array_values( Data_Pages::PAGES ) === array_column( $submenu['pc-data'] ?? array(), 2 ) && 9 === count( $submenu['pc-data'] ?? array() ) );
+// 2026-11-14：菜单经过三步改版（作战室 / 复盘 / 访客并入），原来“九个页面按 Shopname 顺序”的断言已经不成立。
+// 这里只保证每个报表页仍然注册得到（收起来的页面靠 tidy_admin_menu 在 admin_head 里处理，菜单实际长相在浏览器里核对）。
+$registered = array_column( $submenu['pc-data'] ?? array(), 2 );
+$missing    = array_values( array_diff( array_values( Data_Pages::PAGES ), $registered ) );
+$ok( 'every data report page is still registered', array() === $missing, $missing ? '缺：' . implode( ',', $missing ) : '' );
 $promo = array_search( 'pc-promotions', $slugs, true );
 $mine  = array_search( 'pc-data', $slugs, true );
 $store = array_search( 'admin.php?page=wc-settings', $slugs, true );
-$ok( 'Data comes after marketing campaigns and before store settings', false !== $promo && false !== $mine && false !== $store && $promo < $mine && $mine < $store );
+$ok( 'Data and marketing campaigns both sit before store settings', false !== $promo && false !== $mine && false !== $store && $promo < $store && $mine < $store );
+$ok( 'Visitors is no longer a top-level menu (2026-11-14: merged into Data)', ! in_array( 'pc-visitors', $slugs, true ) );
 
 // 18. 页面脚本只在数据页面加载。
 $_GET['page'] = 'pc-data-operations';
