@@ -939,7 +939,8 @@ currency, visitor, visit, buyer
 - 投手的 7 个菜单（2026-11-13 合并主线 `4059779` 之后）：首页 `pc-buyer-home`、订单 `wc-orders`（只读）、弃单 `pc-recovery`、数据 `pc-data*` 和 `pc-visitors*`、营销活动 `pc-promotions`（只读，见下面“投手看营销活动”；F2 的只读页面不在时不显示，这时是 6 个）、广告数据追踪（主线 11-12 的新栏目，菜单键 `adtrack`，原来的键 `ads` 不再存在；子菜单：广告设置 `pc-buyer-ads`、素材库 `pc-creatives`，花费导入 `pc-creatives-spend` 和素材看板 `pc-creatives-board` 从素材库顶部进）、店铺信息 `pc-store-info`；另有开店向导 `pc-onboarding`。投手能提交的表单：`pc_buyer_password`、`pc_buyer_store_save`、`pc_buyer_ads_save`、`pc_buyer_orders_export`，加主线的 `pc_creative_save`、`pc_creative_spend_import`、`pc_creative_export`。
 - **投手后台的两个按店开关（2026-11-14，“优化，不改功能”）**，都是值 `on` 才生效、默认关，关着时投手看到的和线上一样；功能声明 `m9.buyer_extras`、`m9.buyer_no_palette`：
   - `pc_buyer_extras`（`Staff_Buyer::extras()`，过滤器 `pc_buyer_extras_enabled`）：订单列表上方的导出订单（关着时下载请求也拒绝）、订单列表的“退款状态”一列（2026-11-14 起来源和物流单号一律用线上的“来源”“物流单号”两列，原来的“来源广告”“运单号”已去掉）、详情页顶部的退款提示、店铺信息里的“显示客服按钮”（关着时保存店铺信息也不动 `support.enabled`）。
-  - `pc_buyer_no_palette`（`Staff_Buyer::hide_palette()`，过滤器 `pc_buyer_no_palette_enabled`）：投手不加载 WordPress 的命令面板。
+  - `pc_buyer_no_palette`（`Staff_Buyer::hide_palette()`，过滤器 `pc_buyer_no_palette_enabled`）：投手不加载 WordPress 的命令面板。**平台所有者 2026-11-14 定：对投手隐藏，随 F5 模块发布打开**（代码默认仍关；F1 发布时请所有者确认后在 6 家店写 `on`）。
+  - 所有者 2026-11-14 另外定的两件，代码都不动：投手能看访客的 IP、经纬度、城市、运营商（保持线上，不打码）；哪些账号切成投手版“发布后再给名单”，这次发布不切。
   - 开关关着时投手订单列表和线上一模一样（`Admin_Menus::buyer_columns( $columns, false )` 原样返回）。2026-11-14 起按“重复的以主站为主”不再去掉勾选框和“操作”两列（主线 `1a4c189` 的“操作”列已经不给投手发货按钮）。
   - 发布材料（和线上逐页比对、升级和退回、开关状态、还差什么）在 `docs/handoffs/m9-m11-m14-release.md`。
 - 其余后台地址对投手一律 403（`index.php`、`pc-overview` 转到首页，`profile.php` 转到店铺信息）。`admin-ajax.php` 只放行 `heartbeat`、界面偏好、订单预览和按顾客筛选；`admin-post.php` 只放行投手版页面自己的表单；对未登录访客开放的动作不受影响。
@@ -1086,6 +1087,7 @@ currency, visitor, visit, buyer
   - 商品地址从哪里来（2026-11-12 修正，原来假定弹窗里有“详情”链接，实际的商品弹窗没有）：依次取弹窗里的 `a.vc-showcase-quick__details`（有的话）、服务器给的“这次进站的商品”（`vcEntryAddress.product = { id, path }`，由 `vc_entry_address_product()` 按请求里的 `vc_product` 给出，只给已发布的商品）、页面上这个商品的卡片链接（`a[data-vc-quick-open="<ID>"]`、`a[data-vc-home-product="<ID>"]`）。都取不到时地址栏用 `/?vc_product=<ID>`。**改商品卡片或商品弹窗的结构时请保留这两个属性之一**，否则从首页点开的商品又会变回 `?vc_product=`。
   - 已知限制：分享出去的商品地址被社交平台抓取预览时，拿到的仍是首页的标题和图片（服务器把它转到了首页）。
 - **FE-03 信任条**（`inc/product-trust.php`，2026-11-12）：按店开关 `pc_trust_badges`（值 `on` 才生效，**默认关**，过滤器 `vc_trust_badges_enabled`），功能声明 `m14.trust_badges => 1`。打开后商品弹窗内容最前面输出一条：`Secure checkout`（只在本次请求是 HTTPS 或店铺地址是 `https://` 时）和结账实际接受的支付标志（`\VialCove\Panapay\Payment_Icons::data( $gateway->payment_icons() )`，只取已启用的支付方式；过滤器 `vc_trust_payment_icons`，结果只留本站地址的图片，最多 9 个）。没有自由文字。两样都没有时不输出。需要支付插件配合的只有一点：`Payment_Icons::data()` 的返回形状（`id / label / url`）不要改。
+  - **平台所有者 2026-11-14 定：“发布后直接开”**，按现在的英文措辞，6 家店一起开。代码默认仍关；F1 在发布后请所有者确认再写 `pc_trust_badges = on`。
 - **NF-07 落地页提速**（同一个开关 `pc_front_speed`，2026-11-12 第三轮）：
   - 商品落地页（`/?vc_product=<ID>`）：`wp_footer`（优先级 5）里印出 `vc_home_quick_view_template( $product )`，也就是 `GET vialcove/v1/home-product/<ID>` 返回的那个 `<template data-vc-quick-product="<ID>">`。`home-quick-view.js` 的 `loadTemplate()` 和 `product-dialog-polish.js` 的 `openProduct()` 本来就先找页面里有没有这个模板，有就不请求。**这两处“先找页面里的模板”的写法请保留**；改了的话落地页不会坏（退回去请求接口），只是提速失效。`wp_head`（优先级 2）里另有一条 `<link rel="preload" as="image" media="(max-width: 767px)">`，取 `vc_home_quick_view_image()` 的 `src / srcset / sizes`。商品落地页不延后样式。
   - 专辑落地页（`/?vc_catalog_category=<ID>`，以及 `vc_catalog_q`）：首页那 11 个样式，加 `vc-home-quick-view`、`vialcove-product-dialog-interaction`、`vc-product-dialog-polish` 3 个，不再挡首屏。
@@ -1094,6 +1096,7 @@ currency, visitor, visit, buyer
   - `assets/product-dialog-polish.js`：商品落地页（`/?vc_product=<ID>`）要打开弹窗时如果页面在后台（`document.hidden`），不再放弃，改成等 `visibilitychange` 到前台再打开，只开一次。`vc:product-restore-cancel`、`pagehide`、期间任何一次 `vc:product-presented`、回来时已有 `dialog.vc-showcase-quick[open]`、`history.state.__vcCommerceLayers.layers` 非空，这几种情况不补开。对外的 `window.VialCoveStorefrontEntry`（`openProduct`、`bindDialog`、`campaignEligible`）没有变。
   - `assets/home-quick-view.js`：恢复上一次的弹窗时（`VialCoveHomeQuickView.stageRestore()` 之后表单 `reset`），表单里没有 `.variations select` 的商品不再进入“等规格匹配”的状态（`root.vcHomeSelectionPending`），价格、活动、图片用服务器渲染的。有规格的商品不变。
   - 开关全关时，前台 HTML 和主线的差别只有这两个脚本地址后面的版本号。
+- **多规格商品弹窗的库存短句**（`assets/product-dialog-meta.js`，2026-11-14，`758fba8`，不在开关后面；所有者定修并进这次发布）：WooCommerce 11 在 `found_variation` 之后 `setTimeout` 300 毫秒才画规格内容并触发 `show_variation`，弹窗自己的刷新可能都早于它。`createVcProductMetaStrip()` 现在在表单的 `show_variation` / `hide_variation` / `reset_data`（jQuery 命名空间 `.vcProductMeta`，`destroy()` 时解绑）上再读一次。只改时机：文案、样式、换规格时先隐藏旧数字的规则不变；简单商品不挂这些事件。
 - **FE-03 “看过 / 已加购”**（`inc/product-activity.php`、`assets/product-activity.js`，2026-11-12）：按店开关 `pc_product_activity`（值 `on` 才生效，**默认关**），下限 `pc_product_activity_min`（整数 1–1000，默认 5），功能声明 `m14.product_activity => 1`。只显示接口给的真实数字，低于下限不显示。**需要 F4 提供接口**，约定如下：
   - `GET /wp-json/peptide/v1/product-activity?product_id=<商品 ID>`，公开、只读；变体商品传父商品 ID。
   - 200：`{ "product_id": 10, "viewing": 12, "added": 31, "window": { "viewing_minutes": 10, "added_hours": 24 }, "generated_at": "2026-11-12T12:00:00Z", "ttl": 60 }`。

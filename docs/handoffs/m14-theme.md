@@ -2,6 +2,14 @@
 
 分支 `claude/m9-buyer-admin-940389`，提交 `9b93b55`（第一批）、之后修主题用例的提交、`ab62b67`（商品地址修正），和 M9、M11 在同一个分支上。没有合并 main，没有发布。
 
+## 2026-11-14 第九轮：修多规格弹窗的库存短句（`758fba8`）；所有者定信任条发布后开
+
+- 所有者定：库存短句“修，并进这次发布；只修显示的时机，不改文案和样式，在沙盒里验”。
+- 原因：WooCommerce 11.2.1 的 `add-to-cart-variation.js` 在 `found_variation` 后 `setTimeout` 300 毫秒才 `$singleVariation.html()` 并触发 `show_variation`；`product-dialog-meta.js` 只在选中规格的当下和表单 DOM 变化（`MutationObserver` → `requestAnimationFrame`）时刷新，可能都落在这 300 毫秒之前。本机直接打开多规格落地页 3 次全空，手动 `root.vcExperience.update()` 一次就出来——是漏了一次刷新，不是判断写错。
+- 修法：`createVcProductMetaStrip()` 在表单上挂 `show_variation.vcProductMeta hide_variation.vcProductMeta reset_data.vcProductMeta`，`destroy()` 时 `off('.vcProductMeta')`。+9 行。
+- 验证：修后直接打开 6 次全部显示；弹窗里换 3 个规格，300 毫秒里隐藏、之后是新规格的数字；关掉再开别的商品正常。`product-dialog-meta.cjs` 新加 2 项（共 8 项），旧脚本上失败、新脚本上通过；主题 `.cjs` 59 个、PHP 33 个全过；44 个地址比对不变。沙盒步骤在发布材料第九节。
+- 信任条 `pc_trust_badges`：所有者“发布后直接开”，按现在的措辞 6 家店一起开，F1 发布后请所有者确认再写开关。代码不动。
+
 ## 2026-11-14 第八轮：合主线 `3a297df`（合并 `1ce0d24`）
 
 - 主线改了 `assets/product-dialog-polish.js`（落地页商品号统一走 `idValue()`）和 `inc/storefront-entry.php`（跳转时保留素材参数 `cr`、`placement`、`ad_name`）。0 冲突。合并后 `storefront-entry.php` 和主线一字不差；`product-dialog-polish.js` = 主线 + 第六轮“后台加载不放弃弹窗”那处修复，没有重复。
