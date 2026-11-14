@@ -137,6 +137,8 @@ cmp /tmp/m4-online.json /tmp/m4-new.json
 
 第 6 节的命令查出来 6 家店都没有投手账号的话，这张卡片暂时没人看得到，可以先发、再按甲处理。
 
+**F1 11-14 只读核对**：6 家店的投手账号（`pc_media_buyer`）都是 0 个，所以这张卡片现在没人看得到。F1 把它记进了待所有者 / F5 定的事项，**不阻塞 M4 发布**。同一次核对里，`pc_pricing_engine_mode`、`pc_series_campaigns_mode`、`pc_buyer_recognition` 6 家都不存在；`pc_marketing_quiet_mode` 等发布前再查。
+
 以后要所有者定的事（都是功能变化，不在这次发布里）：
 
 1. **已购回访的“静默营销弹窗”**。线上 F5 的 `Buyer_Status` 已经挂好了过滤器，但读这个过滤器的代码在 M4 里，而且关在 `pc_marketing_quiet_mode` 后面。所以打开了已购回访的店，老顾客照样看得到首单券条、离开挽回 / 转盘、活动倒计时，和现在线上一样。要让静默生效，所有者同意后由 F1 在那家店执行 `wp option update pc_marketing_quiet_mode on`；要撤回就设成 `off`。
@@ -179,6 +181,8 @@ cmp /tmp/m4-online.json /tmp/m4-new.json
 ## 9. 统计表 6 家店都是 0 行（F1 11-14 问的，F2 查过）
 
 结论：计数本身写得进去，0 行说明一直没有事件进来，最可能是弹窗从来没打开过。这件事和 M4 无关，M4 不改统计表的代码。
+
+**F1 11-14 只读核对，已经结案：0 行是正常的。** 6 家店（s0001、s0006–s0010）都没有 `peptide_core_exit_intent` 这个选项，也就是从没配置过，等于关着；带 `_pc_exit_intent` 的订单都是 0；前台 nginx 访问日志（当前和上一份，共 4 个文件）里没有任何 `pc_exit_event` 请求。
 
 查过的：
 
