@@ -8,6 +8,9 @@ use PeptideCore\Loyalty;
 defined( 'ABSPATH' ) || exit;
 
 final class Customers_Page {
+
+	/** Per-customer purchase facts cache (v2: order count = paid orders only). */
+	private const STATS_KEY = 'pc_cust_stats_v2_';
 	public const SLUG = 'pc-customers';
 	public const CAP = 'manage_woocommerce';
 
@@ -18,10 +21,12 @@ final class Customers_Page {
 		add_action( 'admin_post_pc_customer_loyalty', array( self::class, 'settings_save' ) );
 		add_action( 'admin_post_pc_customer_bulk', array( self::class, 'bulk_save' ) );
 		add_action( 'admin_post_pc_customer_export', array( self::class, 'export' ) );
-		add_action( 'woocommerce_order_status_changed', static function ( $order_id ): void {
+		$forget = static function ( $order_id ): void {
 			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
-			if ( $order && $order->get_customer_id() ) { delete_transient( 'pc_cust_stats_v1_' . $order->get_customer_id() ); }
-		} );
+			if ( $order && $order->get_customer_id() ) { delete_transient( self::STATS_KEY . $order->get_customer_id() ); }
+		};
+		add_action( 'woocommerce_order_status_changed', $forget );
+		add_action( 'woocommerce_order_refunded', $forget ); // partial refunds keep the status but change the total
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( self::SLUG === ( $_GET['page'] ?? '' ) ) { wp_enqueue_style( 'pc-customers', plugins_url( 'assets/customers.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION ); }
 		} );
@@ -165,12 +170,13 @@ final class Customers_Page {
 	 * @return array{orders:int,spent:float,category:string}
 	 */
 	public static function stats( int $user_id ): array {
-		$key = 'pc_cust_stats_v1_' . $user_id;
+		$key = self::STATS_KEY . $user_id;
 		$cached = get_transient( $key );
 		if ( is_array( $cached ) && isset( $cached['orders'], $cached['spent'], $cached['category'] ) ) { return $cached; }
 		$out = array( 'orders' => 0, 'spent' => 0.0, 'category' => '' );
 		if ( function_exists( 'wc_get_customer_order_count' ) ) {
-			$out['orders'] = (int) wc_get_customer_order_count( $user_id );
+			// Paid orders only: wc_get_customer_order_count() also counts failed / cancelled payment attempts.
+			$out['orders'] = count( wc_get_orders( array( 'customer_id' => $user_id, 'status' => wc_get_is_paid_statuses(), 'limit' => -1, 'return' => 'ids' ) ) );
 			$out['spent']  = (float) wc_get_customer_total_spent( $user_id );
 			$tally = array();
 			$orders = wc_get_orders( array( 'customer_id' => $user_id, 'status' => wc_get_is_paid_statuses(), 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC' ) );
@@ -194,7 +200,7 @@ final class Customers_Page {
 		self::guard( 'pc_customer_export' );
 		$c = Customer_Segments::catalog();
 		$search = sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ); $tag = sanitize_key( $_GET['tag'] ?? '' ); $level = sanitize_key( $_GET['level'] ?? '' );
-		$args = array( 'role' => 'customer', 'number' => 5000, 'orderby' => 'registered', 'order' => 'DESC' );
+		$args = array( 'role' => 'customer', 'number' => 200, 'paged' => 1, 'orderby' => 'registered', 'order' => 'DESC' );
 		if ( $search ) { $args['search'] = '*' . $search . '*'; $args['search_columns'] = array( 'user_login', 'user_email', 'display_name' ); }
 		if ( $tag ) { $args['meta_query'][] = array( 'key' => Customer_Segments::TAGS, 'value' => '"' . $tag . '"', 'compare' => 'LIKE' ); }
 		if ( $level ) { $args['meta_query'][] = array( 'key' => Customer_Segments::LEVEL, 'value' => $level ); }
@@ -209,12 +215,20 @@ final class Customers_Page {
 		$out = fopen( 'php://output', 'w' );
 		fwrite( $out, "\xEF\xBB\xBF" );
 		fputcsv( $out, array( 'email', 'name', 'tags', 'level', 'orders', 'total_spent', 'currency', 'main_category', 'registered' ) );
-		foreach ( ( new \WP_User_Query( $args ) )->get_results() as $u ) {
-			if ( ! Customer_Segments::is_customer( (int) $u->ID ) ) { continue; }
-			$p = Customer_Segments::profile( (int) $u->ID ); $st = self::stats( (int) $u->ID );
-			$labels = array_map( static fn( $k ) => $c['tags'][ $k ] ?? $k, $p['tags'] );
-			fputcsv( $out, array_map( $cell, array( $u->user_email, $u->display_name, implode( ', ', $labels ), $c['levels'][ $p['level'] ] ?? '', $st['orders'], number_format( $st['spent'], 2, '.', '' ), get_woocommerce_currency(), $st['category'], substr( (string) $u->user_registered, 0, 10 ) ) ) );
-		}
+		if ( function_exists( 'set_time_limit' ) ) { @set_time_limit( 0 ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		// Batches of 200 customers, every page (no silent cap); runtime caches are dropped between batches to keep memory flat.
+		do {
+			$users = ( new \WP_User_Query( $args ) )->get_results();
+			foreach ( $users as $u ) {
+				if ( ! Customer_Segments::is_customer( (int) $u->ID ) ) { continue; }
+				$p = Customer_Segments::profile( (int) $u->ID ); $st = self::stats( (int) $u->ID );
+				$labels = array_map( static fn( $k ) => $c['tags'][ $k ] ?? $k, $p['tags'] );
+				fputcsv( $out, array_map( $cell, array( $u->user_email, $u->display_name, implode( ', ', $labels ), $c['levels'][ $p['level'] ] ?? '', $st['orders'], number_format( $st['spent'], 2, '.', '' ), get_woocommerce_currency(), $st['category'], substr( (string) $u->user_registered, 0, 10 ) ) ) );
+			}
+			fflush( $out );
+			if ( function_exists( 'wp_cache_flush_runtime' ) ) { wp_cache_flush_runtime(); }
+			++$args['paged'];
+		} while ( count( $users ) === $args['number'] );
 		fclose( $out );
 		exit;
 	}

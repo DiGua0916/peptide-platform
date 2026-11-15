@@ -46,7 +46,13 @@
                 await bridge.refresh();
                 const before = bridge.snapshot();
                 if (before?.pending || before?.valid !== true || !validCart(before.cart)) { show({kind:'error',message:strings.notReady}); return {state:'unavailable'}; }
-                if (before.cart.items_count === 0) { const saved = await remember(code); if (saved) { show({ kind:'saved', message:strings.saved }); return {state:'saved'}; } await copyCode(true); return {state:'empty'}; }
+                if (before.cart.items_count === 0) {
+                    // remember(): 'saved' (server kept or applied it), 'invalid' (server refused it), anything else = unknown.
+                    const saved = await remember(code);
+                    if (saved === true || saved === 'saved') { show({ kind:'saved', message:strings.saved }); return {state:'saved'}; }
+                    if (saved === 'invalid') { show({ kind:'error', message:strings.unavailable }); return {state:'invalid'}; }
+                    await copyCode(true); return {state:'empty'};
+                }
                 const already = couponResult(before.cart, code);
                 if (already) { show({ kind:'already',message:strings.already,result:already }); return {state:'already'}; }
                 // Never repeat a POST after a timeout. The shared writer handles its single reconciliation read.
@@ -124,9 +130,11 @@
             try {
                 if (!config.rememberUrl) return false;
                 const url = new URL(config.rememberUrl, global.location.href); if (url.origin !== global.location.origin) return false;
-                url.searchParams.set('pc_coupon', code);
-                const response = await global.fetch(url.href, { credentials:'same-origin', cache:'no-store', redirect:'follow' });
-                return response.ok;
+                url.searchParams.set('pc_coupon', code); url.searchParams.set('pc_coupon_json', '1');
+                const response = await global.fetch(url.href, { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
+                if (!response.ok) return false;
+                const state = (await response.json())?.state;
+                return state === 'pending' || state === 'applied' ? 'saved' : state === 'invalid' ? 'invalid' : false;
             } catch (_) { return false; }
         };
         const controller = createController({code:config.code,client:()=>global.VialCoveLiveCart,copy,show,strings,preview:config.preview===true,remember});

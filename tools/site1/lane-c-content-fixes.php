@@ -8,6 +8,7 @@
  *   wp eval-file tools/site1/lane-c-content-fixes.php            # dry run (default): prints what would change
  *   wp eval-file tools/site1/lane-c-content-fixes.php apply      # writes the changes, keeps a backup per product
  *   wp eval-file tools/site1/lane-c-content-fixes.php rollback   # restores titles/content from that backup
+ *                                                                  # (skips products edited after apply; add "force" to override)
  *
  * Idempotent: a second "apply" finds nothing to change. Slugs, prices, variations, stock and
  * attributes are never touched. Storage temperatures and usage paragraphs outside the FAQ are
@@ -52,6 +53,21 @@ function vc_lc_faq_html(): string {
 	return $out;
 }
 
+/** Offset where the FAQ question/answer run that starts at $from ends. */
+function vc_lc_faq_end( string $html, int $from ): int {
+	$pos = $from; $end = $from; $seen_question = false; $len = strlen( $html );
+	while ( $pos < $len ) {
+		if ( preg_match( '~\G(?:\s+|<!--.*?-->)~s', $html, $ws, 0, $pos ) ) { $pos += strlen( $ws[0] ); continue; }
+		if ( ! preg_match( '~\G<(h3|p|ul|ol)\b[^>]*>.*?</\1>~is', $html, $block, 0, $pos ) ) { break; } // any other element ends the FAQ
+		$tag = strtolower( $block[1] );
+		if ( 'h3' === $tag ) { $seen_question = true; }
+		elseif ( ! $seen_question ) { break; }
+		elseif ( 'p' === $tag && preg_match( '~^\s*(?:disclaimer|references?|note)\b~i', wp_strip_all_tags( $block[0] ) ) ) { break; }
+		$pos += strlen( $block[0] ); $end = $pos;
+	}
+	return $end;
+}
+
 /**
  * Apply the content rules. Returns [new_content, list_of_changes].
  *
@@ -62,15 +78,20 @@ function vc_lc_transform_content( string $html ): array {
 	// P1-7: "≥ 99(%" typo.
 	$fixed = preg_replace( '/≥\s*99\s*\(\s*%/u', '≥ 99%', $html, -1, $count );
 	if ( is_string( $fixed ) && $count > 0 ) { $html = $fixed; $changes[] = "purity typo x{$count}"; }
-	// P1-9: replace an existing FAQ section (heading through the next h2, or to the end).
+	// P1-9: replace an existing FAQ section: the heading plus the question/answer blocks right after it
+	// (<h3> questions, each followed by <p>/<ul>/<ol> answers). It stops at the next <h2>, at any other
+	// element (<h4>, <div>, <hr>, tables...) and at a "Disclaimer" / "Reference(s)" / "Note" paragraph,
+	// so content after the FAQ is kept.
 	if ( ! str_contains( $html, VC_LC_MARK ) ) {
 		if ( preg_match( '~<h2\b[^>]*>\s*(?:<[^>]+>\s*)*(?:FAQs?|Frequently\s+asked\s+questions)\s*[:：?]?\s*(?:</[^>]+>\s*)*</h2>~iu', $html, $m, PREG_OFFSET_CAPTURE ) ) {
 			$start = $m[0][1];
 			$after = $start + strlen( $m[0][0] );
-			$end   = preg_match( '~<h2[\s>]~i', $html, $n, PREG_OFFSET_CAPTURE, $after ) ? $n[0][1] : strlen( $html );
+			$end   = vc_lc_faq_end( $html, $after );
 			$old_questions = preg_match_all( '~<h3\b~i', substr( $html, $after, $end - $after ) );
+			$removed = trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( substr( $html, $after, $end - $after ) ) ) );
+			$kept    = trim( wp_strip_all_tags( substr( $html, $end ) ) );
 			$html = substr( $html, 0, $start ) . vc_lc_faq_html() . substr( $html, $end );
-			$changes[] = "FAQ section replaced ({$old_questions} old questions -> " . count( vc_lc_standard_faq() ) . ' standard)';
+			$changes[] = "FAQ section replaced ({$old_questions} old questions -> " . count( vc_lc_standard_faq() ) . ' standard; removes ' . strlen( $removed ) . ' chars: "' . mb_substr( $removed, 0, 160 ) . ( mb_strlen( $removed ) > 160 ? '…' : '' ) . '"; keeps ' . strlen( $kept ) . ' chars after it)';
 		}
 	}
 	return array( $html, $changes );
@@ -86,6 +107,11 @@ foreach ( $vc_lc_ids as $vc_lc_id ) {
 	if ( 'rollback' === $vc_lc_mode ) {
 		$backup = get_post_meta( $vc_lc_id, VC_LC_BACKUP, true );
 		if ( ! is_array( $backup ) ) { continue; }
+		// Don't silently undo edits made after apply: only roll back products still exactly as this script left them.
+		if ( isset( $backup['applied'] ) && $backup['applied'] !== md5( $post->post_title . "\n" . $post->post_content ) && ! in_array( 'force', (array) ( $args ?? array() ), true ) ) {
+			WP_CLI::warning( "#{$vc_lc_id} was edited after apply; not restored (add 'force' to restore anyway)." );
+			continue;
+		}
 		wp_update_post( wp_slash( array( 'ID' => $vc_lc_id, 'post_title' => $backup['title'], 'post_content' => $backup['content'] ) ) );
 		delete_post_meta( $vc_lc_id, VC_LC_BACKUP );
 		WP_CLI::log( "#{$vc_lc_id} restored" );
@@ -112,7 +138,10 @@ foreach ( $vc_lc_ids as $vc_lc_id ) {
 		add_post_meta( $vc_lc_id, VC_LC_BACKUP, array( 'title' => $post->post_title, 'content' => $post->post_content, 'at' => gmdate( 'c' ) ), true );
 	}
 	$result = wp_update_post( wp_slash( array( 'ID' => $vc_lc_id, 'post_title' => $title, 'post_content' => $content ) ), true );
-	if ( is_wp_error( $result ) ) { WP_CLI::warning( "#{$vc_lc_id} not saved: " . $result->get_error_message() ); }
+	if ( is_wp_error( $result ) ) { WP_CLI::warning( "#{$vc_lc_id} not saved: " . $result->get_error_message() ); continue; }
+	$saved  = get_post( $vc_lc_id );
+	$backup = get_post_meta( $vc_lc_id, VC_LC_BACKUP, true );
+	if ( $saved && is_array( $backup ) ) { $backup['applied'] = md5( $saved->post_title . "\n" . $saved->post_content ); update_post_meta( $vc_lc_id, VC_LC_BACKUP, $backup ); }
 }
 delete_transient( 'vc_counter_live_v1' );
 WP_CLI::success( sprintf( '%s: %d product(s) %s.', $vc_lc_mode, $vc_lc_total, 'apply' === $vc_lc_mode ? 'changed' : ( 'rollback' === $vc_lc_mode ? 'restored' : 'would change' ) ) );

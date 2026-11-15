@@ -30,6 +30,7 @@ final class Coupons {
 	public const SHORTCODE   = 'pc_coupons';
 	public const APPLY_ARG   = 'pc_coupon';
 	public const CODE_ARG    = 'code';
+	public const JSON_ARG    = 'pc_coupon_json';
 
 	private const SESSION_KEY = 'pc_pending_coupon';
 
@@ -264,8 +265,15 @@ final class Coupons {
 			return;
 		}
 		$code = wc_format_coupon_code( sanitize_text_field( wp_unslash( $_GET[ self::APPLY_ARG ] ) ) ); // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+		$state = 'invalid';
 		if ( '' !== $code && function_exists( 'WC' ) && WC()->cart && WC()->session ) {
-			self::remember( $code );
+			$state = self::remember( $code );
+		}
+		// The first-order Claim button asks for the result instead of a page (site 1): applied / pending / invalid.
+		if ( isset( $_GET[ self::JSON_ARG ] ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+			if ( function_exists( 'wc_clear_notices' ) ) { wc_clear_notices(); } // the button shows its own message
+			nocache_headers();
+			wp_send_json( array( 'state' => $state ) );
 		}
 		wp_safe_redirect( remove_query_arg( self::APPLY_ARG ) );
 		exit;
