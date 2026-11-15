@@ -416,7 +416,10 @@ class Release:
             key = "source_web_root" if side == "web" else "source_admin_root"
             _, out, _ = self.remotes[host].run("sudo python3 -c " + shlex.quote(f"import json;print(json.load(open('/etc/vialcove-provision/config.json')).get('{key}') or '')"), check=False)
             templates[side] = out.strip()
-        return production_units(self.registry(), self.env["production"], templates)
+        units = production_units(self.registry(), self.env["production"], templates)
+        if getattr(self.args, "skip_hq", False):
+            units = [u for u in units if u["name"] != "hq"]   # 只发 14 份店铺副本（总后台上有主线里还没有的发布工具时用）
+        return units
 
     def run(self):
         if self.env.get("requires_confirmation", self.args.env == "production") and self.args.confirmed != self.label:
@@ -528,6 +531,7 @@ def main():
     parser.add_argument("--allow-unpushed", action="store_true")
     parser.add_argument("--allow-same-version", action="store_true")
     parser.add_argument("--rollback-all-on-failure", action="store_true")
+    parser.add_argument("--skip-hq", action="store_true", help="不换总后台那一份（只发 6 家店前后台和两份模板）")
     parser.add_argument("--wait-lock", type=int, default=0, help="发布锁被占用时排队等待的分钟数（默认 0 = 直接拒绝）")
     parser.add_argument("--mainline", default="", help="例如 origin/codex/checkout-acceptance-20261105：开始前和每一组之前都核对主线仍包含在要发的提交里")
     parser.add_argument("--workdir", default=os.path.join(os.environ.get("TMPDIR", "/tmp"), "vialcove-release"))
