@@ -165,10 +165,12 @@ diff    /tmp/f3/hq-live/data.json /tmp/f3/hq-release/data.json
 **通过标准**：
 
 1. `pages/` 下一个差别都没有（系列管理每个系列一页、订单列表、已退款筛选、订单详情、按单号搜索、跨店报表）。
-2. 店铺 `data.json` 完全相同；其中 `orders_that_would_be_reported_again` 是 0（升级后已上报的订单不会重报）。
+2. 店铺 `data.json` 两次完全相同。其中 `orders_that_would_be_reported_again` 要**两次相同**（发布版不比线上版多 = 升级不会让已上报的订单重报），不要求是 0：摘要里有邮箱哈希和订单号（hang- 付款参考号），脱敏快照改写过邮箱或付款参考号的、生产上已上报过的订单，两边都会被算进来；是哪几张看 `orders_that_would_be_reported_again_list`。生产上这些数据没被改写，不会出现。
 3. 总后台 `data.json` 只多这些键：`customers`、`abandoned`、`abandon_orders`、`abandon_recovered`、`abandon_rate`、`customer_id`（开关关着时页面不显示）。别的数字、43 种搜法的结果、筛选、花费、系列和店铺归属都相同。
-4. 两次的 `meta.json` 里 `writes_during_dump` 都是空的；版本从 `1/1/1` 变成 `1/2/1`；`pchq_m10_extras`、`pc_order_report_customer_id` 都是没有（= 关）。
+4. 两次的 `meta.json` 里 `writes_during_dump` 都是空的（2026-11-15 修：店铺取数时会导出商品，线上代码导出时把每张图片的哈希缓存进附件元 `_pc_series_sha256`，旧版脚本没拦住，沙盒上记了约 200 条；新版脚本拦住了这条缓存，导出内容不变）；版本从 `1/1/1` 变成 `1/2/1`；`pchq_m10_extras`、`pc_order_report_customer_id` 都是没有（= 关）。
 5. 回退演练（第九节）：换回线上版代码再取一次 `hq-rollback`，`pages/` 和 `hq-live` 相同；再换回发布版。
+
+**2026-11-15 F1 沙盒结果**（MySQL，主店 s0001 + 总后台新快照；线上版 `0a100736`，发布版 `d5472d84`）：第 1、3 条和第 4 条的版本、开关都过；店铺取数记了约 200 条图片哈希写入（脚本问题，已修，要用新脚本重跑店铺那两次取数）；会重报的订单两边都是 2（脱敏改写造成，按上面第 2 条的标准算通过，待 F1 用新脚本看清是哪 2 张）。
 
 本机（SQLite）用 `02482ce2` 当线上版跑过一遍，五条都过（本机店铺副本 47 张订单、总后台 10 张，订单和退款是固定造的数据）。沙盒上验的是 MySQL 和真实快照。
 

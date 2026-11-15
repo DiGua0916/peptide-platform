@@ -6,6 +6,12 @@
  *   wp eval-file wp-content/plugins/peptide-core/tests/m3-m10-compare-dump.php <输出目录>
  *
  * 只读：不写数据库（会数出脚本期间的写入语句，写在 meta.json 里），不发网络请求。
+ * 导出商品时，线上代码会把每张商品图片的哈希缓存进附件元 _pc_series_sha256（只在导出商品目录时发生，平时打开页面不会）；
+ * 本脚本在取数期间拦住这条缓存写入，导出的内容不受影响。
+ *
+ * “升级后会重报”的订单：上次上报留下的指纹和现在的摘要对不上。摘要里有邮箱哈希和订单号（hang- 付款参考号），
+ * 所以在脱敏快照上，被改写过邮箱或付款参考号的订单会被算进来——线上版、发布版一样多。比对时看两次是否相同，
+ * 不是看是不是 0；orders_that_would_be_reported_again_list 列出了是哪几张。
  * 输出里没有顾客资料：订单只记编号、金额、状态和摘要的指纹，摘要里的邮箱哈希只记“有 / 没有”。
  *
  * @package PeptideCore
@@ -33,6 +39,11 @@ add_filter(
 	}
 );
 
+// 导出商品会顺手缓存图片哈希（线上代码的老行为）；取数期间不让它写。
+$no_hash_cache = static fn( $check, $object_id, $meta_key ) => '_pc_series_sha256' === $meta_key ? false : $check;
+add_filter( 'add_post_metadata', $no_hash_cache, 1, 3 );
+add_filter( 'update_post_metadata', $no_hash_cache, 1, 3 );
+
 $data = array();
 
 // ---- 订单上报：每张订单的摘要、指纹，和上次上报的指纹比（不一样 = 升级后会重报一次） ----
@@ -54,6 +65,12 @@ foreach ( $orders as $order ) {
 	);
 }
 $data['orders_that_would_be_reported_again'] = $rereport;
+$data['orders_that_would_be_reported_again_list'] = array_values(
+	array_map(
+		static fn( $o ) => array( 'store_order_id' => $o['summary']['store_order_id'], 'order_number' => $o['summary']['order_number'], 'status' => $o['summary']['status'], 'is_test' => $o['summary']['is_test'] ),
+		array_filter( $data['orders'], static fn( $o ) => $o['would_report_again'] )
+	)
+);
 
 // ---- 回填试运行（只数，不发） ----
 $bf = R::backfill( true );
