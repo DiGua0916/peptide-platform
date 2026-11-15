@@ -69,6 +69,6 @@ add_action( 'wp_footer', function (): void {
     if ( '' === $url ) { return; }
     echo '<div class="vc-help-widget" id="vc-contact-support" data-vc-help>';
     echo '<a class="vc-help-contact" id="vc-whatsapp-contact" href="' . esc_url( $url ) . '" target="_blank" rel="noopener noreferrer" aria-label="Contact support now on WhatsApp (opens in a new tab)" tabindex="-1" aria-hidden="true"><strong>Contact support now</strong><span>Add us on WhatsApp <span aria-hidden="true">↗</span></span></a>';
-    echo '<button class="vc-help-float" type="button" aria-label="Open WhatsApp support" aria-expanded="false" aria-controls="vc-whatsapp-contact"><img src="' . esc_url( get_template_directory_uri() . '/assets/product-dialog-support.png' ) . '" width="48" height="48" alt="" decoding="async"></button>';
+    echo '<button class="vc-help-float" type="button" aria-label="Open WhatsApp support" aria-expanded="false" aria-controls="vc-whatsapp-contact"><img src="' . esc_url( get_template_directory_uri() . '/assets/product-dialog-support.png' ) . '" width="48" height="48" alt="" decoding="async"><span class="vc-help-float__label">Chat with us</span></button>';
     echo '</div>';
 }, 15 );

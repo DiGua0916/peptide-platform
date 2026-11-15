@@ -142,6 +142,32 @@
         );
     }
 
+    // Site 1 P1-6: checkout opens with one compact line, stamp + "You're saving $X on this order".
+    // The breakdown stays in the order summary. Shipping savings (tiers) are added to the total.
+    function shippingMinor() {
+        var cart = wp.data.select(window.wc.wcBlocksData.cartStore).getCartData();
+        var v = Number(cart?.extensions?.peptide_core?.shipping_savings?.shipping_discount);
+        return Number.isSafeInteger(v) && v > 0 ? v : 0;
+    }
+    function CheckoutSavings() {
+        var storedCart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
+        var pricing = storedCart?.extensions?.peptide_core?.sale_savings;
+        // Cleared first so the "You save" line under the Pay button never shows an old amount.
+        window.VialCoveCheckoutSaving = '';
+        if (!pricing) return null;
+        var decimals = Number(pricing.currency_minor_unit);
+        if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) return null;
+        var items = pricing.savings_available === false ? 0 : Number(pricing.total_savings !== undefined ? pricing.total_savings : pricing.sale_savings);
+        var total = (Number.isFinite(items) ? items : 0) + shippingMinor(); // shipping-tier savings count even without item savings
+        var amount = money(total, pricing.currency_code, decimals);
+        if (!amount || total <= 0) return null;
+        window.VialCoveCheckoutSaving = amount;
+        return h('section', { className: 'vc-cart-savings vc-cart-savings--compact', 'aria-label': text('Order savings', 'Ahorro del pedido') },
+            h(SavingsStamp, { amount: amount, label: text('You save', 'Ahorras') }),
+            h('p', { className: 'vc-cart-savings__headline' }, text("You're saving " + amount + ' on this order', 'Ahorras ' + amount + ' en este pedido'))
+        );
+    }
+
     function FooterSavings() {
         var data = useSavings();
         return data ? h('section', {className:'vc-order-savings', 'aria-label':text('Order savings','Ahorro del pedido')},
@@ -157,9 +183,9 @@
         // breakpoint changes. This theme-owned root stays outside that tree.
         // It renders only the informational summary; native checkout is untouched.
         if (typeof wp.element.createRoot === 'function') {
-            wp.element.createRoot(checkoutMount).render(h(SavingsSummary));
+            wp.element.createRoot(checkoutMount).render(h(CheckoutSavings));
         } else if (typeof wp.element.render === 'function') {
-            wp.element.render(h(SavingsSummary), checkoutMount);
+            wp.element.render(h(CheckoutSavings), checkoutMount);
         }
     } else if (checkout.ExperimentalOrderMeta && typeof wp.plugins.registerPlugin === 'function') {
         wp.plugins.registerPlugin('vialcove-cart-sale-savings', {

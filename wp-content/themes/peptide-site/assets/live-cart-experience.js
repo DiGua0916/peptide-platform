@@ -212,11 +212,16 @@
         // amounts (Woo can cap them). Associate names by exact native fee key.
         const fees = Array.isArray(cart.fees) ? cart.fees : [], seenFees = new Set(), feeRows = [];
         const applied = cart.extensions?.peptide_core?.promotion?.applied_all;
+        // Site 1 P0-5: shipping protection gets its own row with an opt-out checkbox (below shipping),
+        // so its native fee row is not listed a second time. The row stays when it is switched off.
+        const protectData = cart.extensions?.peptide_core?.shipping_protection;
+        const protect = protectData?.enabled === true && typeof protectData.namespace === 'string' && Number.isSafeInteger(protectData.price_minor) ? protectData : null;
         let feeSum = 0n, feeSavings = 0n, feesComplete = true;
         for (const fee of fees) {
             const key = typeof fee?.key === 'string' ? fee.key : fee?.id;
             if (typeof key !== 'string' || seenFees.has(key) || !sameCurrency(fee.totals) || !isMinor(fee.totals?.total)) { feesComplete = false; break; }
             seenFees.add(key); const amount = BigInt(fee.totals.total); feeSum += amount;
+            if (protect && key === 'pc-shipping-protection') continue;
             const promo = /^pc-promo-([1-9]\d*)$/.exec(key), record = promo && Array.isArray(applied) ? applied.find(entry => String(entry?.id) === promo[1]) : null;
             const name = record ? nativeOfferName(label(record.title) || label(fee.name) || 'Order offer') : label(fee.name) || 'Order adjustment';
             if (amount !== 0n) feeRows.push({ key: 'fee-' + key, label: name, minor: fee.totals.total, savings: amount < 0n });
@@ -233,6 +238,9 @@
                     detail: index === shipping.discounts.length - 1 ? 'Shipping after offers: ' + money(shipping.payable, t) : '' }));
                 saved += BigInt(shipping.discount);
             } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
+            if (protect) rows.push({ key: 'ship-protect', label: label(protect.label) || 'Shipping protection', minor: String(protect.price_minor),
+                reference: Number.isSafeInteger(protect.reference_minor) && protect.reference_minor > protect.price_minor ? String(protect.reference_minor) : '',
+                protect: { namespace: protect.namespace, chosen: protect.chosen === true } });
         }
         if (positive(t.total_tax)) rows.push({ key: 'tax', label: 'Tax', minor: t.total_tax });
         rows.push({ key: 'payable', label: cart.needs_shipping && !cart.has_calculated_shipping ? 'Estimated total' : 'Total payable', minor: t.total_price, total: true });
@@ -758,12 +766,20 @@
             if (view.totalsSignature !== totalsSignature) { view.totalsSignature = totalsSignature; root.querySelector('[data-cart-totals]').replaceChildren(...totalRows.map(total => {
                 const row = el('div', 'vc-live-cart__total-row' + (total.total ? ' is-total' : '') + (total.savings ? ' is-saving' : '') + (total.savedTotal ? ' is-saved-total' : ''));
                 row.dataset.summaryKey = total.key;
+                if (total.protect) {
+                    row.classList.add('vc-live-cart__protect'); row.classList.toggle('is-off', !total.protect.chosen);
+                    const box = el('input'); box.type = 'checkbox'; box.checked = total.protect.chosen; box.dataset.cartProtect = ''; box.disabled = !valid || pending;
+                    box.addEventListener('change', () => client.write('extensions', { namespace: total.protect.namespace, data: { on: box.checked } }).catch(() => {}));
+                    const name = el('label', 'vc-live-cart__total-label vc-live-cart__protect-label'); name.append(box, el('span', '', clean(total.label)));
+                    const value = el('strong'); if (total.reference) value.append(el('s', 'vc-live-cart__protect-ref', money(total.reference, cart.totals)), ' ');
+                    value.append(money(total.minor, cart.totals)); row.append(name, value); return row;
+                }
                 const label = el('span', 'vc-live-cart__total-label', clean(total.label));
                 if (total.detail) label.append(el('small', 'vc-live-cart__total-detail', clean(total.detail)));
                 row.append(label, el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row;
             })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
-            root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button').forEach(node => { node.disabled = !valid || pending; });
+            root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button,[data-cart-protect]').forEach(node => { node.disabled = !valid || pending; });
             const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));
             if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon), button = el('button', '', display.label + ' ×'); button.type = 'button'; button.setAttribute('aria-label', display.removeLabel); button.addEventListener('click', () => client.write('remove-coupon', { code: display.code }).catch(() => {})); return button; })); }
             coupons.querySelectorAll('button').forEach(button => { button.disabled = !valid || pending; });

@@ -142,6 +142,10 @@ add_filter( 'peptide_core_layout_definitions', function ( array $definitions ): 
     if ( isset( $definitions['counter']['settings'] ) ) {
         $definitions['counter']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '数字区域排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原数字列表', 'cards' => '说明与数字卡片' ), 'help' => '标题和简短描述显示为左侧说明卡片；数字及单位使用原有条目。手机将说明放在数字上方。' ) );
     }
+    // Site-1 plan P2-1: a counter item can show the live catalogue size instead of a typed number.
+    if ( isset( $definitions['counter']['items']['fields'] ) && is_array( $definitions['counter']['items']['fields'] ) ) {
+        $definitions['counter']['items']['fields'][] = \PeptideCore\Modules\Fields::f( 'select', 'source', __( '数字来源', 'peptide-site' ), 'manual', array( 'options' => array( 'manual' => '手动填写', 'products' => '在售商品数（自动）', 'specifications' => '在售规格数（自动）' ), 'help' => '选“自动”后忽略上面填写的数字，按当前公开商品实时统计（每小时刷新）。' ) );
+    }
     if ( isset( $definitions['card_list']['settings'] ) ) {
         $definitions['card_list']['settings'][] = \PeptideCore\Modules\Fields::f( 'select', 'presentation', __( '卡片排版', 'peptide-site' ), 'standard', array( 'group' => 'layout', 'options' => array( 'standard' => '原图文卡片', 'process' => '流程说明卡片' ), 'help' => '流程样式用于网格展示；每个步骤的标题、说明、图片和链接继续在原卡片条目中编辑。' ) );
     }
@@ -167,11 +171,68 @@ add_filter( 'peptide_core_module_html', function ( $html, array $module, string 
     return '<div class="vc-process-cards">' . \PeptideCore\Modules\Fallback::render( $module, $context, $device ) . '</div>';
 }, 20, 4 );
 
+/**
+ * Live catalogue size for counter items whose source is "products" or "specifications".
+ * Counts public, visible products; a variable product counts each published variation as one
+ * specification, a simple product counts as one. Cached for an hour and cleared on product saves.
+ *
+ * @return array{products:int,specifications:int}
+ */
+function vc_counter_live_numbers(): array {
+    $cached = get_transient( 'vc_counter_live_v1' );
+    if ( is_array( $cached ) && isset( $cached['products'], $cached['specifications'] ) ) { return $cached; }
+    $numbers = array( 'products' => 0, 'specifications' => 0 );
+    if ( function_exists( 'wc_get_products' ) ) {
+        $ids = wc_get_products( array( 'status' => 'publish', 'visibility' => 'visible', 'limit' => -1, 'return' => 'ids' ) );
+        foreach ( (array) $ids as $id ) {
+            $product = wc_get_product( $id );
+            if ( ! $product || ( class_exists( '\PeptideCore\Modules\Products' ) && ! \PeptideCore\Modules\Products::public_catalog_product( $product ) ) ) { continue; }
+            ++$numbers['products'];
+            if ( $product->is_type( 'variable' ) ) {
+                $live = 0;
+                foreach ( $product->get_children() as $child_id ) {
+                    if ( 'publish' === get_post_status( $child_id ) ) { ++$live; }
+                }
+                $numbers['specifications'] += max( 1, $live );
+            } else {
+                ++$numbers['specifications'];
+            }
+        }
+    }
+    set_transient( 'vc_counter_live_v1', $numbers, HOUR_IN_SECONDS );
+    return $numbers;
+}
+add_action( 'save_post_product', static function (): void { delete_transient( 'vc_counter_live_v1' ); } );
+add_action( 'woocommerce_update_product', static function (): void { delete_transient( 'vc_counter_live_v1' ); } );
+
+/** Replace typed numbers with live ones where an item asks for it. Returns the module unchanged otherwise. */
+function vc_counter_apply_live( array $module ): array {
+    if ( 'counter' !== ( $module['type'] ?? '' ) || empty( $module['items'] ) || ! is_array( $module['items'] ) ) { return $module; }
+    $live = null;
+    foreach ( $module['items'] as $index => $item ) {
+        $source = is_array( $item ) ? (string) ( $item['source'] ?? 'manual' ) : 'manual';
+        if ( ! in_array( $source, array( 'products', 'specifications' ), true ) ) { continue; }
+        $live = $live ?? vc_counter_live_numbers();
+        $module['items'][ $index ]['number'] = $live[ $source ];
+    }
+    return $module;
+}
+
+/** Standard counter layout with at least one live item. */
+add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
+    if ( null !== $html || 'counter' !== $module['type'] || 'cards' === ( $module['settings']['presentation'] ?? 'standard' ) ) {
+        return $html;
+    }
+    $applied = vc_counter_apply_live( $module );
+    return $applied === $module ? $html : \PeptideCore\Modules\Fallback::render( $applied, $context, $device );
+}, 19, 4 );
+
 /** Keep native formatting and item editing; isolate the card-specific motion. */
 add_filter( 'peptide_core_module_html', function ( $html, array $module, string $context, string $device ) {
     if ( null !== $html || 'counter' !== $module['type'] || 'cards' !== ( $module['settings']['presentation'] ?? 'standard' ) ) {
         return $html;
     }
+    $module = vc_counter_apply_live( $module );
     $s = $module['settings'];
     $has_intro = '' !== trim( $s['title'] ?? '' ) || '' !== trim( wp_strip_all_tags( $s['descriptionHtml'] ?? $s['description'] ?? '' ) );
     $content = \PeptideCore\Modules\Fallback::render( $module, $context, $device );

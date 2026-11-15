@@ -29,6 +29,7 @@ require_once __DIR__ . '/inc/campaign-bubble.php';
 require_once __DIR__ . '/inc/lazy-dialog.php';
 require_once __DIR__ . '/inc/offscreen-styles.php';
 require_once __DIR__ . '/inc/front-speed.php';
+require_once __DIR__ . '/inc/welcome-back.php';
 
 add_action( 'after_setup_theme', function () {
     add_theme_support( 'title-tag' );

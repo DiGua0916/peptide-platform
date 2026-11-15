@@ -64,6 +64,18 @@
 	var signup = document.querySelector( '[data-pc-signup]' );
 	var mode = 'signup';
 
+	/**
+	 * 1 号站定稿 P0-2：页面头部的 gate_flag 在需要年龄确认时给 <html> 加了 pc-acc-gating，
+	 * 商品弹窗会一直等到这里发出 pc:gate-closed 才打开，所以屏幕上不会同时叠两个弹窗。
+	 */
+	function releaseGate() {
+		var h = document.documentElement;
+		if ( h.classList.contains( 'pc-acc-gating' ) ) {
+			h.classList.remove( 'pc-acc-gating' );
+			document.dispatchEvent( new CustomEvent( 'pc:gate-closed' ) );
+		}
+	}
+
 	/* ---- 年龄确认 ---- */
 	if ( gate ) {
 		gate.addEventListener( 'cancel', function ( e ) {
@@ -85,11 +97,33 @@
 				} );
 			} );
 		} );
-		gate.querySelector( '[data-pc-gate-yes]' ).addEventListener( 'click', function () {
+		// 1 号站定稿 P1-9：勾选“仅供研究使用”之后，进入按钮才可用。
+		var ruo = gate.querySelector( '[data-pc-gate-ruo]' );
+		var yes = gate.querySelector( '[data-pc-gate-yes]' );
+		function syncYes() {
+			var ok = ! ruo || ruo.checked;
+			yes.disabled = ! ok;
+			yes.setAttribute( 'aria-disabled', ok ? 'false' : 'true' );
+		}
+		if ( ruo ) {
+			ruo.addEventListener( 'change', syncYes );
+		}
+		syncYes();
+		yes.addEventListener( 'click', function () {
+			if ( ruo && ! ruo.checked ) {
+				return;
+			}
 			set( AGE_KEY, String( Date.now() ) );
 			closeDialog( gate );
-			maybeSignup();
+			// 1 号站定稿 P0-2：确认后不再紧接着弹注册框，只放行被挡住的商品弹窗。
+			releaseGate();
 		} );
+		var signin = gate.querySelector( '[data-pc-gate-signin]' );
+		if ( signin ) {
+			signin.addEventListener( 'click', function () {
+				openSignup( 'login' );
+			} );
+		}
 		gate.querySelector( '[data-pc-gate-no]' ).addEventListener( 'click', function () {
 			window.location.href = 'https://www.google.com/';
 		} );
@@ -219,17 +253,27 @@
 		if ( t ) {
 			e.preventDefault();
 			openSignup( 'signup' );
+			return;
+		}
+		// 1 号站定稿 P1-2：顶栏 “Sign in” 打开同一个弹窗的登录模式。
+		var s = e.target.closest && e.target.closest( '[data-pc-open-signin]' );
+		if ( s && signup ) {
+			e.preventDefault();
+			openSignup( 'login' );
 		}
 	} );
 	window.pcAccountsOpen = openSignup;
 
 	/* ---- 进站 ---- */
-	if ( document.body && document.body.classList.contains( 'logged-in' ) ) {
+	// 1 号站定稿 P0-2：进站只弹 18+ 确认；注册 / 登录框不再自动弹，只从顶栏账户图标、年龄弹窗里的 “Sign in” 或账户页打开。
+	// 已购顾客（M11 的 window.pcBuyer）和已登录用户不弹年龄确认。
+	if ( ( document.body && document.body.classList.contains( 'logged-in' ) ) || window.pcBuyer ) {
+		releaseGate();
 		return;
 	}
 	if ( cfg.gate && gate && ! fresh( AGE_KEY, AGE_DAYS ) ) {
 		openDialog( gate );
 	} else {
-		maybeSignup();
+		releaseGate();
 	}
 }( window, document ) );

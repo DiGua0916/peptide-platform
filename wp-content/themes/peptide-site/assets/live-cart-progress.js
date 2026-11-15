@@ -36,8 +36,11 @@
             const reward = state.nodes.find(node => node.key === state.next.key).rewardText.trim();
             const action = state.basis === 'quantity' ? 'Add' : 'Spend';
             const lead = action + ' ' + state.next.remainingText + ' more to unlock ';
+            // Site 1 P0-5: shipping tiers say what they are ("$10.00 off shipping", "free shipping").
+            if (state.promotion?.type === 'shipping') return 'Add ' + state.next.remainingText + ' more for ' + reward + '.';
             return /\boff$/i.test(reward) ? lead + reward + ' your order.' : lead + 'your next order offer: ' + reward + '.';
         }
+        if (state.promotion?.type === 'shipping') return state.completed ? 'Free shipping unlocked.' : 'No shipping offer applied yet.';
         if (state.completed && state.discountApplied && Number(state.actualDiscount.minor) > 0) return 'Highest tier unlocked. ' + state.actualDiscount.text + ' off your order.';
         return 'No offer savings applied.';
     }

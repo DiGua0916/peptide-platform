@@ -8,6 +8,9 @@ use PeptideCore\Loyalty;
 defined( 'ABSPATH' ) || exit;
 
 final class Customers_Page {
+
+	/** Per-customer purchase facts cache (v2: order count = paid orders only). */
+	private const STATS_KEY = 'pc_cust_stats_v2_';
 	public const SLUG = 'pc-customers';
 	public const CAP = 'manage_woocommerce';
 
@@ -17,6 +20,13 @@ final class Customers_Page {
 		add_action( 'admin_post_pc_customer_points', array( self::class, 'points_save' ) );
 		add_action( 'admin_post_pc_customer_loyalty', array( self::class, 'settings_save' ) );
 		add_action( 'admin_post_pc_customer_bulk', array( self::class, 'bulk_save' ) );
+		add_action( 'admin_post_pc_customer_export', array( self::class, 'export' ) );
+		$forget = static function ( $order_id ): void {
+			$order = function_exists( 'wc_get_order' ) ? wc_get_order( $order_id ) : null;
+			if ( $order && $order->get_customer_id() ) { delete_transient( self::STATS_KEY . $order->get_customer_id() ); }
+		};
+		add_action( 'woocommerce_order_status_changed', $forget );
+		add_action( 'woocommerce_order_refunded', $forget ); // partial refunds keep the status but change the total
 		add_action( 'admin_enqueue_scripts', static function () {
 			if ( self::SLUG === ( $_GET['page'] ?? '' ) ) { wp_enqueue_style( 'pc-customers', plugins_url( 'assets/customers.css', PEPTIDE_CORE_FILE ), array(), PEPTIDE_CORE_VERSION ); }
 		} );
@@ -139,16 +149,88 @@ final class Customers_Page {
 		if ( $tag ) { $args['meta_query'][] = array( 'key' => Customer_Segments::TAGS, 'value' => '"' . $tag . '"', 'compare' => 'LIKE' ); }
 		if ( $level ) { $args['meta_query'][] = array( 'key' => Customer_Segments::LEVEL, 'value' => $level ); }
 		$q = new \WP_User_Query( $args );
-		echo '<form method="get" class="pc-customer-toolbar"><input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '"><input name="s" value="' . esc_attr( $search ) . '" placeholder="搜索顾客名称或邮箱"> '; self::select( 'tag', $c['tags'], $tag, '全部标签' ); self::select( 'level', $c['levels'], $level, '全部等级' ); echo ' <button class="button">筛选</button></form>';
+		echo '<form method="get" class="pc-customer-toolbar"><input type="hidden" name="page" value="' . esc_attr( self::SLUG ) . '"><input name="s" value="' . esc_attr( $search ) . '" placeholder="搜索顾客名称或邮箱"> '; self::select( 'tag', $c['tags'], $tag, '全部标签' ); self::select( 'level', $c['levels'], $level, '全部等级' ); echo ' <button class="button">筛选</button> <a class="button" href="' . esc_url( wp_nonce_url( add_query_arg( array( 'action' => 'pc_customer_export', 's' => $search, 'tag' => $tag, 'level' => $level ), admin_url( 'admin-post.php' ) ), 'pc_customer_export' ) ) . '">导出当前筛选（CSV）</a></form>';
 		self::begin_form( 'pc_customer_bulk' );
-		echo '<div class="pc-customer-toolbar"><select name="operation"><option value="add">添加标签</option><option value="remove">移除标签</option><option value="level">设定等级</option></select> '; self::select( 'tag', $c['tags'], '', '选择标签' ); self::select( 'level', $c['levels'], '', '清空等级' ); echo ' <button class="button">对勾选顾客应用</button></div><div class="pc-customer-scroll"><table class="widefat striped"><thead><tr><th>选择</th><th>顾客</th><th>邮箱</th><th>标签 / 等级</th><th>可用积分</th><th>退款待抵扣</th></tr></thead><tbody>';
+		echo '<div class="pc-customer-toolbar"><select name="operation"><option value="add">添加标签</option><option value="remove">移除标签</option><option value="level">设定等级</option></select> '; self::select( 'tag', $c['tags'], '', '选择标签' ); self::select( 'level', $c['levels'], '', '清空等级' ); echo ' <button class="button">对勾选顾客应用</button></div><div class="pc-customer-scroll"><table class="widefat striped"><thead><tr><th>选择</th><th>顾客</th><th>邮箱</th><th>标签 / 等级</th><th>订单数</th><th>累计金额</th><th>主要品类</th><th>可用积分</th><th>退款待抵扣</th></tr></thead><tbody>';
 		foreach ( $q->get_results() as $u ) {
 			if ( ! Customer_Segments::is_customer( (int) $u->ID ) ) { continue; }
 			$p = Customer_Segments::profile( (int) $u->ID ); $a = Loyalty::account( (int) $u->ID ); $labels = array_map( static fn( $k ) => $c['tags'][ $k ], $p['tags'] );
-			echo '<tr><td><input type="checkbox" name="ids[]" value="' . (int) $u->ID . '"></td><td><a href="' . esc_url( self::url( array( 'customer_id' => $u->ID ) ) ) . '">' . esc_html( $u->display_name ) . '</a></td><td>' . esc_html( $u->user_email ) . '</td><td>' . esc_html( implode( '、', $labels ) . ' / ' . ( $c['levels'][ $p['level'] ] ?? '未设置等级' ) ) . '</td><td>' . (int) $a['balance'] . '</td><td>' . (int) $a['debt'] . '</td></tr>';
+			$st = self::stats( (int) $u->ID );
+			echo '<tr><td><input type="checkbox" name="ids[]" value="' . (int) $u->ID . '"></td><td><a href="' . esc_url( self::url( array( 'customer_id' => $u->ID ) ) ) . '">' . esc_html( $u->display_name ) . '</a></td><td>' . esc_html( $u->user_email ) . '</td><td>' . esc_html( implode( '、', $labels ) . ' / ' . ( $c['levels'][ $p['level'] ] ?? '未设置等级' ) ) . '</td><td>' . (int) $st['orders'] . '</td><td>' . wp_kses_post( wc_price( $st['spent'] ) ) . '</td><td>' . esc_html( $st['category'] ?: '—' ) . '</td><td>' . (int) $a['balance'] . '</td><td>' . (int) $a['debt'] . '</td></tr>';
 		}
 		echo '</tbody></table></div></form><p>共 ' . (int) $q->get_total() . ' 位顾客。';
 		foreach ( array( $page - 1 => '上一页', $page + 1 => '下一页' ) as $num => $label ) { if ( $num > 0 && ( $num < $page || $num <= (int) ceil( $q->get_total() / 25 ) ) ) { echo ' <a href="' . esc_url( self::url( array( 'paged' => $num, 's' => $search, 'tag' => $tag, 'level' => $level ) ) ) . '">' . esc_html( $label ) . '</a>'; } } echo '</p>';
+	}
+
+	/**
+	 * Site-1 plan P2-4: automatic purchase facts per customer, cached for 12 hours.
+	 * Orders and total spent use WooCommerce's own customer totals; main category is the
+	 * product category with the most units across the customer's last 50 paid orders.
+	 *
+	 * @return array{orders:int,spent:float,category:string}
+	 */
+	public static function stats( int $user_id ): array {
+		$key = self::STATS_KEY . $user_id;
+		$cached = get_transient( $key );
+		if ( is_array( $cached ) && isset( $cached['orders'], $cached['spent'], $cached['category'] ) ) { return $cached; }
+		$out = array( 'orders' => 0, 'spent' => 0.0, 'category' => '' );
+		if ( function_exists( 'wc_get_customer_order_count' ) ) {
+			// Paid orders only: wc_get_customer_order_count() also counts failed / cancelled payment attempts.
+			$out['orders'] = count( wc_get_orders( array( 'customer_id' => $user_id, 'status' => wc_get_is_paid_statuses(), 'limit' => -1, 'return' => 'ids' ) ) );
+			$out['spent']  = (float) wc_get_customer_total_spent( $user_id );
+			$tally = array();
+			$orders = wc_get_orders( array( 'customer_id' => $user_id, 'status' => wc_get_is_paid_statuses(), 'limit' => 50, 'orderby' => 'date', 'order' => 'DESC' ) );
+			foreach ( $orders as $order ) {
+				foreach ( $order->get_items() as $item ) {
+					$product_id = (int) $item->get_product_id();
+					if ( ! $product_id ) { continue; }
+					foreach ( wp_get_post_terms( $product_id, 'product_cat', array( 'fields' => 'names' ) ) as $name ) {
+						if ( is_string( $name ) && 'Uncategorized' !== $name ) { $tally[ $name ] = ( $tally[ $name ] ?? 0 ) + (int) $item->get_quantity(); }
+					}
+				}
+			}
+			if ( $tally ) { arsort( $tally ); $out['category'] = (string) array_key_first( $tally ); }
+		}
+		set_transient( $key, $out, 12 * HOUR_IN_SECONDS );
+		return $out;
+	}
+
+	/** CSV of the customers matching the list filters. Contact facts only; no addresses, IPs or points ledger. */
+	public static function export(): void {
+		self::guard( 'pc_customer_export' );
+		$c = Customer_Segments::catalog();
+		$search = sanitize_text_field( wp_unslash( $_GET['s'] ?? '' ) ); $tag = sanitize_key( $_GET['tag'] ?? '' ); $level = sanitize_key( $_GET['level'] ?? '' );
+		$args = array( 'role' => 'customer', 'number' => 200, 'paged' => 1, 'orderby' => 'registered', 'order' => 'DESC' );
+		if ( $search ) { $args['search'] = '*' . $search . '*'; $args['search_columns'] = array( 'user_login', 'user_email', 'display_name' ); }
+		if ( $tag ) { $args['meta_query'][] = array( 'key' => Customer_Segments::TAGS, 'value' => '"' . $tag . '"', 'compare' => 'LIKE' ); }
+		if ( $level ) { $args['meta_query'][] = array( 'key' => Customer_Segments::LEVEL, 'value' => $level ); }
+		$cell = static function ( $value ): string {
+			$value = (string) $value;
+			// Spreadsheet formula injection guard.
+			return preg_match( '/^[=+\-@\t\r]/', $value ) ? "'" . $value : $value;
+		};
+		nocache_headers();
+		header( 'Content-Type: text/csv; charset=utf-8' );
+		header( 'Content-Disposition: attachment; filename="customers-' . gmdate( 'Ymd' ) . ( $tag ? '-' . $tag : '' ) . '.csv"' );
+		$out = fopen( 'php://output', 'w' );
+		fwrite( $out, "\xEF\xBB\xBF" );
+		fputcsv( $out, array( 'email', 'name', 'tags', 'level', 'orders', 'total_spent', 'currency', 'main_category', 'registered' ) );
+		if ( function_exists( 'set_time_limit' ) ) { @set_time_limit( 0 ); } // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
+		// Batches of 200 customers, every page (no silent cap); runtime caches are dropped between batches to keep memory flat.
+		do {
+			$users = ( new \WP_User_Query( $args ) )->get_results();
+			foreach ( $users as $u ) {
+				if ( ! Customer_Segments::is_customer( (int) $u->ID ) ) { continue; }
+				$p = Customer_Segments::profile( (int) $u->ID ); $st = self::stats( (int) $u->ID );
+				$labels = array_map( static fn( $k ) => $c['tags'][ $k ] ?? $k, $p['tags'] );
+				fputcsv( $out, array_map( $cell, array( $u->user_email, $u->display_name, implode( ', ', $labels ), $c['levels'][ $p['level'] ] ?? '', $st['orders'], number_format( $st['spent'], 2, '.', '' ), get_woocommerce_currency(), $st['category'], substr( (string) $u->user_registered, 0, 10 ) ) ) );
+			}
+			fflush( $out );
+			if ( function_exists( 'wp_cache_flush_runtime' ) ) { wp_cache_flush_runtime(); }
+			++$args['paged'];
+		} while ( count( $users ) === $args['number'] );
+		fclose( $out );
+		exit;
 	}
 
 	private static function customer_detail( int $id, array $c ): void {

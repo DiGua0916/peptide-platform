@@ -88,6 +88,11 @@ final class Ingest {
 			'video_progress'          => self::VIDEO,
 			'video_seek'              => self::VIDEO,
 			'video_end'               => self::VIDEO,
+			// Site-1 plan P2-5 (2026-11-14): reported by page code through the tracker's 'vc:track' hook.
+			'product_load_failed'     => array( 'product_id' => 'int', 'reason' => 'enum:timeout|http|payload|unknown' ),
+			'pending_banner_click'    => array( 'order_state' => 'enum:pending|failed|unknown' ),
+			'whatsapp_click'          => array( 'source' => 'enum:dealer_popup|cart_link|chat_button|other' ),
+			'catalog_search'          => array( 'term' => 'str:80', 'results' => 'int' ),
 		);
 	}
 
@@ -155,6 +160,12 @@ final class Ingest {
 		foreach ( $spec as $key => $kind ) {
 			$v = self::clean_value( is_array( $data ) ? ( $data[ $key ] ?? null ) : null, $kind );
 			if ( 'method' === $key && in_array( $type, array( 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) && ( ! is_string( $v ) || ! preg_match( '/^[A-Za-z0-9_:-]{1,80}$/D', $v ) ) ) { continue; }
+			// Search text keeps only what the native search observation would keep (no emails, URLs, long digit runs).
+			if ( 'term' === $key && 'catalog_search' === $type ) {
+				$normalized = Search_Context::source( is_string( $v ) ? $v : '' );
+				if ( 'known' !== ( $normalized['status'] ?? '' ) ) { continue; }
+				$v = $normalized['term'];
+			}
 			if ( null !== $v ) {
 				$out[ $key ] = $v;
 			}

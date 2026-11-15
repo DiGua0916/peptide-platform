@@ -40,6 +40,7 @@
     const page = document.querySelector('.vc-checkout-page');
     if (!page || !window.wp?.element || !window.VialCoveSavings) return;
     const mounted = new Map();
+    const wide = window.matchMedia('(min-width: 783px)');
     let frame = 0, packRetry = 0, packRetries = 0;
     function reconcile() {
         frame = 0;
@@ -57,16 +58,23 @@
         const content = summary?.querySelector('.wc-block-components-checkout-order-summary__content');
         const price = title?.querySelector('.wc-block-components-checkout-order-summary__title-price');
         if (!title || !content || !price || !price.textContent.trim()) { page.classList.remove('vc-checkout-summary-ready'); return; }
-        summary.classList.add('vc-order-summary-permanent');
-        title.removeAttribute('role'); title.removeAttribute('tabindex'); title.removeAttribute('aria-expanded'); title.removeAttribute('aria-controls');
-        content.removeAttribute('aria-hidden');
-        const total = content.querySelector('.wc-block-components-totals-footer-item');
-        const label = total?.querySelector('.wc-block-components-totals-item__label')?.textContent.trim() || 'Total';
-        let caption = title.querySelector('.vc-order-total-caption');
-        if (!caption) { caption = document.createElement('span'); caption.className='vc-order-total-caption'; price.before(caption); }
-        if (caption.textContent !== label) caption.textContent=label;
-        const accessible = label + ' ' + price.textContent.trim();
-        if (price.getAttribute('aria-label') !== accessible) price.setAttribute('aria-label', accessible);
+        // Site 1 P1-6: on phones the summary stays Woo's native collapsed bar (tap to open), so the form comes first.
+        // On wider screens it stays permanently open as before.
+        if (wide.matches) {
+            summary.classList.add('vc-order-summary-permanent');
+            title.removeAttribute('role'); title.removeAttribute('tabindex'); title.removeAttribute('aria-expanded'); title.removeAttribute('aria-controls');
+            content.removeAttribute('aria-hidden');
+            const total = content.querySelector('.wc-block-components-totals-footer-item');
+            const label = total?.querySelector('.wc-block-components-totals-item__label')?.textContent.trim() || 'Total';
+            let caption = title.querySelector('.vc-order-total-caption');
+            if (!caption) { caption = document.createElement('span'); caption.className='vc-order-total-caption'; price.before(caption); }
+            if (caption.textContent !== label) caption.textContent=label;
+            const accessible = label + ' ' + price.textContent.trim();
+            if (price.getAttribute('aria-label') !== accessible) price.setAttribute('aria-label', accessible);
+        } else {
+            summary.classList.remove('vc-order-summary-permanent');
+            title.querySelector('.vc-order-total-caption')?.remove();
+        }
         page.classList.add('vc-checkout-summary-ready');
         let host = content.querySelector('[data-vc-footer-savings]');
         if (!host) {
@@ -75,6 +83,7 @@
         }
     }
     const schedule = () => { if (!frame) frame=requestAnimationFrame(reconcile); };
+    wide.addEventListener?.('change', schedule);
     page.addEventListener('click',event=> {
         if (event.target.closest('.vc-order-summary-permanent .wc-block-components-checkout-order-summary__title')) {
             event.preventDefault(); event.stopImmediatePropagation();

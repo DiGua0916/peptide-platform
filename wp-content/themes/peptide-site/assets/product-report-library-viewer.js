@@ -29,14 +29,14 @@
     close(); box?.remove(); opener = trigger || link;
     box = node('dialog','vc-product-report-dialog vc-product-child-dialog');
     box.dataset.vcHistoryReportOrigin = 'library'; box.dataset.vcHistoryReportUrl = url;
-    box.setAttribute('aria-label','Reference COA');
-    const title = (home ? link.dataset.vcReportTitle?.trim() : card.querySelector('.pc-coa-library__details dd')?.textContent?.trim() || card.querySelector('.pc-coa-library__title')?.textContent?.trim()) || 'Reference COA';
-    const dismiss = node('button','vc-product-child-close'); dismiss.type = 'button'; dismiss.setAttribute('aria-label','Close reference COA');
+    box.setAttribute('aria-label','Batch COA');
+    const title = (home ? link.dataset.vcReportTitle?.trim() : card.querySelector('.pc-coa-library__details dd')?.textContent?.trim() || card.querySelector('.pc-coa-library__title')?.textContent?.trim()) || 'Batch COA';
+    const dismiss = node('button','vc-product-child-close'); dismiss.type = 'button'; dismiss.setAttribute('aria-label','Close batch COA');
     dismiss.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     dismiss.addEventListener('click',close);
     const pdf = node('div','vc-product-pdf');
     pdf.innerHTML = '<div class="pdf-toolbar"><p class="pdf-status" role="status" aria-live="polite"></p><div class="pdf-zoom"><button type="button" data-pdf-zoom="out" aria-label="Zoom out">−</button><span class="pdf-zoom-value">100%</span><button type="button" data-pdf-zoom="in" aria-label="Zoom in">+</button></div></div><div class="pdf-pages"></div><button class="pdf-retry" type="button" hidden>Retry</button>';
-    box.append(dismiss,node('h2','',title),node('p','vc-dialog-reference-note','Results apply to the sample named in the report. Not a verified VialCove stock batch certificate.'),pdf);
+    box.append(dismiss,node('h2','',title),node('p','vc-dialog-reference-note','Results apply to the lot named in the report.'),pdf);
     if (home) {
       for (const value of [link.dataset.vcReportMeta,link.dataset.vcReportContext]) if (value?.trim()) box.append(node('p','vc-dialog-reference-note',value.trim()));
       const original = node('a','vc-dialog-pdf-original','Open the original report ↗'); original.href = url; original.target = '_blank'; original.rel = 'noopener noreferrer'; box.append(original);
