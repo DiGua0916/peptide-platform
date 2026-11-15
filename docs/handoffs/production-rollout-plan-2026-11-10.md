@@ -900,3 +900,9 @@
 - 随后从主线删掉发布暂停标记 `tools/deployment/RELEASE_HOLD`（主线 7ee95622），以后上线一律用 `tools/deployment/vc-release`。
 - 回滚：`tools/deployment/vc-release rollback 2026.11.16-1 --owner-confirmed`（换回发布前目录；总后台订单表升级不回退，旧代码能在新结构上跑）。
 
+### 2026-11-16 03:09 北京 开关：信任条、对投手隐藏命令面板（6 家店，F1）
+- 所有者在 F1 会话确认“都做吧”。6 家店（s0001、s0006–s0010）`pc_trust_badges` = on、`pc_buyer_no_palette` = on（之前都没有这两个选项）；各店清了页面缓存。
+- 核对：6 家店商品弹窗的信任条都输出“Secure checkout”和 8 个付款方式图标（来自各店结账页实际启用的付款方式）。目前生产上没有投手账号，命令面板这一项暂时没人看得到变化。
+- 关掉：`wp option update pc_trust_badges off`（每家店单独）；`pc_buyer_no_palette` 同理。不涉及代码。
+- 对比：主店要看效果时，用 11-16 03:09 前后各一周的加购率、进结账率对比。
+
