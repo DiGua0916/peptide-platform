@@ -5,6 +5,7 @@
  * - Loads assets/checkout-assist.js on the block checkout: saves and refills what the shopper typed,
  *   US ZIP fills the state, phone note + inline check, "Pay $X" with "You save $X", and a payment-failure line.
  * - New visitors start with country US and no state (no default California).
+ * - The saved details are removed from the browser on the order-received page.
  *
  * @package PeptideCore
  */
@@ -27,7 +28,17 @@ final class Checkout_Assist {
 	}
 
 	public static function assets(): void {
-		if ( is_admin() || ! function_exists( 'is_checkout' ) || ! is_checkout() || is_wc_endpoint_url() ) {
+		if ( is_admin() || ! function_exists( 'is_checkout' ) || ! is_checkout() ) {
+			return;
+		}
+		// Order placed: forget the saved checkout details (name, address, phone) so they don't stay on a shared phone.
+		if ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
+			wp_register_script( 'pc-checkout-assist-clear', false, array(), PEPTIDE_CORE_VERSION, true );
+			wp_enqueue_script( 'pc-checkout-assist-clear' );
+			wp_add_inline_script( 'pc-checkout-assist-clear', "try{localStorage.removeItem('pcCheckoutDraft')}catch(e){}" );
+			return;
+		}
+		if ( is_wc_endpoint_url() ) {
 			return;
 		}
 		foreach ( array( 'css', 'js' ) as $ext ) {

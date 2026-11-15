@@ -91,7 +91,12 @@
         FIELDS.forEach(f => { if (!ship[f] && draft.shipping[f]) patch[f] = draft.shipping[f]; });
         let changed = false;
         if (Object.keys(patch).length) { actions().setShippingAddress?.({ ...ship, ...patch }); changed = true; }
-        if (!bill.email && draft.email) { actions().setBillingAddress?.({ ...bill, email: draft.email }); changed = true; }
+        // The store action does not run Woo's "use same address for billing" sync, so an empty billing
+        // address gets the same refilled fields (only fields that are still empty; email kept).
+        const billPatch = {};
+        FIELDS.forEach(f => { const v = patch[f] || ship[f]; if (!bill[f] && v) billPatch[f] = v; });
+        if (!bill.email && draft.email) billPatch.email = draft.email;
+        if (Object.keys(billPatch).length) { actions().setBillingAddress?.({ ...bill, ...billPatch }); changed = true; }
         if (changed) notice('We saved what you entered. Check it and finish your order.');
     }
     function notice(text) {

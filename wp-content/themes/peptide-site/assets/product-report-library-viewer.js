@@ -31,7 +31,7 @@
     box.dataset.vcHistoryReportOrigin = 'library'; box.dataset.vcHistoryReportUrl = url;
     box.setAttribute('aria-label','Batch COA');
     const title = (home ? link.dataset.vcReportTitle?.trim() : card.querySelector('.pc-coa-library__details dd')?.textContent?.trim() || card.querySelector('.pc-coa-library__title')?.textContent?.trim()) || 'Batch COA';
-    const dismiss = node('button','vc-product-child-close'); dismiss.type = 'button'; dismiss.setAttribute('aria-label','Close reference COA');
+    const dismiss = node('button','vc-product-child-close'); dismiss.type = 'button'; dismiss.setAttribute('aria-label','Close batch COA');
     dismiss.innerHTML = '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>';
     dismiss.addEventListener('click',close);
     const pdf = node('div','vc-product-pdf');
