@@ -4,7 +4,7 @@
   python3 compare.py fetch <配置文件> <输出目录> [--insecure]   取一遍（配置文件由 prepare.php 生成）
   python3 compare.py diff <目录A> <目录B> [--show N]             比两遍，逐个地址报一致 / 差异
 
-做法：每个地址按对应身份取一次（不跟随跳转，记状态码和跳转地址），把每次都会变的东西（nonce、静态文件版本号、
+做法：每个地址按对应身份取一次（员工发到管理地址 admin_base，访客发到前台 base；不跟随跳转，记状态码和跳转地址），把每次都会变的东西（nonce、静态文件版本号、
 时间、随机编号、来源地址、主题指纹、WooCommerce 数量框编号）统一去掉，再按行比（多重集差）。
 访客请求带一个无关的 cookie，让首页缓存一律不命中，比的是代码当场画出来的页面。
 只用 Python 标准库。
@@ -17,7 +17,7 @@ A = '/wp-admin/admin.php?page='
 
 def addresses(cfg):
     o = cfg['order']
-    simple = cfg['products']['simple']
+    simple = cfg['products'].get('simple')  # 主店可能全是多规格商品：没有就跳过简单商品的 3 个地址
     v1, v2 = cfg['products']['variable'][:2]
     cat = cfg['category']
     out = [('buyer', f'buyer:{p}', A + p) for p in ['pc-buyer-home', 'pc-recovery', 'pc-data', 'pc-buyer-ads', 'pc-creatives', 'pc-creatives-spend', 'pc-creatives-board', 'pc-visitors', 'pc-store-info', 'pc-onboarding']]
@@ -35,22 +35,29 @@ def addresses(cfg):
     ]
     out += [('relnew', f'mustchange:{p}', A + p) for p in ['pc-onboarding', 'pc-buyer-home', 'wc-orders&status=wc-processing', 'pc-store-info']]
     out += [('localadmin', f'admin:{p}', A + p) for p in ['wc-orders&status=wc-processing', f'pc-order&id={o}', 'pc-staff', 'pc-overview', 'pc-promotions', 'pc-buyer-ads', 'pc-store-info']]
+    out += [('visitor', 'visitor:home', '/')]
+    if simple:
+        out += [('visitor', 'visitor:landing-simple', f"/?vc_product={simple['id']}")]
     out += [
-        ('visitor', 'visitor:home', '/'),
-        ('visitor', 'visitor:landing-simple', f"/?vc_product={simple['id']}"),
         ('visitor', 'visitor:landing-variable-1', f"/?vc_product={v1['id']}"),
         ('visitor', 'visitor:landing-variable-2', f"/?vc_product={v2['id']}"),
-        ('visitor', 'visitor:product-link-simple', simple['path']),
+    ]
+    if simple:
+        out += [('visitor', 'visitor:product-link-simple', simple['path'])]
+    out += [
         ('visitor', 'visitor:product-link-variable', v1['path']),
         ('visitor', 'visitor:collection-landing', f"/?vc_catalog_category={cat['id']}"),
         ('visitor', 'visitor:collection-link', cat['path']),
         ('visitor', 'visitor:track-order-page', '/track-order/'),
-        ('visitor', 'visitor:dialog-api-simple', f"/wp-json/vialcove/v1/home-product/{simple['id']}"),
+    ]
+    if simple:
+        out += [('visitor', 'visitor:dialog-api-simple', f"/wp-json/vialcove/v1/home-product/{simple['id']}")]
+    out += [
         ('visitor', 'visitor:dialog-api-variable', f"/wp-json/vialcove/v1/home-product/{v1['id']}"),
         ('visitor', 'visitor:buyer-status-api', '/wp-json/peptide/v1/buyer/status'),
         ('visitor', 'visitor:home-utm', '/?utm_source=fb&utm_campaign=c1&fbclid=abc123'),
     ]
-    assert len(out) == 44, len(out)
+    assert len(out) == (44 if simple else 41), len(out)
     return out
 
 
@@ -70,7 +77,8 @@ def fetch(cfg_path, out, insecure):
             print(f'SKIP {key}（配置里没有 {role} 这个身份）')
             continue
         cookies = cfg['roles'][role]['cookies'] if role != 'visitor' else {'pc_release_compare': '1'}
-        req = urllib.request.Request(cfg['base'] + path, headers={
+        base = cfg['base'] if role == 'visitor' else cfg.get('admin_base') or cfg['base']
+        req = urllib.request.Request(base + path, headers={
             'Cookie': '; '.join(f'{k}={v}' for k, v in cookies.items()),
             'User-Agent': 'Mozilla/5.0 (release-compare)',
         })
@@ -82,7 +90,10 @@ def fetch(cfg_path, out, insecure):
         body = body.decode('utf-8', 'replace')
         name = hashlib.md5(key.encode()).hexdigest()[:10] + '.html'
         open(os.path.join(out, name), 'w', encoding='utf-8').write(body)
-        index[key] = {'path': path, 'status': status, 'location': loc.replace(cfg['base'], ''), 'file': name}
+        for b in (cfg.get('admin_base'), cfg['base']):
+            if b:
+                loc = loc.replace(b, '')
+        index[key] = {'path': path, 'status': status, 'location': loc, 'file': name}
         print(f'{status} {key} {loc[:80]}')
     json.dump(index, open(os.path.join(out, 'index.json'), 'w'), indent=1)
 
