@@ -79,6 +79,8 @@ HQ_TABLES = {
     "pchq_series": KEEP, "pchq_series_products": KEEP, "pchq_series_campaigns": KEEP, "pchq_ad_spend": KEEP,
     # CR 素材归因（总后台）：各店每日素材汇总和属性词表，只有计数和金额
     "pchq_creative_daily": KEEP, "pchq_attribute_vocab": KEEP,
+    # M1（F1）：发布记录（版本标签、提交、操作者代号、各副本结果），没有顾客资料
+    "pchq_releases": KEEP,
     "pchq_orders": SCRUB, "pchq_refunds": SCRUB,
     # 主线 11-12：跨店客户编号（由邮箱算出，能被撞库）、打码邮箱、设备摘要；F3 的每日弃单汇总没有顾客资料
     "pchq_customer_links": SCRUB, "pchq_abandoned": KEEP,

@@ -60,7 +60,7 @@ tools/deployment/vc-release go --fast --note "一句话：改了什么" --owner-
 - `tools/deployment/vc-release plan`：这次会按什么顺序换哪些副本。
 - `tools/deployment/vc-release check`：线上 15 份副本和主线逐文件比，打印不一致的文件。
 
-## 4. 应急通道（待所有者确认）
+## 4. 应急通道（所有者 2026-11-15 确认）
 
 线上急需改东西（顾客下不了单、付不了款、全站报错、收款断了）时：
 
