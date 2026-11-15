@@ -8,20 +8,17 @@ namespace PeptideCore\Admin {
 }
 namespace PeptideCore {
     final class Buyer_Status { public static bool $on = false; public static function enabled(): bool { return self::$on; } }
-    final class Order_Lookup { public static string $url = ''; public static function page_url(): string { return self::$url; } }
+    final class Track_Widget { public static bool $on = true; public static function enabled(): bool { return self::$on; } }
 }
 namespace {
     define( 'ABSPATH', __DIR__ . '/' );
     $GLOBALS['config'] = array();
-    $GLOBALS['page'] = 0;
+    $GLOBALS['customize'] = false;
     function check( bool $ok, string $label ): void { global $checks; if ( ! $ok ) { fwrite( STDERR, "FAIL: $label\n" ); exit( 1 ); } $checks = ( $checks ?? 0 ) + 1; }
     function apply_filters( $tag, $value ) { return $value; }
     function vc_site_config(): array { return $GLOBALS['config']; }
     function wp_kses_post( $html ) { return preg_replace( '#<script\b[^>]*>.*?</script>#is', '', (string) $html ); }
-    function is_page() { return $GLOBALS['page'] > 0; }
-    function get_queried_object_id() { return $GLOBALS['page']; }
-    function get_option( $name, $default = false ) { return 'pc_track_order_page' === $name ? 77 : $default; }
-    function esc_url( $url ) { return htmlspecialchars( (string) $url, ENT_QUOTES ); }
+    function is_customize_preview() { return $GLOBALS['customize']; }
     function vc_icon(): string { return '<svg></svg>'; }
     require dirname( __DIR__ ) . '/inc/storefront-identity.php';
     $capture = static function ( callable $fn ): string { ob_start(); $fn(); return (string) ob_get_clean(); };
@@ -46,19 +43,24 @@ namespace {
     $footer = (string) file_get_contents( dirname( __DIR__ ) . '/footer.php' );
     check( str_contains( $footer, 'vc_use_statement(); vc_track_order_entry();' ), 'footer prints the statement and the order entry' );
 
-    // Track-your-order entry: only with the store switch on and a look-up page; not on that page.
-    check( '' === $capture( 'vc_track_order_entry' ), 'no entry while returning-buyer recognition is off' );
+    // Track-your-order entry (Q20 plan A, 2026-11-14): opens the store's existing tracking panel.
+    check( '' === $capture( 'vc_track_order_entry' ), 'no entry while returning-buyer recognition is off (as online)' );
     \PeptideCore\Buyer_Status::$on = true;
-    check( '' === $capture( 'vc_track_order_entry' ), 'no entry without a look-up page' );
-    \PeptideCore\Order_Lookup::$url = 'https://shop.example/track-order/';
     $entry = $capture( 'vc_track_order_entry' );
-    check( str_contains( $entry, '<p class="vc-track-order"><a href="https://shop.example/track-order/">Track your order ' ), 'entry links to the look-up page' );
-    $GLOBALS['page'] = 77;
-    check( '' === $capture( 'vc_track_order_entry' ), 'no entry on the look-up page itself' );
-    $GLOBALS['page'] = 12;
-    check( '' !== $capture( 'vc_track_order_entry' ), 'entry on other pages' );
+    check( '<p class="vc-track-order"><button type="button" data-pc-open-track>Track your order <svg></svg></button></p>' === $entry, 'entry is a button that opens the existing tracking panel' );
+    check( ! str_contains( $entry, 'href' ) && ! str_contains( $entry, 'track-order/' ), 'no link to the retired look-up page' );
+    \PeptideCore\Track_Widget::$on = false;
+    check( '' === $capture( 'vc_track_order_entry' ), 'no entry when the store switched the tracking panel off' );
+    \PeptideCore\Track_Widget::$on = true;
+    $GLOBALS['customize'] = true;
+    check( '' === $capture( 'vc_track_order_entry' ), 'no entry in the customizer preview (the panel is not there either)' );
+    $GLOBALS['customize'] = false;
     \PeptideCore\Buyer_Status::$on = false;
-    check( '' === $capture( 'vc_track_order_entry' ), 'switching off removes the entry again' );
+    check( '' === $capture( 'vc_track_order_entry' ), 'switching recognition off removes the entry again' );
+    $panel = (string) file_get_contents( dirname( __DIR__, 3 ) . '/plugins/peptide-core/assets/track-widget.js' );
+    check( str_contains( $panel, "closest( '[data-pc-open-track]' )" ), 'the tracking panel still listens for [data-pc-open-track]' );
+    $css = (string) file_get_contents( dirname( __DIR__ ) . '/assets/site.css' );
+    check( str_contains( $css, '.vc-track-order button{' ), 'the entry button is styled like the old link' );
 
     echo "PASS {$checks} storefront identity checks\n";
 }

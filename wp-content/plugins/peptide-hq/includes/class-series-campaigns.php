@@ -3,7 +3,8 @@
  * 系列营销活动的存放（HQ-07 的数据底座）。活动的内容（config）由 M4 营销与价格引擎定义和校验，
  * 这里只负责：按系列保存、整体替换时把 campaign_ver 加一、拼成 /hq/series/sync 的 campaigns 部分。
  *
- * 每条活动：kind（类型）、key（同一类型内不重复的代号）、active（是否在跑）、config（M4 定义的内容，原样保存）。
+ * 每条活动：kind（类型）、key（同一类型内不重复的代号）、active（是否在跑）、config（M4 定义的内容，原样保存）、
+ * ver（这一条最后一次改动时的活动版本号：内容没变的活动保留原来的 ver，店铺端可以据此跳过没变的活动）。
  *
  * @package PeptideHq
  */
@@ -15,7 +16,7 @@ defined( 'ABSPATH' ) || exit;
 final class Series_Campaigns {
 
 	/** 认识的活动类型；不认识的类型不保存。 */
-	public const KINDS = array( 'promotion', 'coupon', 'ship_discount', 'first_order', 'exit_intent', 'wheel', 'upsell', 'progress_bar' );
+	public const KINDS = array( 'promotion', 'coupon', 'ship_discount', 'shipping_discount', 'first_order', 'gift', 'bundle', 'exit_intent', 'wheel', 'upsell', 'progress_bar' );
 
 	/** 一条活动的 config 最多多少字节（JSON）。 */
 	public const MAX_CONFIG_BYTES = 200000;
@@ -96,9 +97,12 @@ final class Series_Campaigns {
 		// 内容没变（或者本来就没有活动、这次也是空的）不加版本号，避免各店白白重新同步。
 		$series  = Series::get( $series_id );
 		$current = array();
+		$vers    = array();
 		foreach ( self::items( $series_id ) as $it ) {
+			$id          = $it['kind'] . '/' . $it['key'];
+			$vers[ $id ] = $it['ver'];
 			unset( $it['ver'] );
-			$current[ $it['kind'] . '/' . $it['key'] ] = $it;
+			$current[ $id ] = $it;
 		}
 		ksort( $current );
 		$wanted = $clean;
@@ -112,7 +116,9 @@ final class Series_Campaigns {
 		}
 		$t = self::table();
 		$wpdb->query( $wpdb->prepare( "DELETE FROM {$t} WHERE series_id = %d", $series_id ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		foreach ( $clean as $c ) {
+		foreach ( $clean as $id => $c ) {
+			// 这一条和原来一模一样就保留原来的版本号，只有改过的和新加的才用新版本号。
+			$same = isset( $current[ $id ] ) && (string) wp_json_encode( $current[ $id ] ) === (string) wp_json_encode( $c );
 			$wpdb->insert( // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 				$t,
 				array(
@@ -121,7 +127,7 @@ final class Series_Campaigns {
 					'item_key'   => $c['key'],
 					'config'     => (string) wp_json_encode( $c['config'] ),
 					'active'     => $c['active'] ? 1 : 0,
-					'ver'        => $ver,
+					'ver'        => $same ? (int) $vers[ $id ] : $ver,
 					'updated_at' => time(),
 				)
 			);
@@ -138,8 +144,7 @@ final class Series_Campaigns {
 		$series = Series::get( $series_id );
 		$items  = array();
 		foreach ( self::items( $series_id ) as $it ) {
-			unset( $it['ver'] );
-			$items[] = $it;
+			$items[] = $it; // 每条带自己的 ver。
 		}
 		return array( 'ver' => $series ? $series['campaign_ver'] : 0, 'items' => $items );
 	}

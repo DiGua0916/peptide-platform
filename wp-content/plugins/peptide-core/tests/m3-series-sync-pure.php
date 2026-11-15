@@ -151,6 +151,40 @@ namespace {
 	check( 'master store diff is prices only', array( 'same' => 1, 'changed' => 1, 'create' => 0, 'unpublish' => 0 ) === $master['summary'] && true === $master['prices_only'] );
 	check( 'diff is repeatable', $diff === S::diff_catalog( $cat2['products'], $locals, 4 ) );
 
+	// ---- 两份导出文件互相比较：出差异报告不用碰店铺 ----
+	$dump = json_decode( (string) json_encode( array( 'source_host' => 'store-b.example.test', 'store' => array( 'name' => 'Store B', 'host' => 'Store-B.Example.Test' ), 'local' => $locals ) ), true );
+	$file = S::diff_dump( array( 'source_host' => 'master.example.test', 'products' => array( $cheaper, $tb, $new ) ), $dump );
+	$want = S::diff_catalog( $cat2['products'], $locals, 0 );
+	check( 'comparing two export files gives the same report as comparing on the store', is_array( $file ) && $want['summary'] === $file['summary'] && array_column( $want['changed'], 'id', 'sku' ) === array_column( $file['changed'], 'id', 'sku' ) && $want['changed'][0]['fields'] === $file['changed'][0]['fields'] && $want['create'] === $file['create'] && $want['unpublish'] === $file['unpublish'] );
+	// 给人看的细节：附加信息按项拆开并带上两边的值；描述截出第一处不同；图片列出各自独有的文件。
+	check( 'meta differences are listed per item with both values', array( array( 'field' => 'meta', 'key' => '_pc_spu', 'store' => '（没有）', 'series' => 'VC-TB500' ) ) === $file['changed'][1]['fields'] );
+	check( 'first difference is cut out of both texts', array( 'Research use only.', 'Research use only. Ships cold.' ) === S::first_difference( 'Research use only.', 'Research use only. Ships cold.' ) && array( '…90123456789012345678Xtail', '…90123456789012345678Ytail' ) === S::first_difference( str_repeat( '1234567890', 3 ) . '12345678Xtail', str_repeat( '1234567890', 3 ) . '12345678Ytail' ) && array( '（到这里就没有了）', '…研究用途，冷链发货' ) === S::first_difference( '', '…研究用途，冷链发货' ) );
+	$img2    = array( 'url' => 'https://master.example.test/wp-content/uploads/b.webp', 'sha256' => $sha( 'b' ), 'name' => 'b.webp', 'alt' => '' );
+	$img1    = $tb['images'][0];
+	$edited  = $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999, 0, array( 'meta' => array( '_pc_pricing' => array( 'tier' => 2 ) ) ) ) ), array( 'description' => '<p>Research use only.</p><p>Ships <b>cold</b>.</p>', 'short_description' => '<div>Short</div>', 'images' => array( $img2 ) ) ), 12 );
+	$master2 = $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999 ) ), array( 'short_description' => '<p>Short</p>', 'images' => array( $img1 ) ) );
+	$rows    = S::explain_changes( S::diff_catalog( array( S::clean_product( $master2 ) ), array( $edited ), 0 )['changed'], array( $edited ), array( S::clean_product( $master2 ) ) )[0]['fields'];
+	$row     = static function ( string $field ) use ( $rows ): array { foreach ( $rows as $r ) { if ( $field === $r['field'] ) { return $r; } } return array(); };
+	check( 'description difference shows where the texts part', 'Research use only. Ships cold.' === $row( 'description' )['store_excerpt'] && 'Research use only.' === $row( 'description' )['series_excerpt'] );
+	check( 'same words with different markup are flagged as markup only', 'markup' === ( $row( 'short_description' )['note'] ?? '' ) );
+	check( 'image difference names the files on each side', array( 'b.webp' ) === $row( 'images' )['store_only'] && array( 'a.webp' ) === $row( 'images' )['series_only'] );
+	check( 'variation meta shows both values', '5mg' === $row( 'meta' )['variation'] && '_pc_pricing' === $row( 'meta' )['key'] && '{"tier":2}' === $row( 'meta' )['store'] && '（没有）' === $row( 'meta' )['series'] );
+	$swapped = $local( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999 ) ), array( 'images' => array( $img2, $img1 ) ) ), 12 );
+	$master3 = S::clean_product( $prod( 'VC-TB500', 'TB-500', array( $var( 'VC-TB500-5', '5mg', 3999 ) ), array( 'images' => array( $img1, $img2 ) ) ) );
+	check( 'same images in another order are flagged as order only', 'order' === S::explain_changes( S::diff_catalog( array( $master3 ), array( $swapped ), 0 )['changed'], array( $swapped ), array( $master3 ) )[0]['fields'][0]['note'] );
+	$many = array();
+	for ( $i = 1; $i <= 30; $i++ ) { $many[] = $var( 'M-' . $i, $i . 'mg', 1000 + $i, 2000 ); }
+	$pricey = array_map( static fn( array $v ): array => array_merge( $v, array( 'price_cents' => $v['price_cents'] + 100, 'compare_cents' => 2500 ) ), $many );
+	$big    = S::diff_dump( array( 'products' => array( $prod( 'M', 'Many', $pricey ) ) ), array( 'local' => array( $local( $prod( 'M', 'Many', $many ), 21 ) ) ) );
+	check( 'the file report lists every difference, the sync preview stays short', 60 === count( $big['changed'][0]['fields'] ) && 40 === count( S::diff_catalog( array( S::clean_product( $prod( 'M', 'Many', $pricey ) ) ), array( $local( $prod( 'M', 'Many', $many ), 21 ) ), 0 )['changed'][0]['fields'] ) );
+	$plan_a = array( array( 'name' => 'General', 'regions' => array( array( 'country' => 'US', 'states' => array() ) ), 'rates' => array( array( 'name' => 'Standard', 'rule' => 'subtotal', 'min' => 0.0, 'max' => 1000.0, 'fee_cents' => 4500 ), array( 'name' => 'Standard', 'rule' => 'subtotal', 'min' => 1000.0, 'max' => null, 'fee_cents' => 1500 ) ) ) );
+	$plan_b = array( array( 'name' => 'General', 'regions' => array(), 'rates' => array( array( 'name' => 'Flat', 'rule' => 'subtotal', 'min' => 0.0, 'max' => null, 'fee_cents' => 2250 ) ) ) );
+	check( 'shipping plans read as plain lines', array( 'General｜US｜Standard：订单金额不到 $1000，运费 $45', 'General｜US｜Standard：订单金额满 $1000，运费 $15' ) === S::shipping_lines( $plan_a ) && array( 'General｜全部地区｜Flat：不限金额，运费 $22.50' ) === S::shipping_lines( $plan_b ) && array() === S::shipping_lines( array() ) );
+	$ship = S::diff_dump( array( 'products' => array( $tb ), 'shipping' => array( 'plans' => $plan_a ) ), array( 'local' => $locals, 'shipping' => array( 'plans' => $plan_b ) ) );
+	check( 'the file report compares shipping plans when both files carry them', true === $ship['shipping']['changed'] && 1 === count( $ship['shipping']['store'] ) && 2 === count( $ship['shipping']['series'] ) && false === S::diff_dump( array( 'products' => array( $tb ), 'shipping' => array( 'plans' => $plan_a ) ), array( 'local' => $locals, 'shipping' => array( 'plans' => $plan_a ) ) )['shipping']['changed'] && ! isset( $file['shipping'] ) );
+	check( 'the report names the store from the file', array( 'name' => 'Store B', 'host' => 'store-b.example.test' ) === $file['store'] );
+	check( 'files that are not exports are refused with a reason', is_string( S::diff_dump( array(), $dump ) ) && is_string( S::diff_dump( array( 'products' => array( $cheaper ) ), array( 'products' => array( $cheaper ) ) ) ) && is_string( S::diff_dump( array( 'products' => array() ), $dump ) ) );
+
 	// ---- 运费两档（FE-07）：系列格式 ↔ 店铺运费方案 ----
 	$series_plans = array( array( 'name' => 'Standard shipping', 'regions' => array( array( 'country' => 'US', 'states' => array() ) ), 'rates' => array(
 		array( 'name' => 'Standard Shipping', 'rule' => 'subtotal', 'min' => 0, 'max' => 1000, 'fee_cents' => 4500 ),

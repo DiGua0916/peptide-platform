@@ -876,6 +876,14 @@
     {"name": "m6-reconcile-reports-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-reports-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
     {"name": "m6-reconcile-conversion-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-conversion-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
     {"name": "m6-reconcile-rankings-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-reconcile-rankings-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m7-purchase-dedupe-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m7-purchase-dedupe-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M7"},
+    {"name": "m6-tracker-staff-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-tracker-staff-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-test-order-flag-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-test-order-flag-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-ad-params-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-ad-params-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-data-sources-ads", "language": "node", "path": "wp-content/plugins/peptide-core/tests/m6-data-sources-ads.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-data-stacked", "language": "node", "path": "wp-content/plugins/peptide-core/tests/m6-data-stacked.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "customer-checkout-observer", "language": "node", "path": "wp-content/plugins/peptide-core/tests/customer-checkout-observer.cjs", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
+    {"name": "m6-product-activity-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/m6-product-activity-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "M6"},
     {
       "name": "m9-buyer-scope-pure",
       "language": "php",
@@ -948,6 +956,87 @@
       "status": "module-gate",
       "module": "M14"
     },
+    {
+      "name": "m9-buyer-orders-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-orders-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
+    {
+      "name": "m14-product-trust-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-trust-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-front-speed-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-front-speed-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-product-activity-pure",
+      "language": "php",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-product-activity",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-product-activity.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-entry-background",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-entry-background.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m14-restore-no-specification",
+      "language": "node",
+      "path": "wp-content/themes/peptide-site/tests/m14-restore-no-specification.cjs",
+      "core": true,
+      "node_test": true,
+      "status": "module-gate",
+      "module": "M14"
+    },
+    {
+      "name": "m9-buyer-campaigns-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-campaigns-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
+    {
+      "name": "m9-buyer-switches-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m9-buyer-switches-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M9"
+    },
     {"name": "cr-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-hq-contract-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-contract-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
     {"name": "cr-capture-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-capture-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
@@ -956,6 +1045,60 @@
     {"name": "cr-library-spend-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
     {"name": "cr-library-spend-db-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-library-spend-db-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["pdo_sqlite"]},
     {"name": "cr-hq-compare-pure", "language": "php", "path": "wp-content/plugins/peptide-hq/tests/cr-hq-compare-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR", "extensions": ["mbstring"]},
-    {"name": "cr-board-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-board-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"}
+    {"name": "cr-board-pure", "language": "php", "path": "wp-content/plugins/peptide-core/tests/cr-board-pure.php", "core": true, "node_test": false, "status": "module-gate", "module": "CR"},
+    {
+      "name": "m4-price-engine-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-engine-mode-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-engine-mode-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-marketing-quiet-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-campaigns-readonly-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaigns-readonly-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-marketing-quiet",
+      "language": "node",
+      "path": "wp-content/plugins/peptide-core/tests/m4-marketing-quiet.cjs",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    },
+    {
+      "name": "m4-campaign-text-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/m4-campaign-text-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M4"
+    }
   ]
 }

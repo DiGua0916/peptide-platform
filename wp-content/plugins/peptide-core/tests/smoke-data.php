@@ -1,7 +1,7 @@
 <?php
 /**
  * 后台“数据”板块（DATA-01 第 1 步）冒烟测试：店铺时区的时间段（预设 / 自定义 / 对比时间段 / 夏令时 / 错误参数）、
- * 变化百分比、GET /peptide/v1/data/range 接口和权限、九个页面的菜单顺序与位置、页面脚本的加载。开发环境专用。
+ * 变化百分比、GET /peptide/v1/data/range 接口和权限、十二个页面的菜单顺序与位置、页面脚本的加载。开发环境专用。
  *
  * 运行：wp eval-file wp-content/plugins/peptide-core/tests/smoke-data.php
  * 只在命令行里模拟一次后台菜单生成，不写数据库；临时创建的顾客账号在结束时彻底删除。不要在正式站点运行。
@@ -35,6 +35,12 @@ $bad = static function ( $r, string $field, string $reason ): bool {
 $get_backup = $_GET;
 $admin      = get_users( array( 'role' => 'administrator', 'number' => 1 ) )[0];
 wp_set_current_user( $admin->ID );
+// 用例里的日期和夏令时都是按 America/Los_Angeles 写的。店铺实际时区不一定是它（本地站是 UTC），
+// 所以在这一次运行里用过滤器固定时区，不改选项，结束时拿掉。
+$la_zone   = static fn() => 'America/Los_Angeles';
+$la_offset = static fn() => -7;
+add_filter( 'pre_option_timezone_string', $la_zone );
+add_filter( 'pre_option_gmt_offset', $la_offset );
 $tz = wp_timezone();
 
 // 固定的“现在”：店铺时区（America/Los_Angeles）2026-10-22 05:00。
@@ -163,5 +169,7 @@ $k3           = Data_Pages::current_key();
 $ok( 'current_key maps page slugs to keys', 'realtime' === $k1 && 'emails' === $k2 && null === $k3 );
 
 // 清理。
+remove_filter( 'pre_option_timezone_string', $la_zone );
+remove_filter( 'pre_option_gmt_offset', $la_offset );
 wp_delete_user( (int) $customer );
 $_GET = $get_backup;

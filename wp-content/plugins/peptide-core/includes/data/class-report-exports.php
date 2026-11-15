@@ -30,6 +30,20 @@ final class Report_Exports {
 			}
 			return;
 		}
+		if ( isset( Sources::AD_GROUPS[ $args['group_by'] ?? 'utm' ] ) ) {
+			// M6“按广告拆分”：每个广告参数两列（状态、值），后面和别的分组一样。
+			$keys = Sources::AD_GROUPS[ $args['group_by'] ]; $head = array();
+			foreach ( $keys as $key ) { $head[] = $key . '_state'; $head[] = $key; }
+			$head = array_merge( $head, array( 'group_by', 'currency', 'current_from_epoch_s', 'current_to_epoch_s' ) );
+			foreach ( Sources::METRICS as $key ) { $head[] = $key . ( 'conversion' === $key ? '_pct' : '' ); } yield $head;
+			foreach ( $rows as $row ) {
+				$cells = array();
+				foreach ( $keys as $key ) { $cells[] = $row[ $key ]['state']; $cells[] = Csv_Response::text( $row[ $key ]['value'] ?? '' ); }
+				$cells = array_merge( $cells, array( (string) $args['group_by'], Csv_Response::text( get_woocommerce_currency() ), (string) $range['from'], (string) $range['to'] ) );
+				foreach ( Sources::METRICS as $key ) { $cells[] = self::number( $row[ $key ], in_array( $key, array( 'conversion', 'sales', 'aov', 'uv_value' ), true ) ); } yield $cells;
+			}
+			return;
+		}
 		$head = array( 'utm_source_state', 'utm_source', 'utm_medium_state', 'utm_medium', 'split_medium', 'currency', 'current_from_epoch_s', 'current_to_epoch_s' );
 			foreach ( Sources::METRICS as $key ) { $head[] = $key . ( 'conversion' === $key ? '_pct' : '' ); } yield $head;
 		foreach ( $rows as $row ) {

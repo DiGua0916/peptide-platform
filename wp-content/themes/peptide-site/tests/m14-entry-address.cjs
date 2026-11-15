@@ -2,7 +2,7 @@
 /* FE-02: address-bar rules of assets/entry-address.js (pure functions, no browser). */
 const test = require('node:test');
 const assert = require('node:assert/strict');
-const { withoutKeys, hasKey, samePath, resolve } = require('../assets/entry-address.js');
+const { withoutKeys, hasKey, samePath, productPath, resolve } = require('../assets/entry-address.js');
 
 const landing = (search, hash = '#vc-products') => ({ path: '/', search, hash });
 const tail = 'utm_source=facebook&utm_medium=paid&fbclid=AbC';
@@ -87,4 +87,47 @@ test('start() rewrites the current entry only, with the native method', () => {
   win.location.pathname = '/product/bpc-157/'; win.location.search = '?utm_source=fb'; win.location.hash = '';
   timers[0]();
   assert.deepEqual(written, [['native', { layers: 1 }, '/?utm_source=fb#vc-products']]);
+});
+
+test('productPath takes the first usable same-origin link that is not the home page', () => {
+  const origin = 'https://shop.example';
+  assert.equal(productPath(['https://shop.example/product/bpc-157/'], origin, '/'), '/product/bpc-157/');
+  assert.equal(productPath(['https://other.example/product/x/', 'https://shop.example/', 'https://shop.example/product/y/?a=1'], origin, '/'), '/product/y/');
+  assert.equal(productPath(['https://shop.example/'], origin, '/'), '');
+  assert.equal(productPath([], origin, '/'), '');
+  assert.equal(productPath(undefined, origin, '/'), '');
+});
+
+// The real product dialog has no details link: the permalink comes from the product's card on
+// the page, or from the server for the product the page was entered through.
+function realWindow({ cards = [], product = null, search = '' }) {
+  const written = [];
+  const timers = [];
+  const dialog = { open: true, querySelector: sel => sel.startsWith('a.') ? null : { getAttribute: () => '10' } };
+  const asked = [];
+  const win = {
+    vcEntryAddress: { enabled: '1', home: '/', category: '', product },
+    document: { addEventListener: () => {}, querySelector: () => dialog, querySelectorAll: sel => { asked.push(sel); return cards; } },
+    History: { prototype: { replaceState(state, title, url) { written.push(url); } } },
+    history: { state: null, replaceState: () => written.push('wrapped') },
+    location: { pathname: '/', search, hash: '', origin: 'https://shop.example' },
+    addEventListener: () => {}, setTimeout: fn => { timers.push(fn); return timers.length; }, clearTimeout: () => {},
+  };
+  require('../assets/entry-address.js').start(win);
+  timers[0]();
+  return { written, asked };
+}
+
+test('start() reads the permalink from the product card on the page', () => {
+  const { written, asked } = realWindow({ cards: [{ href: 'https://shop.example/product/demo-peptide-a/' }], search: '?utm_source=fb' });
+  assert.deepEqual(written, ['/product/demo-peptide-a/?utm_source=fb']);
+  assert.deepEqual(asked, ['a[data-vc-quick-open="10"][href], a[data-vc-home-product="10"][href]']);
+});
+
+test('start() uses the server-provided permalink of the entered product', () => {
+  assert.deepEqual(realWindow({ product: { id: 10, path: '/product/demo-peptide-a/' }, search: '?vc_product=10&fbclid=x' }).written, ['/product/demo-peptide-a/?fbclid=x']);
+  // Another product is open than the one the page was entered through, and it has no card.
+  assert.deepEqual(realWindow({ product: { id: 11, path: '/product/other/' }, search: '?vc_product=11' }).written, ['/?vc_product=10']);
+  // A path that does not start with a slash is never joined onto the origin.
+  assert.deepEqual(realWindow({ product: { id: 10, path: '.evil.example/x' }, search: '' }).written, ['/?vc_product=10']);
 });

@@ -46,6 +46,8 @@ final class Tracker {
 		// 保存期限和隐私请求：关着追踪时也要能删旧数据、处理顾客的请求。
 		Privacy::register_hooks();
 		Native_Visit_Classifier::register_hooks();
+		Ad_Params::register_hooks(); // 广告参数的表（自己的版本选项，见 Ad_Params）。
+		Product_Activity::register_hooks(); // FE-03“看过 / 已加购”的公开接口：按店开关 pc_product_activity 关着时一律 404。
 		if ( ! self::enabled() ) {
 			return;
 		}
@@ -155,7 +157,14 @@ final class Tracker {
 	}
 
 	public static function is_staff( int $user_id ): bool {
-		return $user_id > 0 && ( user_can( $user_id, 'manage_woocommerce' ) || user_can( $user_id, 'manage_options' ) );
+		if ( $user_id <= 0 ) {
+			return false;
+		}
+		if ( user_can( $user_id, 'manage_woocommerce' ) || user_can( $user_id, 'manage_options' ) ) {
+			return true;
+		}
+		// 员工角色（投手等）的权限是进后台时按请求给的，在前台没有 manage_woocommerce；按角色认（F5 的请求，2026-11-12）。
+		return class_exists( \PeptideCore\Staff::class ) && \PeptideCore\Staff::is_staff( $user_id );
 	}
 
 	/** 前台页面加载时发访客 cookie。后台、预览、员工账号不发。 */

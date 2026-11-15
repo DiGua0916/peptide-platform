@@ -16,6 +16,11 @@
 	color: var(--by-ink);
 }
 
+/* hidden 属性要压过下面各处的 display（否则“现在没有待办”和还没生成的投放链接一直显示）。 */
+.pc-by [hidden] {
+	display: none !important;
+}
+
 .pc-by h1 {
 	margin: 8px 0 16px;
 	padding: 0;
@@ -503,6 +508,21 @@
 	color: var(--by-muted);
 	font-size: 12px;
 	font-style: normal;
+}
+
+/* 勾选项（店铺信息里的“显示客服按钮”）：勾选框和文字同一行，说明在下面。 */
+.pc-by-check label {
+	display: flex;
+	align-items: center;
+	gap: 8px;
+	font-weight: 600;
+}
+
+.pc-by-check input[type="checkbox"] {
+	width: 18px;
+	height: 18px;
+	min-height: 0;
+	margin: 0;
 }
 
 /* 广告设置页（2026-11-12）：像素连通后折叠、通用链接折叠 */

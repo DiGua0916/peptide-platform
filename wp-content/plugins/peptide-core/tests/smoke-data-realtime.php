@@ -53,6 +53,11 @@ foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'li
 	}
 }
 if ( ! $product ) {
+	// 店里没有可用的简单商品（生产店的脱敏快照里全是多规格商品）：临时建一个，脚本结束时删掉。
+	require_once __DIR__ . '/m6-smoke-fixtures.php';
+	$product = pc_m6_smoke_temp_product();
+}
+if ( ! $product ) {
 	echo "FAIL fixture product\n";
 	return;
 }
@@ -123,11 +128,13 @@ $event     = static function ( int $visitor_id, int $visit_id, string $type, str
 	);
 	$event_ids[] = (int) $wpdb->insert_id;
 };
+// 2026-11-11 起只有“前台、有操作”的心跳才算访客活动（Realtime::per_minute 按 data 里的这两项筛），和主题脚本上报的一致。
+$alive = '{"activity":"active","visibility":"visible"}';
 // W1：页面浏览、查看商品、加购（服务端）、心跳、订单状态（服务端，每分钟图要忽略）。
 $event( $w1, $v1, 'page_view', 'client', '2020-06-10 11:52:30', '/rt-a/' );
 $event( $w1, $v1, 'product_view', 'client', '2020-06-10 11:53:30', '', $pid );
 $event( $w1, $v1, 'add_to_cart', 'server', '2020-06-10 11:55:30', '', $pid, '{"quantity":2}' );
-$event( $w1, $v1, 'heartbeat', 'client', '2020-06-10 11:58:30' );
+$event( $w1, $v1, 'heartbeat', 'client', '2020-06-10 11:58:30', '', 0, $alive );
 $event( $w1, $v1, 'order_status', 'server', '2020-06-10 11:57:30' );
 // W2：两次页面浏览。
 $event( $w2, $v2, 'page_view', 'client', '2020-06-10 11:40:30', '/rt-a/' );
@@ -135,7 +142,7 @@ $event( $w2, $v2, 'page_view', 'client', '2020-06-10 11:59:30', '/rt-b/' );
 // W3：页面浏览、查看商品、心跳。
 $event( $w3, $v3, 'page_view', 'client', '2020-06-10 11:30:30', '/rt-b/' );
 $event( $w3, $v3, 'product_view', 'client', '2020-06-10 11:31:30', '', $pid );
-$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:45:30' );
+$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:45:30', '', 0, $alive );
 
 // 订单（不带追踪信息，游客）。
 $make_order = static function ( int $qty, string $status, string $created, ?callable $setup = null ) use ( $product, $at ): WC_Order {
@@ -213,10 +220,10 @@ $ok( 'lists pages: /rt-a/ 2 then /rt-b/ 2 (tie by path), urls start with http', 
 $ok( 'updated starts with 2020-06-10 12:00 and the links point at the product and page reports for today', 0 === strpos( (string) ( $s['updated'] ?? '' ), '2020-06-10 12:00' ) && false !== strpos( (string) ( $s['links']['products'] ?? '' ), 'page=pc-data-products&range=today' ) && false !== strpos( (string) ( $s['links']['pages'] ?? '' ), 'page=pc-data-pages&range=today' ) && true === ( $s['tracking'] ?? null ) && $now === ( $s['now_ms'] ?? null ) );
 
 // 9. 窗口边界和不算的事件类型（在 1–8 之后再加数据）。
-$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:50:00' );
-$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 11:51:00' );
-$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 11:59:00' );
-$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 12:00:00' );
+$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:50:00', '', 0, $alive );
+$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 11:51:00', '', 0, $alive );
+$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 11:59:00', '', 0, $alive );
+$event( $w4, $v4, 'heartbeat', 'client', '2020-06-10 12:00:00', '', 0, $alive );
 $event( $w2, $v2, 'payment_success', 'server', '2020-06-10 11:56:30' );
 $sb      = Realtime::summary( $now, 10, 10 );
 $pb      = $sb['minutes']['points'] ?? array();
@@ -229,6 +236,17 @@ $ok( 'boundaries: ago 9 = 1 (W4 at 11:51:00 is the right edge of (11:50, 11:51];
 $ok( 'boundaries: ago 1 = 2 (W1 at 11:58:30 plus W4 at 11:59:00) and ago 0 = 2 (W2 at 11:59:30 plus W4 exactly at now)', 2 === ( $by_edge[1] ?? null ) && 2 === ( $by_edge[0] ?? null ) );
 $ok( 'boundaries: ago 3 = 0 (payment_success is not visitor activity), ago 7, 6 and 4 still 1', 0 === ( $by_edge[3] ?? null ) && 1 === ( $by_edge[7] ?? null ) && 1 === ( $by_edge[6] ?? null ) && 1 === ( $by_edge[4] ?? null ) );
 $ok( 'boundaries: page views still 2', 2 === ( $sb['cards']['pageviews'] ?? null ) );
+
+// 9b. 开着不动的标签页：没有操作（idle）或在后台（hidden）的心跳，以及不带状态的旧心跳，都不算访客活动。
+$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:54:30', '', 0, '{"activity":"idle","visibility":"visible"}' );
+$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:57:30', '', 0, '{"activity":"active","visibility":"hidden"}' );
+$event( $w3, $v3, 'heartbeat', 'client', '2020-06-10 11:57:40' );
+$si      = Realtime::summary( $now, 10, 10 );
+$by_idle = array();
+foreach ( $si['minutes']['points'] ?? array() as $p ) {
+	$by_idle[ $p['ago'] ] = $p['visitors'];
+}
+$ok( 'idle, hidden and unmarked heartbeats are not visitor activity: ago 5 and ago 2 stay 0, the rest is unchanged', 0 === ( $by_idle[5] ?? null ) && 0 === ( $by_idle[2] ?? null ) && $by_idle === $by_edge );
 
 // 10. 参数校验。
 $none = Realtime::params( array() );
@@ -311,4 +329,4 @@ if ( $visitor_ids ) {
 		$left += (int) $wpdb->get_var( 'SELECT COUNT(*) FROM ' . Schema::table( $name ) . " WHERE visitor_id IN ({$in})" ); // phpcs:ignore WordPress.DB.PreparedSQL.NotPrepared,WordPress.DB.DirectDatabaseQuery
 	}
 }
-$ok( 'test data removed (orders, visitors, visits, events, temporary user)', 0 === $left && ( 0 === $customer || ! get_userdata( $customer ) ) && 4 === count( $visitor_ids ) && 4 === count( $visit_ids ) && 15 === count( $event_ids ) );
+$ok( 'test data removed (orders, visitors, visits, events, temporary user)', 0 === $left && ( 0 === $customer || ! get_userdata( $customer ) ) && 4 === count( $visitor_ids ) && 4 === count( $visit_ids ) && 18 === count( $event_ids ) );

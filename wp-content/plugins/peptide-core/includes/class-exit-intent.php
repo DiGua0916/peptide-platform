@@ -43,6 +43,8 @@ final class Exit_Intent {
 
 	public static function register_hooks(): void {
 		add_action( 'wp_enqueue_scripts', array( self::class, 'enqueue' ) );
+		// HQ-07：投手不能改弹窗设置。设置页的保存入口在 Admin\Apps_Page（只查店铺能力），这里先拦一道，直接 403。
+		add_action( 'admin_post_pc_app_exit_save', array( self::class, 'deny_buyer' ), 0 );
 		add_action( 'wc_ajax_pc_exit_event', array( self::class, 'ajax_event' ) );
 		add_action( 'wc_ajax_pc_exit_claim', array( self::class, 'ajax_claim' ) );
 		add_action( 'wc_ajax_pc_exit_spin', array( self::class, 'ajax_spin' ) );
@@ -192,11 +194,32 @@ final class Exit_Intent {
 		return array( $s, array_values( array_unique( $errors ) ) );
 	}
 
+	/** admin_post_pc_app_exit_save（排在保存之前）：投手提交弹窗设置直接 403。 */
+	public static function deny_buyer(): void {
+		if ( Admin\Marketing::is_buyer() && Admin\Marketing::rules_active() ) {
+			wp_die( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。', '', array( 'response' => 403 ) );
+		}
+	}
+
 	/** 保存设置。有错误时不能开启（其他内容照样保存，方便继续编辑）。 */
 	public static function save( array $raw ): array {
+		// 弹窗由系列统一下发时（HQ-07）：登录的后台用户不能改；总后台的应用开关（没有登录用户）照常，系列标记保留。
+		$old    = get_option( self::OPTION, array() );
+		$series = Pricing\Series_Campaigns::setting_locked( $old );
+		if ( $series && get_current_user_id() ) {
+			return array( '这个弹窗由总后台按系列统一下发，店铺后台不能修改。' );
+		}
+		// 投手只能看当前在跑的活动，不能改弹窗设置（HQ-07）。没有登录用户的调用（总后台的应用开关、系列下发）不受影响。
+		if ( get_current_user_id() && Admin\Marketing::is_buyer() && Admin\Marketing::rules_active() ) {
+			return array( '这个账号只能查看当前在跑的活动，不能修改弹窗设置。' );
+		}
 		[ $s, $errors ] = self::clean( $raw );
 		if ( $errors ) {
 			$s['enabled'] = false;
+		}
+		if ( $series ) {
+			$s['series_key']  = $old['series_key'];
+			$s['series_hash'] = '';
 		}
 		update_option( self::OPTION, $s, false );
 		return $errors;
@@ -294,6 +317,10 @@ final class Exit_Intent {
 				return;
 			}
 			if ( ! in_array( self::page_kind(), $s['pages'], true ) || ! self::audience_ok( $s ) ) {
+				return;
+			}
+			// 营销弹窗静默（M4，已购回访等）：不加载弹窗和转盘；优惠码本身照常可用。
+			if ( Pricing\Popups::suppressed() ) {
 				return;
 			}
 		}

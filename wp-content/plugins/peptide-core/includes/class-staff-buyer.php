@@ -2,15 +2,18 @@
 /**
  * 投手版后台（M9，PRD 6.2）：角色 pc_media_buyer。“投手”= 负责投广告的内部员工，不是顾客。
  *
- * 投手只用 6 个菜单：首页、订单（只读）、弃单、数据、广告数据追踪（广告设置、素材库）、店铺信息。其余菜单不显示，直接打开地址返回 403。
- * “素材”（素材库、花费导入、素材看板）由 Creatives\Module 提供，2026-11-11 加入。
+ * 投手的菜单：首页、订单（只读）、弃单、数据、营销活动（只读）、广告数据追踪（广告设置、素材库）、店铺信息。其余菜单不显示，直接打开地址返回 403。
+ * “营销活动”（平台所有者 2026-11-13 定）：投手可以看只读的“当前在跑的活动”，不能新建、编辑、启停、删除。
+ * 只读页面归 F2（Admin\Marketing::read_only_gate()），这里只管菜单入口和放行“不带任何操作参数的 GET”；
+ * F2 的只读代码不在（或它认为这个账号能改）时，三个营销页面对投手仍然整页 403。
+ * “素材”（素材库、花费导入、素材看板）由 Creatives\Module 提供，2026-11-11 加入；2026-11-12 和广告设置合成“广告数据追踪”。
  * 管理员（包括从总后台一键登录）不受影响，仍然看到全部菜单。
  *
  * 做法：
  * - 按账号开关。给销售账号（pc_staff）加上 pc_media_buyer 这个角色就是投手版，去掉就恢复原来按模块勾选的权限。
  *   原来的角色和勾选的模块都不动，所以总后台的“销售账号”列表、专属登录入口、停用开关照常工作。
  *   默认不改任何现有账号；开关在“员工管理”页面和 `wp peptide buyer on|off <账号>`。
- * - 角色本身只存 read 和 view_admin_dashboard。页面需要的能力（多数店铺页面共用 manage_woocommerce）只在
+ * - 角色本身只存 read、view_admin_dashboard 和只读的 pc_view_campaigns（role_caps()）。页面需要的能力（多数店铺页面共用 manage_woocommerce）只在
  *   “这次请求是允许的页面或接口”时通过 user_has_cap 临时给（classify()、rest_scope()，能力清单在 Capabilities::BUYER_SCOPES）。
  *   在其他地址上投手没有任何店铺能力，WordPress、WooCommerce 和插件自己的权限检查都会拒绝。
  * - 后台页面、admin-ajax、admin-post 另有一道白名单（gate_page()、gate_action()）：不在名单里的直接 403。
@@ -41,13 +44,31 @@ final class Staff_Buyer {
 	public const PAGE_ADS    = 'pc-buyer-ads';
 	public const PAGE_STORE  = 'pc-store-info';
 	public const PAGE_WIZARD = 'pc-onboarding';
+	/** 订单详情页（Admin\Order_Detail_Page，2026-11-11 起订单列表和原生编辑页都转到这里）：投手只读。 */
+	public const PAGE_ORDER  = 'pc-order';
+	/** 导出订单（Admin\Buyer_Order_Export，ST-03）。只读，走 admin-post.php 下载。 */
+	public const ACTION_EXPORT = 'pc_buyer_orders_export';
+
+	/** F2（M4）的三个营销页面：满减、优惠码、运费折扣。投手只能看 F2 的只读列表。只认这三个地址，带同样前缀的其他页面不算。 */
+	public const CAMPAIGN_PAGES = array( 'pc-promotions', 'pc-coupons', 'pc-shipping-discounts' );
+	/** F2 定的只读权限（Admin\Marketing::VIEW_CAP）。写字面值：F2 的代码合进来之前那个常量还不存在。 */
+	public const CAP_CAMPAIGNS  = 'pc_view_campaigns';
+
+	/**
+	 * 按店开关（值 on 才生效，默认关）：投手后台在线上版本之外新加、会改变页面内容的几样——订单列表上方的导出、
+	 * 订单列表的“来源广告 / 运单号 / 退款状态”三列和详情页顶部的退款提示、店铺信息里的“显示客服按钮”。
+	 * 平台所有者 2026-11-13 定“优化，不改功能”：这些算功能变化，代码随模块发布，开不开另由所有者定。
+	 */
+	public const OPTION_EXTRAS     = 'pc_buyer_extras';
+	/** 按店开关（值 on 才生效，默认关）：投手不加载 WordPress 的命令面板（⌘K）。等所有者定性（算 bug 还是算功能调整）。 */
+	public const OPTION_NO_PALETTE = 'pc_buyer_no_palette';
 
 	public const ACTION_PASSWORD = 'pc_buyer_password';
 	public const ACTION_STORE    = 'pc_buyer_store_save';
 	public const ACTION_ADS      = 'pc_buyer_ads_save';
 
-	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的，含素材登记、花费导入、看板导出）。 */
-	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ); // 和 Creatives\Module::ACTION_* 一致。
+	/** admin-post.php 里投手能提交的表单（都是投手版页面自己的，含导出订单、素材登记、花费导入、看板导出）。 */
+	private const POST = array( self::ACTION_PASSWORD, self::ACTION_STORE, self::ACTION_ADS, self::ACTION_EXPORT, 'pc_creative_save', 'pc_creative_spend_import', 'pc_creative_export' ); // 后三个和 Creatives\Module::ACTION_* 一致。
 
 	/** admin-ajax.php 里投手能用的动作 => 需要的能力范围（空 = 不需要店铺能力）。 */
 	private const AJAX = array(
@@ -86,13 +107,24 @@ final class Staff_Buyer {
 		add_filter( 'submenu_file', array( self::class, 'submenu_file' ), 9999 );
 		add_action( 'admin_bar_menu', array( self::class, 'admin_bar' ), 9999 );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
+		add_action( 'admin_enqueue_scripts', array( self::class, 'no_command_palette' ), 0 );
+		// 这四个页面不挂在菜单下（隐藏页面），WordPress 给不出标题：浏览器标签和面包屑用页面自己的名字。
+		foreach ( array( self::PAGE_HOME => '首页', self::PAGE_ADS => '广告设置', self::PAGE_STORE => '店铺信息', self::PAGE_WIZARD => '开店向导' ) as $slug => $label ) {
+			add_action(
+				'load-admin_page_' . $slug,
+				static function () use ( $label ): void {
+					$GLOBALS['title'] = $label; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+				}
+			);
+		}
+		add_action( 'current_screen', array( self::class, 'campaigns_title' ) );
 		add_filter( 'pc_hq_capabilities', array( self::class, 'capabilities' ) );
 		add_filter( 'editable_roles', array( self::class, 'hide_role' ) );
 		if ( defined( 'WP_CLI' ) && WP_CLI ) {
 			\WP_CLI::add_command( 'peptide buyer', Staff_Buyer_Cli::class );
 		}
 		// 投手版自己的页面（首页、向导和广告设置）。店铺信息在 Admin\Store_Settings 里。
-		foreach ( array( Admin\Buyer_Home::class, Admin\Onboarding::class ) as $page ) {
+		foreach ( array( Admin\Buyer_Home::class, Admin\Onboarding::class, Admin\Buyer_Order_Export::class ) as $page ) {
 			if ( class_exists( $page ) ) {
 				$page::register_hooks();
 			}
@@ -101,21 +133,44 @@ final class Staff_Buyer {
 
 	/** 向总后台声明这家店的代码支持投手版后台和开店向导（新旧版本混跑时用，约定见 F1 的 pc_hq_capabilities）。 */
 	public static function capabilities( $caps ) {
-		return is_array( $caps ) ? $caps + array( 'm9.media_buyer' => '1', 'm9.onboarding' => '1' ) : $caps;
+		return is_array( $caps ) ? $caps + array( 'm9.media_buyer' => '1', 'm9.onboarding' => '1', 'm9.buyer_extras' => '1', 'm9.buyer_no_palette' => '1' ) : $caps;
+	}
+
+	/** 投手后台的新增内容开着没有（OPTION_EXTRAS，默认关）。 */
+	public static function extras(): bool {
+		return (bool) apply_filters( 'pc_buyer_extras_enabled', 'on' === (string) get_option( self::OPTION_EXTRAS, 'off' ) );
+	}
+
+	/** 投手不加载命令面板这一条开着没有（OPTION_NO_PALETTE，默认关 = 和线上一样加载）。 */
+	public static function hide_palette(): bool {
+		return (bool) apply_filters( 'pc_buyer_no_palette_enabled', 'on' === (string) get_option( self::OPTION_NO_PALETTE, 'off' ) );
 	}
 
 	// ---------- 角色和开关 ----------
 
+	/**
+	 * 角色上存的能力，只有这三项。pc_view_campaigns 是 F2 约定的只读权限：有它只能看“当前在跑的活动”。
+	 * 能改东西的权限（edit_shop_coupons、manage_woocommerce 等）不在这里，也永远不加到角色上。
+	 *
+	 * @return array<string,bool>
+	 */
+	public static function role_caps(): array {
+		return array(
+			'read'                 => true,
+			'view_admin_dashboard' => true, // WooCommerce 只让有这个能力的人进后台。
+			self::CAP_CAMPAIGNS    => true,
+		);
+	}
+
 	public static function ensure_role(): void {
-		if ( ! get_role( self::ROLE ) ) {
-			add_role(
-				self::ROLE,
-				'Media buyer',
-				array(
-					'read'                 => true,
-					'view_admin_dashboard' => true, // WooCommerce 只让有这个能力的人进后台。
-				)
-			);
+		$role = get_role( self::ROLE );
+		if ( ! $role ) {
+			add_role( self::ROLE, 'Media buyer', self::role_caps() );
+			return;
+		}
+		// 2026-11-13 之前建好角色的店：补上只读权限。每家店只写一次（之后 has_cap 为真，不再写）。
+		if ( ! $role->has_cap( self::CAP_CAMPAIGNS ) ) {
+			$role->add_cap( self::CAP_CAMPAIGNS );
 		}
 	}
 
@@ -237,6 +292,17 @@ final class Staff_Buyer {
 		return 'page' === $r['doing'] && 'admin.php' === $r['file'] && in_array( $r['page'], array( self::PAGE_HOME, self::PAGE_ADS, self::PAGE_STORE, self::PAGE_WIZARD ), true );
 	}
 
+	/**
+	 * WordPress 的命令面板（⌘K）会把这次请求里登记的全部后台菜单连名字带地址写进页面，包括投手看不到的页面
+	 * （客户、邮件、店铺设置……）。它在 admin_enqueue_scripts 时读菜单，比这里重建菜单（admin_head）早。
+	 * 投手不加载命令面板；顶部工具条上的入口在 admin_bar() 里去掉。只在开关 OPTION_NO_PALETTE 打开时。
+	 */
+	public static function no_command_palette(): void {
+		if ( self::current() && self::hide_palette() ) {
+			remove_action( 'admin_enqueue_scripts', 'wp_enqueue_command_palette_assets' );
+		}
+	}
+
 	/** 投手版页面的样式和脚本（一份，四个页面共用）。 */
 	public static function enqueue(): void {
 		if ( ! self::on_own_page() ) {
@@ -300,9 +366,43 @@ final class Staff_Buyer {
 			'action2' => $text( $_REQUEST['action2'] ?? '' ),
 			// 订单页上不靠 action 也会执行写操作的参数：清空回收站（delete_all）、接管编辑锁（claim-lock）。
 			'writes'  => ( ! empty( $_REQUEST['delete_all'] ) || ! empty( $_REQUEST['claim-lock'] ) ) ? '1' : '',
+			// 营销页面上打开新建 / 编辑表单的参数（Admin\Marketing::read_only_gate() 看的是同样两个）。
+			'edits'   => ( isset( $_REQUEST['new'] ) || isset( $_REQUEST['edit'] ) ) ? '1' : '',
+			'campaigns' => '',
 		);
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
+		// 先把上面的结果存好再问 F2：它的判断要查当前用户的能力，会回到 scoped_caps() 再读一次这里。
+		self::$request['campaigns'] = self::campaigns_read_only() ? '1' : '';
 		return self::$request;
+	}
+
+	/** F2 的只读“当前在跑的活动”在不在这份代码里。 */
+	public static function campaigns_ready(): bool {
+		$marketing = Admin\Marketing::class;
+		return class_exists( $marketing ) && is_callable( array( $marketing, 'can_view' ) ) && is_callable( array( $marketing, 'can_manage' ) ) && is_callable( array( $marketing, 'read_only_gate' ) );
+	}
+
+	/**
+	 * 当前登录的人打开营销页面时，F2 给的是不是只读列表。F2 的代码不在，或者它认为这个人能改（比如有人用过滤器
+	 * pc_marketing_can_manage 放开了），都返回 false：投手的拦截仍然整页拒绝，不会因为这里放行而露出可编辑的页面。
+	 */
+	public static function campaigns_read_only(): bool {
+		return self::campaigns_ready() && ! Admin\Marketing::can_manage();
+	}
+
+	/**
+	 * 投手打开三个营销页面时，页面顶部和浏览器标签用投手菜单里的名字。这三个页面登记的名字是给能改的人看的
+	 * （满减活动 / 优惠码 / 运费折扣），投手看到的三个页面都是同一张只读列表。
+	 */
+	public static function campaigns_title(): void {
+		if ( self::current() && in_array( self::request()['page'], self::CAMPAIGN_PAGES, true ) ) {
+			$GLOBALS['title'] = self::menu_items()['campaigns']['label']; // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
+		}
+	}
+
+	/** 投手菜单里要不要显示“营销活动”：F2 说这个人能看（Marketing::can_view()），并且看到的是只读列表。 */
+	public static function campaigns_visible(): bool {
+		return ! empty( self::request()['campaigns'] ) && (bool) Admin\Marketing::can_view();
 	}
 
 	/**
@@ -364,11 +464,22 @@ final class Staff_Buyer {
 		if ( 'pc-overview' === $page ) {
 			return $redirect( self::PAGE_HOME ); // 后台里“回到首页”的链接都指向数据大盘，投手的首页是另一个页面。
 		}
+		if ( self::PAGE_ORDER === $page ) {
+			// 订单详情页：只读打开（走到这里的只有 GET / HEAD）。页面上的作废、卖家备注、标签提交到
+			// admin-post.php（pc_order_detail），不在投手的名单里，仍然 403。
+			return $allow( 'orders' );
+		}
+		$none = array( '', '-1' );
+		if ( in_array( $page, self::CAMPAIGN_PAGES, true ) ) {
+			// F2 的只读列表“当前在跑的活动”：只放行不带任何操作参数的 GET。打开新建 / 编辑表单（new、edit）、
+			// 批量和启停（action、action2）一律拒绝；保存和启停的提交走 admin-post.php，不在投手的名单里。
+			$plain = empty( $r['edits'] ) && in_array( $action, $none, true ) && in_array( (string) ( $r['action2'] ?? '' ), $none, true );
+			return ( ! empty( $r['campaigns'] ) && $plain ) ? $allow() : $deny;
+		}
 		if ( 'wc-orders' === $page ) {
 			// 只读：列表（筛选、搜索、翻页）和打开一张订单。批量操作、新建、删除等都带别的 action；
 			// “清空回收站”和“接管编辑”不带 action，靠单独的参数触发（WooCommerce 的 ListTable::current_action()、
 			// PageController::handle_edit_lock()），一样拒绝。
-			$none = array( '', '-1' );
 			$idle = in_array( (string) ( $r['action2'] ?? '' ), $none, true ) && empty( $r['writes'] );
 			return ( $idle && ( in_array( $action, $none, true ) || 'edit' === $action ) ) ? $allow( 'orders' ) : $deny;
 		}
@@ -432,6 +543,9 @@ final class Staff_Buyer {
 			return $allcaps;
 		}
 		$allcaps[ self::CAP_VIEW ] = true;
+		// F2 约定的只读权限：有它只能看“当前在跑的活动”，不能改。角色上已经存了（ensure_role()）；
+		// 这里再给一次，是为了角色记录还没来得及补上的那一次请求（拦截在 init 3，补角色在 init 5）。
+		$allcaps[ self::CAP_CAMPAIGNS ] = true;
 		// 只按“当前登录的人、当前这次请求”给：后台任务里的 user_can( 投手, … ) 不会顺带拿到店铺能力。
 		if ( (int) get_current_user_id() !== (int) $user->ID ) {
 			return $allcaps;
@@ -496,17 +610,19 @@ final class Staff_Buyer {
 	// ---------- 菜单 ----------
 
 	/**
-	 * 投手的 6 个菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算）。
+	 * 投手的菜单，按显示顺序。slug 是菜单链接，pages 是算在这个菜单下的页面（带同样前缀的子页面也算；
+	 * exact 为真时只认 pages 里写的地址）。“营销活动”只在 campaigns_visible() 时显示，见 build_menu()。
 	 *
-	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[]}>
+	 * @return array<string,array{label:string,slug:string,icon:string,pages:string[],exact?:bool}>
 	 */
 	public static function menu_items(): array {
 		$url = static fn( string $page ): string => 'admin.php?page=' . $page;
 		return array(
 			'home'     => array( 'label' => '首页', 'slug' => $url( self::PAGE_HOME ), 'icon' => 'dashicons-dashboard', 'pages' => array( self::PAGE_HOME, self::PAGE_WIZARD ) ),
-			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders' ) ),
+			'orders'   => array( 'label' => '订单', 'slug' => 'admin.php?page=wc-orders&status=wc-processing', 'icon' => 'dashicons-cart', 'pages' => array( 'wc-orders', self::PAGE_ORDER ) ),
 			'recovery' => array( 'label' => '弃单', 'slug' => $url( 'pc-recovery' ), 'icon' => 'dashicons-backup', 'pages' => array( 'pc-recovery' ) ),
 			'data'     => array( 'label' => '数据', 'slug' => $url( 'pc-data' ), 'icon' => 'dashicons-chart-area', 'pages' => array( 'pc-data', 'pc-visitors' ) ),
+			'campaigns' => array( 'label' => '营销活动', 'slug' => $url( self::CAMPAIGN_PAGES[0] ), 'icon' => 'dashicons-tag', 'pages' => self::CAMPAIGN_PAGES, 'exact' => true ),
 			// 2026-11-12：广告设置和素材库合成一个栏目“广告数据追踪”（子菜单见 adtrack_submenu()）。
 			'adtrack'  => array( 'label' => '广告数据追踪', 'slug' => $url( self::PAGE_ADS ), 'icon' => 'dashicons-megaphone', 'pages' => array( self::PAGE_ADS, 'pc-creatives' ) ), // Creatives\Module::PAGE_*
 			'store'    => array( 'label' => '店铺信息', 'slug' => $url( self::PAGE_STORE ), 'icon' => 'dashicons-store', 'pages' => array( self::PAGE_STORE ) ),
@@ -520,7 +636,7 @@ final class Staff_Buyer {
 		}
 		foreach ( self::menu_items() as $key => $item ) {
 			foreach ( $item['pages'] as $base ) {
-				if ( $page === $base || str_starts_with( $page, $base . '-' ) ) {
+				if ( $page === $base || ( empty( $item['exact'] ) && str_starts_with( $page, $base . '-' ) ) ) {
 					return $key;
 				}
 			}
@@ -529,7 +645,7 @@ final class Staff_Buyer {
 	}
 
 	/**
-	 * 左侧菜单换成投手的 7 项。
+	 * 左侧菜单换成投手的这几项。
 	 *
 	 * 在 admin_head 才换：页面能不能打开，WordPress 是按各页面原来登记的菜单判断的（admin_menu 之后立刻检查），
 	 * 那时不能动；到这里只剩显示。“数据”下面保留数据页面自己登记的子页面和实时访客。
@@ -547,6 +663,9 @@ final class Staff_Buyer {
 		foreach ( self::menu_items() as $key => $item ) {
 			if ( $locked && 'home' !== $key ) {
 				continue; // 还没改密码：只留首页（会转到向导）。
+			}
+			if ( 'campaigns' === $key && ! self::campaigns_visible() ) {
+				continue; // F2 的只读列表不在这份代码里，或者 F2 说这个人不能看。
 			}
 			$position         += 5;
 			$menu[ $position ] = array( $item['label'], 'read', $item['slug'], $item['label'], 'menu-top pc-buyer-menu', 'pc-buyer-menu-' . $key, $item['icon'] ); // phpcs:ignore WordPress.WP.GlobalVariablesOverride.Prohibited
@@ -616,7 +735,11 @@ final class Staff_Buyer {
 		if ( ! $bar instanceof \WP_Admin_Bar || ! self::current() ) {
 			return;
 		}
-		foreach ( array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments' ) as $node ) {
+		$nodes = array( 'new-content', 'edit', 'view', 'archive', 'search', 'customize', 'updates', 'comments' );
+		if ( self::hide_palette() ) {
+			$nodes[] = 'command-palette';
+		}
+		foreach ( $nodes as $node ) {
 			$bar->remove_node( $node );
 		}
 		$store = self::page_url( self::PAGE_STORE );

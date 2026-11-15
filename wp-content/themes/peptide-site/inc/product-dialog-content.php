@@ -318,9 +318,12 @@ function vc_product_dialog_content( $product ): string {
         // NF-06: the store's product use statement always closes the dialog content, whatever
         // blocks the product layout contains. Empty when the store has not set one.
         $statement = function_exists( 'vc_use_statement_markup' ) ? vc_use_statement_markup() : '';
-        if ( '' === trim( $html ) && '' === $statement ) { return ''; }
+        // FE-03: trust strip (secure checkout line, accepted payment marks) opens the content,
+        // right under the purchase summary. Empty unless the store switched it on.
+        $trust = function_exists( 'vc_trust_badges' ) ? vc_trust_badges() : '';
+        if ( '' === trim( $html ) && '' === $statement && '' === $trust ) { return ''; }
         return '<div class="vc-product-dialog-content" data-vc-dialog-document="' . esc_attr( $layout['document'] )
-            . '" data-vc-dialog-omitted="' . esc_attr( wp_json_encode( $layout['omitted'] ) ) . '">' . $html . $statement . '</div>';
+            . '" data-vc-dialog-omitted="' . esc_attr( wp_json_encode( $layout['omitted'] ) ) . '">' . $trust . $html . $statement . '</div>';
     } finally {
         if ( null !== $renderer_document ) { \PeptideCore\Modules\Renderer::$document_id = $renderer_document; }
         foreach ( $saved as $key => [ $existed, $value ] ) {

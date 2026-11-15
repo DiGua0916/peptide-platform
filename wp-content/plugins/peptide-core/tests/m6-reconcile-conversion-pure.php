@@ -55,7 +55,7 @@ final class M6_ConversionDB extends ConversionDB059 {
 				$s    = $cohort[ $e['visit_id'] ] ?? null;
 				$step = 'client' === $e['source'] ? in_array( $e['type'], array( 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' ), true ) : 'payment_success' === $e['type'];
 				if ( ! $s || ! $step || $e['id'] <= $a[0] || $s['visitor_id'] !== $e['visitor_id'] ) { continue; }
-				$rows[] = array( 'id' => $e['id'], 'type' => $e['type'], 'source' => $e['source'], 'visit_id' => $e['visit_id'], 'visitor_id' => $e['visitor_id'], 'order_id' => $e['order_id'], 'linked_order' => $s['order_id'], 'g' => $s['device'], 'returning_visit' => 0 );
+				$rows[] = array( 'id' => $e['id'], 'type' => $e['type'], 'source' => $e['source'], 'visit_id' => $e['visit_id'], 'visitor_id' => $e['visitor_id'], 'order_id' => $e['order_id'], 'linked_order' => $s['order_id'], 'visit_stage' => $s['stage'], 'g' => $s['device'], 'returning_visit' => 0 );
 			}
 			usort( $rows, static fn( $x, $y ) => $x['id'] <=> $y['id'] );
 			return array_slice( $rows, 0, 500 );

@@ -5,7 +5,7 @@
  * - 订单付款、状态变化时，把订单摘要异步报给总后台 POST /peptide-hq/v1/orders/report（每批最多 50 条）。
  *   签名和邮件中心相同：店铺连接密钥 + X-PC-HQ-Site。总后台按（店铺，订单号）覆盖写入，重复上报结果不变。
  * - 订单元 _pc_hq_reported 记最近一次上报成功的内容指纹和时间；每小时把近 48 小时里内容变了但没报成功的订单补报一次。
- * - 只报汇总需要的字段：状态、金额、时间、所属系列、邮箱的哈希、来源；不报姓名、邮箱、电话、地址。
+ * - 只报汇总需要的字段：状态、金额、时间、所属系列、邮箱的哈希、客户编号、来源；不报姓名、邮箱、电话、地址。
  * - 没付过款、也从没上报过的订单（未付款、草稿、失败）不上报。
  * - 历史订单回填：wp peptide orders backfill [--dry-run] [--since=YYYY-MM-DD]。先试运行看报告，再正式运行；可重复执行。
  * - 退款标记：总后台调用 POST /peptide/v1/hq/order-refund，这里只写 _pc_refund_cents、_pc_refund_state 和一条订单备注。
@@ -191,6 +191,16 @@ final class Order_Report {
 		return $out;
 	}
 
+	/**
+	 * 开关（默认关）：订单摘要里带不带客户编号。关着时摘要和 11-10 上线的版本逐项相同，
+	 * 所以已经上报过的订单不会因为升级而全部重报一遍。打开：wp option update pc_order_report_customer_id 1。
+	 */
+	public const CUSTOMER_ID = 'pc_order_report_customer_id';
+
+	public static function with_customer_id(): bool {
+		return (bool) apply_filters( 'pc_order_report_customer_id', '1' === (string) get_option( self::CUSTOMER_ID, '0' ) ) && class_exists( Customer_Id::class );
+	}
+
 	/** 报给总后台的订单摘要。 */
 	public static function summary( \WC_Order $order ): array {
 		$facts   = self::facts( $order );
@@ -198,7 +208,7 @@ final class Order_Report {
 		$email   = strtolower( trim( (string) $order->get_billing_email() ) );
 		$attr    = self::attribution( $order );
 		$series  = (int) $order->get_meta( Series_Sync::ORDER_META );
-		return array(
+		$out     = array(
 			'store_order_id' => (int) $order->get_id(),
 			'order_number'   => (string) $order->get_order_number(),
 			'status'         => (string) $order->get_status(),
@@ -214,6 +224,11 @@ final class Order_Report {
 			'utm_source'     => $attr['utm_source'],
 			'ad_id'          => $attr['ad_id'],
 		);
+		if ( self::with_customer_id() ) {
+			// 客户编号（同一位顾客在各店相同，由邮箱或手机号算出，不含原文）。
+			$out['customer_id'] = (string) Customer_Id::for_order( $order );
+		}
+		return $out;
 	}
 
 	private static function reported( \WC_Order $order ): array {

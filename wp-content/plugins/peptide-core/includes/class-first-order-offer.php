@@ -115,7 +115,7 @@ final class First_Order_Offer {
 	}
 
 	public static function assets(): void {
-		if ( is_admin() || ! self::coupon() ) { return; }
+		if ( is_admin() || ! self::coupon() || Pricing\Popups::suppressed() ) { return; }
 		foreach ( array( 'css', 'js' ) as $ext ) {
 			$file = 'assets/first-order-offer.' . $ext;
 			$url = plugins_url( $file, PEPTIDE_CORE_FILE ); $version = (string) filemtime( PEPTIDE_CORE_DIR . '/' . $file );
@@ -156,6 +156,8 @@ final class First_Order_Offer {
 
 	/** Public static offer only: no customer/email/order information is embedded in HTML. */
 	public static function render( bool $preview = false ): string {
+		// 营销弹窗静默（M4，已购回访等）：前台不输出券条；WELCOME5 本身照常可用。
+		if ( ! $preview && Pricing\Popups::suppressed() ) { return ''; }
 		$c = self::coupon();
 		if ( ! $c ) { return $preview ? '<p class="pc-first-offer-empty">请在插件绑定并启用符合规则的首单 5% 优惠券。</p>' : ''; }
 		$s = self::strings();

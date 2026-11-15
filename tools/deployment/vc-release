@@ -44,6 +44,10 @@ PY
     python3 "$HERE/inventory/drift.py" report --raw "$out" --ref "$MAINLINE" --out "$out" --date "$(date -u +%F)"
     echo "详细结果：$out/drift.md";;
   go)
+    git -C "$REPO" fetch -q "${MAINLINE%%/*}"
+    if git -C "$REPO" cat-file -e "$MAINLINE:tools/deployment/RELEASE_HOLD" 2>/dev/null; then
+      echo "vc-release：主线上有发布暂停标记，现在不能用 go："; git -C "$REPO" show "$MAINLINE:tools/deployment/RELEASE_HOLD"; exit 1
+    fi
     [ -n "$fast$full" ] && [ -z "$fast" -o -z "$full" ] || die "要选一种：--fast（不等试点观察）或 --full（试点店观察 15 分钟）"
     [ -n "$note" ] || die "要写 --note \"这次改了什么\""
     [ -n "$ok" ] || die "生产发布要平台所有者在聊天里明确同意这一次，之后加 --owner-confirmed"

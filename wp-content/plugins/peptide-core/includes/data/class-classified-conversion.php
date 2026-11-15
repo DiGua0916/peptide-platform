@@ -76,7 +76,7 @@ final class Classified_Conversion {
     }
    } while ( count( $rows ) === 500 );
   }
-  foreach ( $visit_steps as $visit => $steps ) { $visitor = (int) $selected[$visit]['visitor_id']; foreach ( Metrics::tail_steps( $steps, ! empty( $steps['paid'] ) ) as $step ) { $sets[$step][$visitor] = true; $groups[$keys[$visit]]['sets'][$step][$visitor] = true; } }
+  foreach ( $visit_steps as $visit => $steps ) { $visitor = (int) $selected[$visit]['visitor_id']; $reached = (int) $selected[$visit]['stage']; if ( $reached < 3 ) { continue; } foreach ( Metrics::tail_steps( $steps, ! empty( $steps['paid'] ) && $reached >= 5 ) as $step ) { $sets[$step][$visitor] = true; $groups[$keys[$visit]]['sets'][$step][$visitor] = true; } }
   $paid = 0;
   foreach ( Operations::paid_orders( $from, $to ) as $order ) {
    if ( self::is_test( $order ) ) { continue; } $at = self::order_ts( $order ) ?? -1;
