@@ -186,6 +186,7 @@ final class Plugin {
 			Admin\Coupons_Page::register_hooks();
 			Admin\Shipping_Discounts_Page::register_hooks();
 			Admin\Apps_Page::register_hooks();
+			Admin\Storefront_Switches::register_hooks();
 			Admin\Campaign_Countdown_Page::register_hooks();
 			Admin\Product_Broadcast_Page::register_hooks();
 			Admin\Activity_Listener_Page::register_hooks();

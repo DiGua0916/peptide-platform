@@ -84,6 +84,9 @@ final class App_Switch {
 				}
 				return true;
 		}
+		if ( Admin\Storefront_Switches::handles( $key ) ) {
+			return Admin\Storefront_Switches::set( $key, $on ); // 前台的 5 个按店开关（2026-11-16）。
+		}
 		$stores = array(
 			'product-broadcast' => Broadcast\Store::class,
 			'activity-listener' => Activity\Store::class,
