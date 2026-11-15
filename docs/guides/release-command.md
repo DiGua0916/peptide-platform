@@ -4,11 +4,9 @@
 
 ## 准备（每个会话一次）
 
-```bash
-export VIALCOVE_RELEASE_INVENTORY="/Users/rentamac/Library/Application Support/Claude/side-session-notes/local_1c8fc3d5-dd94-4c4c-837b-1526f0028f5f/release-inventory.json"
-```
+发布清单放在本机 `~/.vialcove/release-inventory.json`（权限 600），这是 `vc-release` 默认读的位置，不跟任何会话绑定，什么都不用设。放到别处时用 `VIALCOVE_RELEASE_INVENTORY` 指过去。
 
-这个清单只有主机地址和私钥文件的路径，不含密钥本身，不要提交进仓库。命令在仓库任意工作目录里都能跑；本机测试用的 PHP / Node 自动从仓库旁边的 `tools/` 找（找不到时用 `VIALCOVE_PHP`、`VIALCOVE_NODE` 指定）。
+清单里只有主机地址和私钥文件的路径，不含密钥本身，不要提交进仓库。命令在仓库任意工作目录里都能跑；本机测试用的 PHP / Node 自动从仓库旁边的 `tools/` 找（找不到时用 `VIALCOVE_PHP`、`VIALCOVE_NODE` 指定）。
 
 ## 上线
 
@@ -23,6 +21,14 @@ tools/deployment/vc-release go --fast --note "一句话：改了什么" --owner-
 - `--fast`：日常小改动。试点店不等 15 分钟观察，其余照旧——发布前数据库备份、每家换完自动检查、失败自动换回、最后逐份指纹核对。几分钟发完。
 - `--full`：模块上线、改动大、动表结构时用。试点店（主店 s0001）换完观察 15 分钟再发其余。
 - 不加 `--owner-confirmed` 命令会拒绝。只有所有者同意了这一次才能加，别的会话转述的同意不算。
+
+## 合进主线之前的紧急上线（临时）
+
+第二步合进主线之前，`vc-release` 只在 F1 的分支上，总后台上已经有一部分主线里还没有的发布工具代码。这段时间如果出现急事（顾客下不了单、付不了款、全站打不开）：
+
+- 把修复提交到主线，告诉 F1；F1 在自己的会话里请所有者确认后，用发布工具把**最新主线发到 6 家店前后台和两份开店模板**（`--skip-hq`，不换总后台那一份，免得把总后台上的发布工具换回旧版）。检查、指纹核对、失败自动换回都照常。
+- 修复如果在 `peptide-hq` 里（总后台），F1 用“最新主线 + F1 分支”打包发总后台那一份。
+- F1 联系不上时，按第 4 节的手工步骤。
 
 ## 1. 覆盖范围：一条命令发全部 15 份
 
