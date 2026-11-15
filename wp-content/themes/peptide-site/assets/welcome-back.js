@@ -59,6 +59,7 @@
     if (!cfg.recentApi) return;
     try {
       const body = await getJSON(cfg.recentApi);
+      if (body && body.visible === false) return; // the store's own on/off and minimum for this list
       const items = (Array.isArray(body) ? body : body && body.items || []).filter(i => i && i.name && i.permalink).slice(0, 6);
       if (!items.length) return;
       const row = el('div', 'vc-welcome__recent');
@@ -67,6 +68,8 @@
       items.forEach(i => {
         const a = el('a', 'vc-welcome__chip');
         a.href = i.permalink;
+        // Same hooks as the bag's recently viewed cards: the home page opens the product dialog in place.
+        if (Number.isSafeInteger(i.productId) && i.productId > 0) { a.dataset.vcHomeProduct = String(i.productId); a.dataset.vcQuickOpen = String(i.productId); }
         if (i.image && i.image.url) { const img = el('img'); img.src = i.image.url; img.alt = ''; img.width = 40; img.height = 40; img.loading = 'lazy'; a.append(img); }
         const t = el('span', 'vc-welcome__chip-text');
         t.append(el('b', '', i.name), el('span', '', (i.priceIsFrom ? 'From ' : '') + (i.price && i.price.text || '')));
