@@ -830,3 +830,116 @@ body.pc-admin-workspace #wpbody-content .pc-mk .pc-mk-count input {
 		order: -1;
 	}
 }
+
+/* ---------- 只读页面：当前在跑的活动（HQ-07，给投手看） ---------- */
+.pc-rc__lead {
+	max-width: 860px;
+	font-size: 14px;
+	line-height: 1.7;
+	margin: 6px 0;
+}
+
+.pc-rc__summary {
+	font-size: 14px;
+	font-weight: 600;
+	margin: 14px 0 0;
+}
+
+.pc-rc__group {
+	font-size: 16px;
+	margin: 26px 0 10px;
+}
+
+.pc-rc__card {
+	max-width: 860px;
+	background: #fff;
+	border: 1px solid #dcdcde;
+	border-radius: 6px;
+	padding: 14px 16px;
+	margin: 0 0 12px;
+}
+
+.pc-rc__card h3 {
+	font-size: 15px;
+	margin: 0 0 10px;
+	word-break: break-word;
+}
+
+.pc-rc__kind {
+	display: inline-block;
+	font-size: 12px;
+	font-weight: 400;
+	color: #1d4ed8;
+	background: #eff6ff;
+	border-radius: 3px;
+	padding: 1px 6px;
+	margin-right: 4px;
+	vertical-align: 1px;
+}
+
+.pc-rc__deal {
+	width: 100%;
+	border-collapse: collapse;
+	margin: 0 0 10px;
+}
+
+.pc-rc__deal th,
+.pc-rc__deal td {
+	width: 50%;
+	text-align: left;
+	vertical-align: top;
+	border: 1px solid #e2e4e7;
+	padding: 8px 10px;
+	font-size: 14px;
+	line-height: 1.6;
+}
+
+.pc-rc__deal th {
+	background: #f6f7f7;
+	font-size: 13px;
+}
+
+.pc-rc__deal td:last-child {
+	font-weight: 600;
+}
+
+.pc-rc__deal ul,
+.pc-rc__facts ul {
+	margin: 0;
+	padding-left: 18px;
+	list-style: disc;
+}
+
+.pc-rc__deal li,
+.pc-rc__facts li {
+	margin: 0 0 2px;
+}
+
+.pc-rc__facts {
+	display: grid;
+	grid-template-columns: 96px 1fr;
+	gap: 6px 12px;
+	margin: 0;
+	font-size: 13px;
+	line-height: 1.6;
+}
+
+.pc-rc__facts dt {
+	color: #646970;
+}
+
+.pc-rc__facts dd {
+	margin: 0;
+	word-break: break-word;
+}
+
+@media (max-width: 600px) {
+	.pc-rc__facts {
+		grid-template-columns: 1fr;
+		gap: 2px 0;
+	}
+
+	.pc-rc__facts dd {
+		margin-bottom: 8px;
+	}
+}

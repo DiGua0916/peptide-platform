@@ -55,7 +55,11 @@ final class Promotions_Page {
 	// ---------- 列表 ----------
 
 	public static function render(): void {
-		if ( ! current_user_can( Marketing::CAP ) ) {
+		if ( ! Marketing::can_view() ) {
+			return;
+		}
+		// HQ-07：投手只读——新建 / 编辑地址 403，列表显示“当前在跑的活动”。
+		if ( Marketing::read_only_gate() ) {
 			return;
 		}
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
@@ -101,7 +105,7 @@ final class Promotions_Page {
 			$c  = Promotions::config( $id );
 			$on = 'publish' === get_post_status( $id );
 			echo '<tr>' . Marketing::check_cell( $id ) . '<td class="pc-mk-col-act">' . Marketing::row_actions( self::url( array( 'edit' => $id ) ), wp_nonce_url( admin_url( 'admin-post.php?action=pc_promo_toggle&id=' . $id . '&on=' . ( $on ? 0 : 1 ) ), 'pc_promo_toggle' ), $on ) . '</td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $id ) ) ) . '">' . esc_html( $r['search'] ) . '</a></td>';
+			echo '<td><a class="pc-mk-name" href="' . esc_url( self::url( array( 'edit' => $id ) ) ) . '">' . esc_html( $r['search'] ) . '</a>' . Marketing::locked_badge( 'promotion', $id ) . '</td>';
 			echo '<td class="pc-mk-time-cell">' . esc_html( Marketing::date_text( (int) $c['start'] ) ) . ' ~<br>' . esc_html( $c['end'] ? Marketing::date_text( (int) $c['end'] ) : __( 'Long-term', 'peptide-core' ) ) . '</td>';
 			echo '<td>' . implode( '<br>', array_map( 'esc_html', Promotions::rules_text( $c ) ) ) . '</td>';
 			echo '<td>' . esc_html( self::scope_text( $c ) ) . '</td><td>' . Marketing::badge( $r['status'] ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -139,6 +143,7 @@ final class Promotions_Page {
 			echo '<div class="wrap"><p>' . esc_html__( 'This promotion does not exist.', 'peptide-core' ) . '</p></div>';
 			return;
 		}
+		Marketing::guard_unlocked( 'promotion', $id ); // 系列统一下发的活动只读。
 		$c     = $id ? Promotions::config( $id ) : Promotions::defaults();
 		$title = $id ? html_entity_decode( get_the_title( $id ) ) : '';
 		$long  = $id && ! $c['end'];
@@ -268,6 +273,7 @@ final class Promotions_Page {
 		Marketing::guard( 'pc_promo_save' );
 		$in                          = wp_unslash( $_POST ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized -- 在 Promotions::clean() 里逐项清理。
 		$id                          = absint( $in['id'] ?? 0 );
+		Marketing::guard_unlocked( 'promotion', $id );
 		[ $name, $raw, $time_errors ] = self::from_form( $in );
 		$enabled                     = ! $id || 'publish' === get_post_status( $id );
 		$errors                      = $time_errors;
@@ -289,6 +295,7 @@ final class Promotions_Page {
 	public static function toggle(): void {
 		Marketing::guard( 'pc_promo_toggle' );
 		// phpcs:disable WordPress.Security.NonceVerification.Recommended
+		Marketing::guard_unlocked( 'promotion', absint( $_GET['id'] ?? 0 ) );
 		$errors = Promotions::set_enabled( absint( $_GET['id'] ?? 0 ), ! empty( $_GET['on'] ) );
 		// phpcs:enable WordPress.Security.NonceVerification.Recommended
 		if ( $errors ) {
@@ -306,8 +313,8 @@ final class Promotions_Page {
 		$done   = 0;
 		$errors = array();
 		foreach ( Marketing::posted_ids() as $id ) {
-			if ( Promotions::CPT !== get_post_type( $id ) ) {
-				continue;
+			if ( Promotions::CPT !== get_post_type( $id ) || Marketing::locked( 'promotion', $id ) ) {
+				continue; // 不存在的、系列统一下发的跳过。
 			}
 			if ( 'delete' === $op ) {
 				wp_delete_post( $id, true ); // 满减活动没有回收站页面，直接删除；订单里的费用行保留活动名称。

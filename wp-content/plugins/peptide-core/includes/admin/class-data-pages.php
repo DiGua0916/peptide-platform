@@ -616,6 +616,29 @@ final class Data_Pages {
 		return class_exists( Audience::class ) && Audience::is_media_buyer();
 	}
 
+	/**
+	 * 合并页的布局：tabs（默认，线上现在的样子）= 一页两个页签，一次显示一个报表；stacked = 两个报表上下排在同一屏（ST-05）。
+	 * 每家店一个选项 peptide_core_buyer_data_layout，过滤器同名。同屏布局 2026-11-12 在本地站点的浏览器里核对过两个合并页。
+	 * 2026-11-13：模块发布只做优化、不改线上已有的功能，所以默认值是线上的页签布局；要同屏的店把选项设成 stacked。
+	 */
+	public const BUYER_LAYOUT_OPTION = 'peptide_core_buyer_data_layout';
+
+	private static function buyer_layout(): string {
+		$layout = function_exists( 'get_option' ) ? get_option( self::BUYER_LAYOUT_OPTION, 'tabs' ) : 'tabs';
+		$layout = function_exists( 'apply_filters' ) ? apply_filters( self::BUYER_LAYOUT_OPTION, $layout ) : $layout;
+		return 'stacked' === $layout ? 'stacked' : 'tabs';
+	}
+
+	/** 这个合并页要同屏显示的报表（PAGES 的 key，按页面上的顺序）；不是同屏布局时只有当前这一个。 */
+	private static function buyer_keys( string $page, string $key ): array {
+		return isset( self::BUYER_PAGES[ $page ] ) && 'stacked' === self::buyer_layout() ? array_values( self::BUYER_PAGES[ $page ] ) : array( $key );
+	}
+
+	/** 来源页给不给“广告系列 / 广告组 / 广告”三种分组：只在广告参数那张表的开关开着时给（默认关，下拉和线上一样只有两项）。 */
+	private static function ad_groups_on(): bool {
+		return class_exists( \PeptideCore\Tracking\Ad_Params::class ) && \PeptideCore\Tracking\Ad_Params::writing();
+	}
+
 	/** 合并页当前的页签：地址栏的 tab，没有或不认识时是第一个。 */
 	private static function buyer_tab( string $page ): string {
 		$tabs = self::merged_pages()[ $page ];
@@ -676,27 +699,42 @@ final class Data_Pages {
 		}
 		$url = plugins_url( 'assets/', PEPTIDE_CORE_FILE );
 		$ver = static fn( string $file ): string => PEPTIDE_CORE_VERSION . '.' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/' . $file ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		// ST-05 同屏布局：合并页一次画两个报表。$stacked 是多给外壳脚本的三项（报表清单、每段的标题、先滚到哪一段）；别的页面是空数组，配置和以前一个字都不差。
+		$keys    = self::buyer_keys( $buyer_page, $key );
+		$stacked = array();
+		if ( count( $keys ) > 1 ) {
+			$labels   = self::buyer_labels();
+			$sections = array();
+			foreach ( self::BUYER_PAGES[ $buyer_page ] as $tab => $report ) { $sections[ $report ] = $labels[ $tab ]; }
+			$stacked = array( 'pages' => $keys, 'sections' => $sections, 'focus' => $key, 'title' => $labels[ $buyer_page ] );
+		}
 		wp_enqueue_style( 'peptide-core-data', $url . 'data.css', array(), $ver( 'data.css' ) );
 		wp_enqueue_script( self::SCRIPT, $url . 'data.js', array( 'wp-api-fetch', 'wp-url' ), $ver( 'data.js' ), array( 'in_footer' => true ) );
 		wp_add_inline_script(
 			self::SCRIPT,
 			'window.pcData = ' . wp_json_encode(
+				array_merge(
 				array(
 					'page'        => $key,
 					'title'       => self::titles()[ $key ],
 					'range'       => Range::from_params( array() ), // 今天，由服务器按店铺时区算好。
 					'showRange'   => 'realtime' !== $key,           // 实时数据页没有时间段工具栏。
-					'showCompare' => ! in_array( $key, array( 'landing', 'pages', 'sources', 'experiments' ), true ),
+					'showCompare' => (bool) array_diff( $keys, array( 'landing', 'pages', 'sources', 'experiments' ) ), // 同屏时只要有一个报表用对比期就显示。
 					'timezone'    => wp_timezone_string() . ' (UTC' . wp_date( 'P' ) . ')',
 					'currency'    => array(
 						'code'   => get_woocommerce_currency(),
 						'symbol' => html_entity_decode( get_woocommerce_currency_symbol() ),
 					),
 					'strings'     => self::strings(),
+				),
+				$stacked
 				)
 			) . ';',
 			'before'
 		);
+
+		// 下面每个报表的样式、脚本和文案：平时只有当前这一个；合并页同屏时两个都加载（每一段看的都是 $key）。
+		foreach ( $keys as $key ) {
 
 		// 实时数据页的报表（三张卡片、访客行为漏斗、每分钟访客数量、今日列表），在 data.js 之后加载，用 PcData.register( 'realtime', … ) 画进页面。
 		if ( 'realtime' === $key ) {
@@ -734,7 +772,7 @@ final class Data_Pages {
 		if ( 'sources' === $key ) {
 			wp_enqueue_script( 'peptide-core-data-export', $url . 'data-export.js', array( self::SCRIPT, 'wp-api-fetch', 'wp-url' ), $ver( 'data-export.js' ), array( 'in_footer' => true ) );
 			wp_enqueue_script( 'peptide-core-data-sources', $url . 'data-sources.js', array( self::SCRIPT, 'peptide-core-data-export' ), $ver( 'data-sources.js' ), array( 'in_footer' => true ) );
-			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => '' !== $buyer_page ? self::buyer_url( $buyer_page ) : admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) . ';', 'before' );
+			wp_add_inline_script( 'peptide-core-data-sources', 'window.pcDataSources = ' . wp_json_encode( array( 'strings' => self::sources_strings(), 'operationsUrl' => count( $keys ) > 1 ? '' : ( '' !== $buyer_page ? self::buyer_url( $buyer_page ) : admin_url( 'admin.php?page=' . self::PAGES['operations'] ) ) ) + ( self::ad_groups_on() ? array( 'adGroups' => true ) : array() ) ) . ';', 'before' );
 		}
 		if ( 'dimension_details' === $key ) {
 			$dimension = self::dimension_page();
@@ -825,6 +863,7 @@ final class Data_Pages {
 				'before'
 			);
 		}
+		} // foreach $keys
 	}
 
 	/** 页面 key => 翻译后的标题（也是菜单名）。 */
@@ -1385,7 +1424,9 @@ final class Data_Pages {
 	}
 	private static function sources_strings(): array {
 		$navigation = array( 'backToOperations' => __( 'Back to Operations data', 'peptide-core' ) );
-		$channels = array( 'groupBy' => __( 'Group by', 'peptide-core' ), 'utm' => __( 'UTM source', 'peptide-core' ), 'channel' => __( 'Automatic traffic channel', 'peptide-core' ), 'channelNote' => __( 'Channels use the first saved UTM and referrer values for each visit. An empty referrer may mean direct access or a hidden source. Saved UTM values stay unchanged.', 'peptide-core' ), 'channelCoverage' => __( 'Channel observations: %v / %n %t. Unknown: %u; not observed: %o.', 'peptide-core' ), 'visits' => __( 'Visits', 'peptide-core' ) );
+		// M6“按广告拆分”：三种分组的名称、列名和说明。只在广告参数的开关开着时给页面（关着时页面配置和线上一个字都不差）。
+		$ads = array( 'campaign' => __( 'Ad campaign', 'peptide-core' ), 'adset' => __( 'Ad set', 'peptide-core' ), 'ad' => __( 'Ad', 'peptide-core' ), 'utm_campaign' => __( 'Ad campaign', 'peptide-core' ), 'utm_term' => __( 'Ad set', 'peptide-core' ), 'utm_content' => __( 'Ad', 'peptide-core' ), 'adNote' => __( 'Campaign, ad set and ad come from the utm_campaign, utm_term and utm_content of the link a visit landed on (the ad links made in the buyer admin carry all three). Visits whose link had no such value are listed as “Captured key absent”.', 'peptide-core' ) );
+		$channels = ( self::ad_groups_on() ? $ads : array() ) + array( 'groupBy' => __( 'Group by', 'peptide-core' ), 'utm' => __( 'UTM source', 'peptide-core' ), 'channel' => __( 'Automatic traffic channel', 'peptide-core' ), 'channelNote' => __( 'Channels use the first saved UTM and referrer values for each visit. An empty referrer may mean direct access or a hidden source. Saved UTM values stay unchanged.', 'peptide-core' ), 'channelCoverage' => __( 'Channel observations: %v / %n %t. Unknown: %u; not observed: %o.', 'peptide-core' ), 'visits' => __( 'Visits', 'peptide-core' ) );
 		return $navigation + $channels + self::export_strings() + array( 'source' => __( 'UTM source', 'peptide-core' ), 'medium' => __( 'UTM medium', 'peptide-core' ), 'split' => __( 'Split by UTM medium', 'peptide-core' ), 'search' => __( 'Search source and medium values', 'peptide-core' ), 'unobserved' => __( 'Not observed', 'peptide-core' ), 'missing' => __( 'Captured key absent', 'peptide-core' ), 'empty' => __( 'Captured empty value', 'peptide-core' ), 'uv' => __( 'Visitors (UV)', 'peptide-core' ), 'customers' => __( 'Customers', 'peptide-core' ), 'viewed_uv' => __( 'Viewed product UV', 'peptide-core' ), 'carted_uv' => __( 'Added to cart UV', 'peptide-core' ), 'paid_uv' => __( 'Paid UV', 'peptide-core' ), 'orders' => __( 'Paid orders', 'peptide-core' ), 'conversion' => __( 'Conversion rate', 'peptide-core' ), 'sales' => __( 'Sales', 'peptide-core' ), 'aov' => __( 'Average order value', 'peptide-core' ), 'uv_value' => __( 'UV value', 'peptide-core' ), 'prev' => __( 'Previous', 'peptide-core' ), 'next' => __( 'Next', 'peptide-core' ), 'noData' => __( 'No source data in this period.', 'peptide-core' ), 'retry' => __( 'Retry', 'peptide-core' ), 'note' => __( 'First successfully captured source values preserve case, absent keys and empty values. Visits use start time; paid orders use creation time and their original visit. Rows overlap in visitors. Test visits and test orders are excluded. No direct traffic is inferred.', 'peptide-core' ) );
 	}
 
@@ -1578,8 +1619,9 @@ final class Data_Pages {
 			echo '<div class="wrap pc-data-wrap"><h1>' . esc_html__( 'Data', 'peptide-core' ) . '</h1>' . self::buyer_links() . '</div>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- buyer_links() 里已经转义。
 			return;
 		}
-		// 合并页：报表上面多一行页签；其余页面的输出和以前一个字节都不差。
-		echo '<div class="wrap pc-data-wrap">' . ( '' !== $buyer_page ? self::buyer_tabs( $buyer_page ) : '' ) . '<h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
+		// 合并页：报表上面多一行页签；其余页面的输出和以前一个字节都不差。只有投手合并页在同屏布局下不出页签
+		// （两张报表都在页面上）；管理员的“页面与落地页”（主线 11-14 借用了同一套页签）不受同屏布局开关影响。
+		echo '<div class="wrap pc-data-wrap">' . ( '' !== $buyer_page && count( self::buyer_keys( $buyer_page, $key ) ) < 2 ? self::buyer_tabs( $buyer_page ) : '' ) . '<h1 class="screen-reader-text">' . esc_html( self::titles()[ $key ] ) . '</h1><div id="pc-data" class="pc-data" data-page="' . esc_attr( $key ) . '"><p>' . esc_html__( 'Loading…', 'peptide-core' ) . '</p></div></div>';
 		if ( is_callable( array( \PeptideCore\Tracking\Country_Provider::class, 'render_attribution' ) ) ) { \PeptideCore\Tracking\Country_Provider::render_attribution(); }
 	}
 }

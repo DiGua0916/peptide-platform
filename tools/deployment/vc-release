@@ -1,0 +1,73 @@
+#!/usr/bin/env bash
+# 生产上线的唯一入口（2026-11-14 起）。说明见 docs/guides/release-command.md。
+#
+#   tools/deployment/vc-release status                     现在有没有发布在进行、谁持锁、上一次发的是什么（只读）
+#   tools/deployment/vc-release plan                       这次会按什么顺序换哪些副本（只读）
+#   tools/deployment/vc-release check                      线上 15 份副本和主线逐文件比（只读）
+#   tools/deployment/vc-release go --fast  --note "改了什么" --owner-confirmed
+#   tools/deployment/vc-release go --full  --note "改了什么" --owner-confirmed
+#   tools/deployment/vc-release rollback <版本标签> --owner-confirmed
+#   tools/deployment/vc-release unlock --owner-confirmed   锁卡住时强制解锁（先 status 确认没有发布真的在跑）
+#
+# go 总是发“远端主线的最新提交”，不发本地未推送的东西。--owner-confirmed 只能在平台所有者在聊天里明确同意这一次之后加。
+set -euo pipefail
+HERE="$(cd "$(dirname "$0")" && pwd)"; REPO="$(cd "$HERE/../.." && pwd)"
+MAINLINE="${VIALCOVE_MAINLINE:-origin/codex/checkout-acceptance-20261105}"
+INV="${VIALCOVE_RELEASE_INVENTORY:-$HOME/.vialcove/release-inventory.json}"
+TOOLS="${VIALCOVE_TOOLS:-$(cd "$(git -C "$REPO" rev-parse --git-common-dir)/../.." && pwd)/tools}"
+PHP="${VIALCOVE_PHP:-$TOOLS/php/php}"; NODE="${VIALCOVE_NODE:-$(ls -d "$TOOLS"/node-*/bin/node 2>/dev/null | head -1)}"
+die() { echo "vc-release：$*" >&2; exit 1; }
+[ -f "$INV" ] || die "找不到发布清单 $INV（格式见 tools/deployment/release-inventory.example.json；可用 VIALCOVE_RELEASE_INVENTORY 指定）"
+hq() { python3 - "$INV" "$@" <<'PY'
+import json, shlex, subprocess, sys
+inv = json.load(open(sys.argv[1]))["environments"]["production"]; hq = inv["hq_wp"]; h = inv["hosts"][hq["host"]]
+cmd = f"cd /tmp && sudo -u {shlex.quote(hq['user'])} -H wp --path={shlex.quote(hq['path'])} pchq-release " + " ".join(shlex.quote(a) for a in sys.argv[2:])
+sys.exit(subprocess.run(["ssh", "-o", "BatchMode=yes", "-o", "IdentitiesOnly=yes", "-i", h["identity"], f"{h['user']}@{h['host']}", cmd]).returncode)
+PY
+}
+cmd="${1:-}"; shift || true
+fast=""; full=""; note=""; ok=""; label=""
+while [ $# -gt 0 ]; do case "$1" in
+  --fast) fast=1;; --full) full=1;; --note) note="$2"; shift;; --owner-confirmed) ok=1;;
+  *) label="$1";; esac; shift; done
+case "$cmd" in
+  status) hq status; echo "锁的有效期：2 小时（超时自动失效）。卡住了先确认没有发布进程在跑，再 vc-release unlock --owner-confirmed。";;
+  plan) python3 "$HERE/release.py" plan --inventory "$INV" --env production;;
+  check)
+    git -C "$REPO" fetch -q "${MAINLINE%%/*}"; out="$(mktemp -d)"
+    python3 - "$INV" "$out/hosts.json" <<'PY'
+import json, sys
+inv = json.load(open(sys.argv[1]))["environments"]["production"]["hosts"]
+json.dump({"hosts": [dict(role=r, **v) for r, v in inv.items()]}, open(sys.argv[2], "w"))
+PY
+    python3 "$HERE/inventory/drift.py" collect --hosts "$out/hosts.json" --out "$out" >/dev/null
+    python3 "$HERE/inventory/drift.py" report --raw "$out" --ref "$MAINLINE" --out "$out" --date "$(date -u +%F)"
+    echo "详细结果：$out/drift.md";;
+  go)
+    git -C "$REPO" fetch -q "${MAINLINE%%/*}"
+    if git -C "$REPO" cat-file -e "$MAINLINE:tools/deployment/RELEASE_HOLD" 2>/dev/null; then
+      echo "vc-release：主线上有发布暂停标记，现在不能用 go："; git -C "$REPO" show "$MAINLINE:tools/deployment/RELEASE_HOLD"; exit 1
+    fi
+    [ -n "$fast$full" ] && [ -z "$fast" -o -z "$full" ] || die "要选一种：--fast（不等试点观察）或 --full（试点店观察 15 分钟）"
+    [ -n "$note" ] || die "要写 --note \"这次改了什么\""
+    [ -n "$ok" ] || die "生产发布要平台所有者在聊天里明确同意这一次，之后加 --owner-confirmed"
+    git -C "$REPO" fetch -q "${MAINLINE%%/*}"; ref="$(git -C "$REPO" rev-parse "$MAINLINE")"
+    label="$(date -u +%Y.%m.%d-%H%M)"; minutes=15; [ -n "$fast" ] && minutes=0
+    echo "发布 $label：主线 $MAINLINE = ${ref:0:8}，模式 $([ -n "$fast" ] && echo 快速 || echo 完整)，说明：$note"
+    set +e
+    python3 -u "$HERE/release.py" run --inventory "$INV" --env production --label "$label" --confirmed "$label" --ref "$ref" \
+      --mainline "$MAINLINE" --modules "$note" --operator "${VIALCOVE_OPERATOR:-$(whoami)}" --observe-minutes "$minutes" \
+      --php "$PHP" --node "$NODE" --workdir "${TMPDIR:-/tmp}/vialcove-release" 2>&1 | tee "${TMPDIR:-/tmp}/vc-release-$label.log"
+    rc=${PIPESTATUS[0]}; set -e
+    echo
+    echo "----- 贴进 docs/handoffs/production-rollout-plan-2026-11-10.md 的上线记录 -----"
+    echo "### $(date -u '+%F %H:%M') UTC $note（vc-release $label，$([ $rc = 0 ] && echo 成功 || echo 未完成)）"
+    echo "- 主线提交 \`${ref:0:8}\`；模式 $([ -n "$fast" ] && echo 快速 || echo 完整)；总后台发布记录可在“发布记录”页查看。"
+    grep -E "测试单订单号|收款回写|失败|已回滚|发布完成|发布终止|停止" "${TMPDIR:-/tmp}/vc-release-$label.log" | sed 's/^\[[0-9:]*\] */- /'
+    echo "----------------------------------------------------------------------"
+    exit $rc;;
+  rollback) [ -n "$label" ] && [ -n "$ok" ] || die "用法：vc-release rollback <版本标签> --owner-confirmed"
+    python3 "$HERE/release.py" rollback --inventory "$INV" --env production --label "$label";;
+  unlock) [ -n "$ok" ] || die "强制解锁要所有者同意：vc-release unlock --owner-confirmed"; hq unlock --yes;;
+  *) sed -n 2,13p "$0"; exit 1;;
+esac

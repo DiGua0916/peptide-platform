@@ -446,6 +446,17 @@ KEY notice_due (notice_status,notice_next)
 		return $valid;
 	}
 
+	/**
+	 * 价格引擎读取用（M4，只读）：这张积分券的预扣流水是否仍然有效、是否已关联订单。
+	 * 判断条件和 validate_coupon 相同，只是不抛异常、不看当前登录的是谁（由引擎比较）。
+	 */
+	public static function coupon_facts( \WC_Coupon $coupon ): array {
+		$user        = (int) $coupon->get_meta( '_pc_loyalty_user' );
+		$reservation = self::event( 'redeem:' . $coupon->get_meta( '_pc_loyalty_request' ) );
+		$ok          = $reservation && (int) $reservation['reference_id'] === $coupon->get_id() && (int) $reservation['user_id'] === $user && -(int) $reservation['delta'] === (int) $coupon->get_meta( '_pc_loyalty_points' ) && 'yes' !== $coupon->get_meta( '_pc_loyalty_released' ) && ! self::event( 'release-coupon:' . $coupon->get_id() ) && ! self::event( 'release-failed:' . $coupon->get_meta( '_pc_loyalty_request' ) ) && $coupon->get_meta( '_pc_loyalty_currency' ) === get_woocommerce_currency();
+		return array( 'user' => $user, 'ledger_ok' => (bool) $ok, 'linked' => (bool) (int) $coupon->get_meta( '_pc_loyalty_order' ) );
+	}
+
 	public static function link_coupons( $order ): void {
 		if ( ! $order instanceof \WC_Order ) { return; }
 		foreach ( $order->get_coupon_codes() as $code ) {

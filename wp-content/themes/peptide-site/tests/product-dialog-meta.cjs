@@ -49,6 +49,22 @@ test('copies actual stock and classes, hides pending/stale variation stock, upda
   const fresh=new f.Element('p','stock out-of-stock');fresh.textContent='Out of stock';f.stock.remove();f.single.append(fresh);meta.update();assert.equal(copy.textContent,'Out of stock');assert.equal(copy.classList.contains('out-of-stock'),true);assert.equal(copy.classList.contains('in-stock'),false);
   fresh.remove();meta.update();assert.equal(copy.hidden,true);assert.equal(copy.textContent,'');
 });
+test('re-reads stock when Woo draws the variation 300 ms after found_variation, even if no other refresh follows',()=>{
+  // WooCommerce 11 (add-to-cart-variation.js) sets variation_id at found_variation but writes the
+  // availability HTML in a setTimeout(300) and then triggers show_variation. The dialog's own refresh
+  // can all land before that; the strip must not stay empty (2026-11-14, owner: fix the timing only).
+  const f=fixture(),meta=f.create(f.options),copy=meta.element.querySelector('.vc-product-meta__stock');
+  assert.equal(f.nativeHandlers>=3,true,'listens for show_variation / hide_variation / reset_data');
+  f.id.value='';meta.update();f.id.value='72';meta.update();assert.equal(copy.hidden,true,'during the 300 ms the old template is not shown');
+  const drawn=new f.Element('p','stock in-stock');drawn.textContent='49 in stock';f.stock.remove();f.single.append(drawn);
+  assert.equal(copy.hidden,true,'nothing refreshed yet');
+  f.nativeEvent('show_variation');assert.equal(copy.hidden,false);assert.equal(copy.textContent,'49 in stock');assert.equal(copy.classList.contains('in-stock'),true);
+  drawn.remove();f.nativeEvent('hide_variation');assert.equal(copy.hidden,true,'cleared variation clears the line');
+  const before=f.nativeHandlers;meta.destroy();assert.equal(f.nativeHandlers,before-3,'destroy removes exactly its own three handlers');
+});
+test('simple products do not listen for variation events',()=>{
+  const f=fixture(false),before=f.nativeHandlers,meta=f.create(f.options);assert.equal(f.nativeHandlers,before);meta.destroy();
+});
 test('unchanged update makes no DOM writes; home SKU updater still reaches the moved real line',()=>{
   const f=fixture(),meta=f.create(f.options),count=f.writes;meta.update();meta.update();assert.equal(f.writes,count);
   f.summary.querySelector('.vc-home-quick__sku').textContent='SKU TR10';f.setLabel('10mg × 10 vials');meta.update();assert.equal(f.sku.textContent,'SKU TR10');assert.equal(meta.element.querySelector('.vc-product-meta__spec').textContent,'10 mg per vial · 10 vials per box');assert.equal(f.sku.hidden,true);

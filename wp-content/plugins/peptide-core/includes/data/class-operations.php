@@ -189,7 +189,7 @@ final class Operations {
 			)
 		);
 		$orders = is_array( $orders ) ? $orders : array();
-		// M6（NF-02）：开关开着时换成“时间段内付款”的那一批（Data\Metrics::paid_orders()），影子时对账；关着时原样返回。
+		// M6（NF-02）：开关开着时换成统一口径的那一批（Data\Metrics::paid_orders()：同样按下单时间，另外算上已退款但付过款的），影子时对账；关着时原样返回。
 		// 商品、落地页、来源、分维度、趋势、实时、实验等报表都从这里取订单，所以它们和概览页的合计是同一批订单。
 		return class_exists( Metrics_Overlay::class ) ? Metrics_Overlay::paid_orders( $orders, $from, $to ) : $orders;
 	}

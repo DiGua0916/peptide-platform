@@ -22,6 +22,14 @@ namespace {
     function add_filter( $hook, $callback, $priority = 10, $argc = 1 ) { $GLOBALS['hooks'][$hook][] = array( $callback, $priority, $argc ); }
     function add_action( ...$unused ) {}
     function is_front_page() { return $GLOBALS['home'] ?? true; }
+    // Mainline 2026-11-12: the strip's motion script is enqueued where the strip is rendered, and only
+    // when the native render has just registered its dependency (it used to be enqueued on every page).
+    $enqueued = array();
+    function is_admin() { return $GLOBALS['admin_request'] ?? false; }
+    function wp_script_is( $handle, $status = 'enqueued' ) { return 'registered' === $status && in_array( $handle, $GLOBALS['registered_scripts'] ?? array( 'pc-commerce-blocks' ), true ); }
+    function wp_enqueue_script( $handle, $src = '', $deps = array(), $ver = false, $footer = false ) { $GLOBALS['enqueued'][ $handle ] = array( 'src' => $src, 'deps' => $deps, 'footer' => $footer ); }
+    function get_template_directory() { return dirname( __DIR__ ); }
+    function get_template_directory_uri() { return 'https://store.test/wp-content/themes/peptide-site'; }
     function peptide_core_get_campaign_announcement( array $settings, bool $home ): array {
         $GLOBALS['helper_arguments'] = array( $settings, $home );
         return $GLOBALS['campaign_dto'];
@@ -131,5 +139,23 @@ namespace {
     $custom=$announcement; $custom['settings']['conditionTemplateHtml']='Spend {{condition}}, get'; $custom['settings']['discountTemplateHtml']='{{discount}} OFF';
     $rendered=vc_campaign_bubble_html(null,$custom,'public','mobile');
     check( str_contains($rendered,'Spend $300.00, get</div>') && str_contains($rendered,'$25.00 OFF</div>'), 'Announcement also respects both merchant-authored wording templates.' );
+    // The motion script: with a strip and its dependency registered, once, in the footer, after pc-commerce-blocks.
+    $GLOBALS['enqueued'] = array(); reset_campaign(array(),$native);
+    vc_campaign_bubble_html(null,$announcement,'public','mobile');
+    $motion = $GLOBALS['enqueued']['vc-campaign-announcement'] ?? null;
+    check( is_array($motion) && array('pc-commerce-blocks')===$motion['deps'] && true===$motion['footer'] && str_ends_with($motion['src'],'/assets/campaign-announcement.js'), 'A rendered strip loads its motion script after the native script it depends on.' );
+    $GLOBALS['enqueued'] = array(); $GLOBALS['registered_scripts'] = array(); reset_campaign(array(),$native);
+    check( str_contains(vc_campaign_bubble_html(null,$announcement,'public','mobile'),'data-vc-campaign-strip') && array()===$GLOBALS['enqueued'], 'Without the registered dependency the strip still renders and nothing is enqueued (no unmet-dependency notice).' );
+    unset($GLOBALS['registered_scripts']);
+    $GLOBALS['enqueued'] = array(); $GLOBALS['admin_request'] = true; reset_campaign(array(),$native);
+    vc_campaign_bubble_html(null,$announcement,'editor','mobile');
+    check( array()===$GLOBALS['enqueued'], 'The editor preview does not load the storefront motion script.' );
+    $GLOBALS['admin_request'] = false;
+    $GLOBALS['enqueued'] = array(); reset_campaign();
+    vc_campaign_bubble_html(null,module(),'public','mobile');
+    check( array()===$GLOBALS['enqueued'], 'The bubble presentation and pages without a strip never load it.' );
+    $GLOBALS['enqueued'] = array(); reset_campaign(array('visible'=>false),$native);
+    vc_campaign_bubble_html(null,$announcement,'public','mobile');
+    check( array()===$GLOBALS['enqueued'], 'A hidden strip loads nothing.' );
     echo "$passed campaign bubble presentation guards passed\n";
 }

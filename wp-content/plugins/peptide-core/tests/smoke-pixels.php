@@ -39,7 +39,9 @@ $catch    = static function ( $pre, $args, $url ) use ( &$requests, &$reply ) {
 	$requests[] = array( 'url' => $url, 'args' => $args, 'body' => json_decode( (string) ( $args['body'] ?? '' ), true ) );
 	return $reply;
 };
-add_filter( 'pre_http_request', $catch, 1, 3 );
+// 排在最后：沙盒和本地测试站自己也挂了“拦掉一切对外请求”的过滤器，优先级比这里晚的话会把下面的模拟回应换成错误，
+// 请求照样被记下，但发送记录里全是失败。
+add_filter( 'pre_http_request', $catch, PHP_INT_MAX, 3 );
 Server::$sync = true;
 
 // 1. 设置清理。
@@ -235,7 +237,7 @@ $ok( 'admin page: every platform card, masked token, notes and settings', 23 ===
 $ok( 'admin page: X event ID fields and the per-platform notes', str_contains( $html, 'name="platforms[twitter][event_ids][purchase]"' ) && str_contains( $html, 'Event IDs' ) && str_contains( $html, 'only the first ID is used' ) );
 
 // 7. 清理。
-remove_filter( 'pre_http_request', $catch, 1 );
+remove_filter( 'pre_http_request', $catch, PHP_INT_MAX );
 Server::$sync = false;
 unset( $_COOKIE['_fbp'], $_COOKIE['_ttp'] );
 WC()->cart->empty_cart();

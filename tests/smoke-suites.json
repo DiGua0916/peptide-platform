@@ -1,0 +1,609 @@
+{
+  "baseline": {
+    "date": "2026-11-12",
+    "commit": "12b0f63",
+    "where": "沙盒（后台机），先 wp peptide demo seed，数据库跑完恢复",
+    "runner": "tools/sandbox/run-smoke.sh"
+  },
+  "statuses": {
+    "gate": "发布前在沙盒必须通过",
+    "skipped": "基线时就失败：归属会话修好后改回 gate",
+    "local-only": "只能在本地隔离环境跑"
+  },
+  "suites": [
+    {
+      "name": "checkout-phone-required-native",
+      "path": "wp-content/plugins/peptide-core/tests/checkout-phone-required-native.php",
+      "status": "skipped",
+      "checks": "0/0",
+      "owner": "日常会话",
+      "skip_reason": "PHP Fatal error: Cannot redeclare get_option() (previously declared in /srv/vialcove-sandbox/admin/public/wp-includes/option.php:78) in /var/tmp/m1/t/"
+    },
+    {
+      "name": "checkout-savings-native",
+      "path": "wp-content/plugins/peptide-core/tests/checkout-savings-native.php",
+      "status": "skipped",
+      "checks": "0/0",
+      "owner": "日常会话",
+      "skip_reason": "PHP Fatal error: Cannot redeclare get_option() (previously declared in /srv/vialcove-sandbox/admin/public/wp-includes/option.php:78) in /var/tmp/m1/t/"
+    },
+    {
+      "name": "smoke-activity-blocks",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-activity-blocks.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-admin-menus",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-admin-menus.php",
+      "status": "skipped",
+      "checks": "48/2",
+      "owner": "F5",
+      "skip_reason": "候选 c5fb1d8 上剩 2 项：payment settings open under the WooCommerce payments menu；wc-settings tab checkout highlights …&from=PAYMENTS_MENU_ITEM"
+    },
+    {
+      "name": "smoke-backend",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-backend.php",
+      "status": "skipped",
+      "checks": "44/26",
+      "owner": "日常会话",
+      "skip_reason": "FAIL collected images become media files in the chosen group, with the source address FAIL an address without a file extension is recognised by its co"
+    },
+    {
+      "name": "smoke-basic-config",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-basic-config.php",
+      "status": "gate",
+      "checks": "67/0"
+    },
+    {
+      "name": "smoke-batch-orders",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-batch-orders.php",
+      "status": "gate",
+      "checks": "14/0"
+    },
+    {
+      "name": "smoke-block-records",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-block-records.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-commerce-blocks",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-commerce-blocks.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-content-block-bindings",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-content-block-bindings.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-content-tools",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-content-tools.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-coupons",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-coupons.php",
+      "status": "gate",
+      "checks": "36/0"
+    },
+    {
+      "name": "smoke-custom-pages",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-custom-pages.php",
+      "status": "skipped",
+      "checks": "16/2",
+      "owner": "日常会话",
+      "skip_reason": "FAIL shipping policy draft created FAIL draft has placeholders, not finished text "
+    },
+    {
+      "name": "smoke-customer-flow",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-customer-flow.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-customer-loyalty",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-customer-loyalty.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-apps",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-apps.php",
+      "status": "skipped",
+      "checks": "13/8",
+      "owner": "F4",
+      "skip_reason": "FAIL shown: 10 vs 5, change +100.0 FAIL claims (claim + spin): 3 vs 1, change +200.0 ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 21/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-data-attribution",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-attribution.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-conversion-export",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-conversion-export.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-conversion",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-conversion.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-emails",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-emails.php",
+      "status": "gate",
+      "checks": "19/0"
+    },
+    {
+      "name": "smoke-data-exports",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-exports.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-full-rankings",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-full-rankings.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-landing",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-landing.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-operations-checkout",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-operations-checkout.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-operations",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-operations.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-page-context",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-page-context.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-pages",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-pages.php",
+      "status": "gate",
+      "checks": "23/0"
+    },
+    {
+      "name": "smoke-data-products",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-products.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture products "
+    },
+    {
+      "name": "smoke-data-rankings",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-rankings.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-realtime-dimensions",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-realtime-dimensions.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-realtime-filters",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-realtime-filters.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-realtime-history",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-realtime-history.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data-realtime",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-realtime.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-sync",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-sync.php",
+      "status": "gate",
+      "checks": "37/0"
+    },
+    {
+      "name": "smoke-data-trends",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-trends.php",
+      "status": "skipped",
+      "checks": "0/1",
+      "owner": "F4",
+      "skip_reason": "FAIL fixture product "
+    },
+    {
+      "name": "smoke-data-visitor-funnel",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data-visitor-funnel.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-data",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-data.php",
+      "status": "skipped",
+      "checks": "38/3",
+      "owner": "F4",
+      "skip_reason": "FAIL DST end day is one calendar day of 25 hours FAIL Data submenu has the nine pages in Shopname order "
+    },
+    {
+      "name": "smoke-design-editor",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-design-editor.php",
+      "status": "gate",
+      "checks": "39/0"
+    },
+    {
+      "name": "smoke-domains",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-domains.php",
+      "status": "skipped",
+      "checks": "45/5",
+      "owner": "日常会话",
+      "skip_reason": "FAIL a domain that returns this store’s code is connected; Cloudflare is detected FAIL HTTPS that fails stays “checking” during the first 7 days "
+    },
+    {
+      "name": "smoke-email-campaigns",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-email-campaigns.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-emails",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-emails.php",
+      "status": "gate",
+      "checks": "31/0"
+    },
+    {
+      "name": "smoke-exit-intent",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-exit-intent.php",
+      "status": "skipped",
+      "checks": "30/7",
+      "owner": "F2",
+      "skip_reason": "FAIL spin and win counted FAIL only one spin per visit: the same result comes back ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 40/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-hq-connector",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-hq-connector.php",
+      "status": "skipped",
+      "checks": "7/26",
+      "owner": "F1",
+      "skip_reason": "用例是单域名时代写的：向前台域名发签名请求、总后台地址用 http、不带防重放参数，双域名和签名规则收紧后必然被拒（不是连接器坏了）。连接本身由 critical-path 的“总后台连接”9 项覆盖。M2 改注册和密钥时重写这个用例",
+      "root_cause_checked": "2026-11-12"
+    },
+    {
+      "name": "smoke-import",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-import.php",
+      "status": "gate",
+      "checks": "23/0"
+    },
+    {
+      "name": "smoke-marketing",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-marketing.php",
+      "status": "skipped",
+      "checks": "80/1",
+      "owner": "F2",
+      "skip_reason": "FAIL an all-products promotion after it has ended is fine ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 81/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-menus",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-menus.php",
+      "status": "gate",
+      "checks": "51/0"
+    },
+    {
+      "name": "smoke-modules",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-modules.php",
+      "status": "skipped",
+      "checks": "59/1",
+      "owner": "日常会话",
+      "skip_reason": "FAIL category source returns only that category "
+    },
+    {
+      "name": "smoke-notice-launch",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-notice-launch.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-order-batches",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-order-batches.php",
+      "status": "gate",
+      "checks": "18/0"
+    },
+    {
+      "name": "smoke-overview",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-overview.php",
+      "status": "skipped",
+      "checks": "19/5",
+      "owner": "F4",
+      "skip_reason": "FAIL sales and orders count only paid orders FAIL test orders are left out and counted separately "
+    },
+    {
+      "name": "smoke-page-design",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-page-design.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-pixels",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-pixels.php",
+      "status": "skipped",
+      "checks": "46/2",
+      "owner": "F4",
+      "skip_reason": "FAIL each send is written to the log FAIL a refused send is logged with the HTTP code and message "
+    },
+    {
+      "name": "smoke-pricing",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-pricing.php",
+      "status": "skipped",
+      "checks": "22/1",
+      "owner": "F2",
+      "skip_reason": "FAIL Woo payable total stays authoritative (59.96 - 6.00 = 53.96) ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 23/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-product-hover",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-product-hover.php",
+      "status": "gate",
+      "checks": "16/0"
+    },
+    {
+      "name": "smoke-product-offers",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-product-offers.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-product-reviews",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-product-reviews.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-promotions",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-promotions.php",
+      "status": "skipped",
+      "checks": "33/1",
+      "owner": "F2",
+      "skip_reason": "FAIL saving a public promotion creates the offers page ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 34/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-read-api",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-read-api.php",
+      "status": "gate",
+      "checks": "18/0"
+    },
+    {
+      "name": "smoke-recovery",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-recovery.php",
+      "status": "skipped",
+      "checks": "22/21",
+      "owner": "日常会话",
+      "skip_reason": "FAIL three stages with Shopname default delays 300 / 1800 / 86400 s FAIL stage 1 sent after 300 s: recalling, 1 email "
+    },
+    {
+      "name": "smoke-referrals",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-referrals.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-review-block-bindings",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-review-block-bindings.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-review-layout",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-review-layout.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-review-legacy-media",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-review-legacy-media.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-review-media",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-review-media.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-review-products",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-review-products.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-save-logic",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-save-logic.php",
+      "status": "gate",
+      "checks": "14/0"
+    },
+    {
+      "name": "smoke-security",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-security.php",
+      "status": "gate",
+      "checks": "23/0"
+    },
+    {
+      "name": "smoke-seo",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-seo.php",
+      "status": "gate",
+      "checks": "28/0"
+    },
+    {
+      "name": "smoke-settings-ack",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-settings-ack.php",
+      "status": "skipped",
+      "checks": "16/1",
+      "owner": "F5",
+      "skip_reason": "FAIL cleanup: settings restored "
+    },
+    {
+      "name": "smoke-shipping-plans",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-shipping-plans.php",
+      "status": "skipped",
+      "checks": "29/2",
+      "owner": "F2",
+      "skip_reason": "FAIL checkout offers the plan rates and nothing from the old zone FAIL mixed real cart charges 30 + 80 = 110 (cheapest general rate + custom rate) ",
+      "fixed_in": "claude/m4-pricing-35ba90 @27b3c37",
+      "verified": "2026-11-12 沙盒候选 c5fb1d8 上实跑 31/0；F2 分支合进主线时把 status 改回 gate"
+    },
+    {
+      "name": "smoke-shipping-support",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-shipping-support.php",
+      "status": "gate",
+      "checks": "32/0"
+    },
+    {
+      "name": "smoke-site-design-details",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-site-design-details.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-site-tools",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-site-tools.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-staff-fulfillments",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-staff-fulfillments.php",
+      "status": "gate",
+      "checks": "29/0"
+    },
+    {
+      "name": "smoke-store-design",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-store-design.php",
+      "status": "gate",
+      "checks": "37/0"
+    },
+    {
+      "name": "smoke-subscriptions",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-subscriptions.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-tax-plans",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-tax-plans.php",
+      "status": "gate",
+      "checks": "21/0"
+    },
+    {
+      "name": "smoke-terms",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-terms.php",
+      "status": "gate",
+      "checks": "19/0"
+    },
+    {
+      "name": "smoke-tracking",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-tracking.php",
+      "status": "skipped",
+      "checks": "90/2",
+      "owner": "F4",
+      "skip_reason": "FAIL duplicates are stored once FAIL returning visitor is live again, same visit "
+    },
+    {
+      "name": "smoke-workbench",
+      "path": "wp-content/plugins/peptide-core/tests/smoke-workbench.php",
+      "status": "gate",
+      "checks": "13/0"
+    },
+    {
+      "name": "smoke-client-nonce",
+      "path": "wp-content/plugins/peptide-hq/tests/smoke-client-nonce.php",
+      "status": "local-only",
+      "checks": "0/0",
+      "skip_reason": "用例自带“只能在本地隔离环境运行”的保护，不在沙盒跑"
+    },
+    {
+      "name": "smoke-hq",
+      "path": "wp-content/plugins/peptide-hq/tests/smoke-hq.php",
+      "status": "skipped",
+      "checks": "13/0",
+      "owner": "F1",
+      "skip_reason": "前 13 项通过；清理时直接调 Sites::delete()，11-03 起删店必须走 Site_Lifecycle::request，抛 LogicException。用例没跟上，不是功能问题。M2 时重写",
+      "root_cause_checked": "2026-11-12"
+    }
+  ]
+}

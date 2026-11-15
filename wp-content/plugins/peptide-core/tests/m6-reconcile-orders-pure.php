@@ -26,8 +26,8 @@ m6_check( 'legacy total matches the old formula (total - WooCommerce refund)', 3
 $GLOBALS['m6_orders'] = array();
 Metrics::flush();
 m6_order( 1, 'processing', 20.0, 150, 150 );                               // 两边都算，金额相同。
-m6_order( 2, 'processing', 10.0, 250, 150 );                               // 时间段内创建、之后付款。
-m6_order( 3, 'processing', 15.0, 150, 50 );                                // 之前创建、时间段内付款。
+m6_order( 2, 'processing', 10.0, 250, 150 );                               // 时间段内下单、之后付款：两边都算（口径版本 2 按下单时间）。
+m6_order( 3, 'processing', 15.0, 150, 50 );                                // 之前下单、时间段内付款：两边都不算。
 m6_order( 4, 'processing', 1.0, 150, 150 )->ones = true;                    // 收件信息全 1 的测试单。
 m6_order( 5, 'refunded', 40.0, 160, 150 )->meta['_pc_refund_cents'] = 4000; // 已退款但付过款。
 m6_order( 6, 'processing', 30.0, 150, 150 )->wc_refund = 5.0;               // 只有 WooCommerce 退款。
@@ -37,13 +37,13 @@ m6_order( 9, 'pending', 50.0, null, 150 );                                 // �
 
 $r = Reconcile::orders( 100, 200 );
 m6_check( 'legacy totals', array( 'orders' => 5, 'sales_cents' => 8600 ) === $r['legacy'] );
-m6_check( 'metrics totals equal Data\\Metrics', array( 'orders' => 5, 'sales_cents' => 8500 ) === $r['metrics'] && 5 === Metrics::orders( 100, 200 )['orders'] && 8500 === Metrics::orders( 100, 200 )['sales_cents'] );
-m6_check( 'delta', array( 'orders' => 0, 'sales_cents' => -100 ) === $r['delta'] );
+m6_check( 'metrics totals equal Data\\Metrics', array( 'orders' => 5, 'sales_cents' => 8000 ) === $r['metrics'] && 5 === Metrics::orders( 100, 200 )['orders'] && 8000 === Metrics::orders( 100, 200 )['sales_cents'] );
+m6_check( 'delta', array( 'orders' => 0, 'sales_cents' => -600 ) === $r['delta'] );
 $reasons = $r['reasons'];
 ksort( $reasons );
-m6_check( 'every difference has a named reason', array( 'created_outside_range', 'paid_outside_range', 'refund_basis', 'refunded_status', 'test_order_rule' ) === array_keys( $reasons ) );
-m6_check( 'paid later: legacy only', -1 === $reasons['paid_outside_range']['orders'] && -1000 === $reasons['paid_outside_range']['cents'] && array( 2 ) === $reasons['paid_outside_range']['ids'] );
-m6_check( 'created earlier: metrics only', 1 === $reasons['created_outside_range']['orders'] && 1500 === $reasons['created_outside_range']['cents'] && array( 3 ) === $reasons['created_outside_range']['ids'] );
+m6_check( 'every difference has a named reason', array( 'refund_basis', 'refunded_status', 'test_order_rule' ) === array_keys( $reasons ) );
+$m6_ids = array_merge( ...array_column( $reasons, 'ids' ) );
+m6_check( 'version 2: an order paid after the period and one placed before it are no longer differences', ! in_array( 2, $m6_ids, true ) && ! in_array( 3, $m6_ids, true ) && ! isset( Reconcile::REASONS['paid_outside_range'] ) && ! isset( Reconcile::REASONS['created_outside_range'] ) );
 m6_check( 'all-ones test order: legacy only', -1 === $reasons['test_order_rule']['orders'] && -100 === $reasons['test_order_rule']['cents'] && array( 4 ) === $reasons['test_order_rule']['ids'] );
 m6_check( 'refunded but paid: metrics only, net zero', 1 === $reasons['refunded_status']['orders'] && 0 === $reasons['refunded_status']['cents'] && array( 5 ) === $reasons['refunded_status']['ids'] );
 m6_check( 'refund basis: same orders, different money', 0 === $reasons['refund_basis']['orders'] && -500 === $reasons['refund_basis']['cents'] && array( 6, 7 ) === $reasons['refund_basis']['ids'] );

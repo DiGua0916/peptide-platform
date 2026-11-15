@@ -855,5 +855,48 @@
 
 #### 遗留
 1. **新开店会再踩一次**：`/srv/vialcove-provision-template/yy-sync-0532574-1794082452-admin/source/wp-content/db.php` 在供应模板里，但模板的 wp-config 是开店时生成的，不带 `PC_PANAPAY_DB_HOST`。要么在开店脚本里一起写进去，要么让 `Database::open()` 认得这个只加 `p:` 的 drop-in（后者动的是支付核心的安全防线，需要店主拍板，且 peptide-panapay 正在发版，先不动）。
-2. db.php 不在代码仓库里（是手工放到各后台的），下次整目录发布 store-admin 会不会把它带走，取决于发布代理的替换范围——要确认。
+2. ~~db.php 会不会被发布带走~~ **已确认不会**（2026-11-14，经另一会话向 F1 核对）：发布代理只整目录替换 5 个组件目录（plugins/peptide-core、peptide-hq、peptide-panapay、peptide-ops、themes/peptide-site），wp-content 根目录下的 db.php 和 wp-config 都不碰。但 db.php 仍然不在代码仓库里，是手工放到各后台的，换机器 / 重装时要记得补。
 3. 光辉那位客户的 "Payment attempts are too frequent"（Panapay 限流）仍待店主找 Panapay 确认限流维度和是否仍在限。
+
+### 2026-11-14 上线流程变更：生产只有一个入口
+所有者 2026-11-14 定的（经"站点底层优化"会话转达，原话"按这个改"）。起因是当天有多个会话同时往生产推：F1 的热修复包 A 被打断三次，还盖掉过我的一次修复。
+
+**新流程**
+1. 生产只有一个入口——F1 的发布工具：整目录替换、指纹核对、发布前数据库备份、自动检查、失败自动回滚，并且**加锁**，同一时间只允许一个发布，后来的排队。日常小改动有快速模式。
+2. 我照常提交到主线 `codex/checkout-acceptance-20261105`，然后用该工具的一条命令上线，**不再自己 scp / rsync 文件到服务器**。F1 交付命令和一页说明（约半天）。
+3. **过渡期**（工具交付前）：要上线先通知"站点底层优化"会话，由它和 F1 确认没有发布在进行，再推。
+4. F1 接下来会把 5 个优化模块合进主线（开关全关），再用新工具整目录发一次；那次发布前会提前通知我暂停。
+
+**工具管不到的**：`wp-config.php`、`wp-content/db.php` 这类不在 5 个组件目录（plugins/peptide-core、peptide-hq、peptide-panapay、peptide-ops、themes/peptide-site）里的服务器配置，仍由我手工维护，改之前先知会。本文件上一节的 `PC_PANAPAY_DB_HOST` 就属于这一类。
+
+**已向 F1 提出、待写进使用说明的四点**（未答复前按旧习惯谨慎操作）
+1. 一条命令是否覆盖全部 14 份副本（含 web 模板和 admin 模板）。漏掉模板会导致下次开店或换 release 回退到旧代码。
+2. 发布记录由工具生成还是仍由我写进本文件；若仍由我写，请把指纹核对结果输出出来。
+3. 发布中途失败或进程被杀时，锁如何释放：查看持锁者、强制解锁的命令，以及锁超时时间。
+4. 应急通道：线上故障且工具不可用时，所有者认可的上线步骤是什么。
+
+### 2026-11-14 开店脚本补上 PC_PANAPAY_DB_HOST（上一节遗留项 1 已闭环）
+所有者指派（经"站点底层优化"会话转达）。解决的是上面"新开店会再踩一次"那条：开店时生成的后台 wp-config 不带 `PC_PANAPAY_DB_HOST`，而后台都装了只加 `p:` 的 `wp-content/db.php`，`Database::open()` 会拒绝运行——这正是 2026-11-14 支付回写中断的成因。
+
+**改了什么**：`admin_create()` 在把 web 配置改成管理通道（`'DB_HOST','127.0.0.1:13361'`）之后，紧跟着插入一行 `define('PC_PANAPAY_DB_HOST',DB_HOST);`，并加了一条 `require(..., 'payment_write_back_configuration')` 断言，漏写就直接开店失败而不是静默上线一个收不到回写的后台。
+
+- 仓库副本：`tools/deployment/provisioning/worker.py`（本次提交）
+- 服务器副本：总后台 54.144.250.46 `/usr/local/lib/vialcove-provision/worker.py`，手工同步，md5 与仓库副本一致 `04465f80764fb2b141538eb13a7a8b6f`
+- 备份：`/usr/local/lib/vialcove-provision/worker.py.bak-20261114-payfix`（改前原件，md5 `db64161ad1289d75555ef5b905b75aeb`）
+- 验证：服务器端 `python3 -m py_compile` 通过；用 s0006 的真实 web 配置字节形式（`define('DB_HOST','localhost');`）做过替换干跑，生成结果正确
+- 该文件不在 5 个组件目录内，`vc-release` 不覆盖、其 `check` 也不会报它，所以属于手工维护项
+
+**离线验证（2026-11-14 补）**：加了回归测试 `test_admin_config_declares_payment_write_back_host`，它用 worker 自己的 `configuration()` 生成真实 web 配置，再走 `admin_create()` 的同一套替换，断言 `PC_PANAPAY_DB_HOST` 出现且只出现一次、排在 `DB_HOST` 之后（它是裸常量引用，顺序错了 PHP 会炸）、配置里不再残留 `localhost`，并断言 worker.py 源码里那条 `require` 断言还在。把 worker.py 回退到修复前，这个测试会失败——确认它真的在守这件事。仓库测试套件在本机 39 个用例，失败数与修复前完全一致（2 failures / 10 errors，都是本机环境造成的既有失败，与本改动无关）。
+
+**未完成**：还没开测试店做端到端验证（开一个店 → 看生成的 wp-config 有这行 → 在该店后台确认一次支付通知回写到位）。按店主"测试一律用主店 s0001，不动子店"的规矩，开新店要先经店主同意，已在等。
+
+### 2026-11-16 02:36–02:55 北京（2026-11-15 18:36–18:55 UTC）整目录发布：全部优化代码合进主线后一次上线（vc-release 流程，F1）
+- 平台所有者在 F1 会话里直接确认“现在就发”。发布记录 #3，标签 `2026.11.16-1`，主线提交 `0729276e`（= 合并分支 b60ceea7：主线 + F1 发布工具 + 热修复 A + F2 M4、F3 M3/M10、F4 M6/M7、F5 M9/M11/M14，开关全关）。版本：核心 0.34.0、总后台 0.5.0、主题 0.3.0；支付插件 0.4.7、运维代理 0.2.0 没变。
+- 范围：6 家店前台和后台、两份开店模板、总后台，共 15 份，只整目录换 5 个组件目录；`db.php`、`wp-config.php`、mu-plugins、uploads、报告文件没碰。
+- 发布前：6 家店库和总后台库都做了快照（`/root/vialcove-backups/release-2026.11.16-1/`）；本机测试 110 过 / 0 失败 / 2 跳过；每一组换之前都重新核对了主线和这一组的线上指纹。
+- 试点主店 s0001：完整检查通过，测试单 #11893（收件信息全 1，待付款，留在店里）走到付款页；观察 15 分钟无致命错误。其余 5 家、两份模板、总后台依次通过。用时约 20 分钟。
+- 收款回写探测（第一次在生产跑）：s0001、s0006、s0007、s0008、s0009、s0010 六家店后台全部 PASS（签名和支付库都正常，探测事件按预期被拒，不改订单）。
+- 发布后：`vc-release check` 15 份副本和主线 0 个不一致（之前遗留的 26 个旧文件 / macOS 附属文件也一并清掉了）；6 家店核心 0.34.0、追踪表 v7、所有新开关都没有（= 关）；总后台 0.5.0，`pchq_m10_db` 1 → 2（订单表加一列一张表，不回退），`pchq_m10_extras` 没有。
+- 随后从主线删掉发布暂停标记 `tools/deployment/RELEASE_HOLD`（主线 7ee95622），以后上线一律用 `tools/deployment/vc-release`。
+- 回滚：`tools/deployment/vc-release rollback 2026.11.16-1 --owner-confirmed`（换回发布前目录；总后台订单表升级不回退，旧代码能在新结构上跑）。
+

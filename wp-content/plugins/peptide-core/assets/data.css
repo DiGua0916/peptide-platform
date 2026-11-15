@@ -532,3 +532,25 @@
 .pc-exp-more__panel { position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; display: grid; gap: 10px; min-width: 300px; padding: 12px 14px; border: 1px solid #ececec; border-radius: 6px; background: #fff; box-shadow: 0 6px 18px rgba(0, 0, 0, .1); }
 .pc-exp-more__panel label { display: flex; align-items: center; gap: 8px; margin: 0; color: #525252; font-size: 13px; }
 .pc-exp-more__panel :is(input, select) { min-height: 30px; border-color: #dcdcdc; border-radius: 6px; }
+
+/* ST-05 同屏布局：一页上下两个报表，每个报表一段。 */
+.pc-data-section + .pc-data-section { margin-top: 32px; padding-top: 24px; border-top: 1px solid #ececec; }
+.pc-data-section-title { margin: 0 0 14px; font-size: 18px; font-weight: 600; line-height: 1.4; }
+
+/* 日期框的左右内边距：后台通用样式（admin-workspace.css）给所有输入框加了 12px，优先级比上面本页的 2px 高，
+   结果四位年份的最后一位被日历图标压住（桌面宽度也是）。这里用更高的优先级把 2px 拿回来。 */
+#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { padding: 0 2px; }
+
+/* 手机宽度的时间段工具条：后台通用样式在窄屏给所有输入框加了 12px 的左右内边距和 16px 字号，
+   日期框里四位年份被切掉（10/14/202）。这里收回内边距、去掉前面的时钟图标，两个日期各占一半。字号保持 16px（再小 iOS 聚焦时会放大页面）。 */
+@media (max-width: 600px) {
+	#wpbody-content .pc-data .pc-data-rangebox input.pc-data-date { flex: 1 1 0; width: auto; min-width: 0; min-height: 28px; height: 30px; padding: 0 2px; }
+	.pc-data .pc-data-rangebox { height: auto; min-height: 36px; }
+	.pc-data-rangebox .pc-data-clock { display: none; }
+	/* 报表里的筛选行（入口域名、访问国家）：标签、下拉、输入框原来挤在一行不换行，输入框伸出屏幕右边。窄屏下允许换行，输入框单独占一行。 */
+	.pc-data-body .pc-report-filters { align-items: stretch; }
+	.pc-data-body .pc-report-filters label { display: flex; flex-wrap: wrap; flex: 1 1 100%; min-width: 0; }
+	.pc-data-body .pc-report-filters label :is(select, input[type="text"]) { flex: 1 1 120px; width: auto; min-width: 0; max-width: 100%; }
+	/* “每页条数”下拉：窄屏的大字号和内边距下，数字和箭头叠在一起。 */
+	#wpbody-content .pc-data select:is(.pc-landing-perpage, .pc-pages-perpage, .pc-dim-perpage) { min-width: 80px; }
+}

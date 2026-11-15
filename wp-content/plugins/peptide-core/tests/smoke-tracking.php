@@ -90,7 +90,14 @@ $ok( 'visit created with landing page, stage = viewed product', $visit1 && '/pro
 // 2. 重复 / 乱序 / 无效。
 $res = $send( array( 'tab_id' => $tabA, 'events' => array( $batch[0], $batch[1] ) ) );
 $ok( 'duplicates are acknowledged again', 2 === count( $res->get_data()['ack'] ) );
-$ok( 'duplicates are stored once', 3 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d', $visitor['id'] ) ) ); // phpcs:ignore
+// 只数这一批的三个事件：店里开着实验、访问分类之类的功能时，服务端会给同一个访客另外记事件，不能按访客的事件总数判断。
+$batch_uids = array_column( $batch, 'event_id' );
+$stored     = $wpdb->get_results( $wpdb->prepare( 'SELECT event_uid, type FROM ' . Schema::table( 'events' ) . ' WHERE visitor_id = %d', $visitor['id'] ), ARRAY_A ); // phpcs:ignore
+$mine       = array_values( array_filter( $stored, static fn( $e ) => in_array( $e['event_uid'], $batch_uids, true ) ) );
+$ok( 'duplicates are stored once', 3 === count( $mine ) && 3 === count( array_unique( array_column( $mine, 'event_uid' ) ) ) );
+if ( 3 !== count( $stored ) ) {
+	echo 'INFO this visitor has ', count( $stored ), ' events in all; types: ', implode( ', ', array_column( $stored, 'type' ) ), "\n";
+}
 $ok( 'duplicates do not inflate counters', 3 === (int) $wpdb->get_var( $wpdb->prepare( 'SELECT events FROM ' . Schema::table( 'visits' ) . ' WHERE id = %d', $visit1 ) ) ); // phpcs:ignore
 
 $pageA2 = $uuid();
@@ -357,7 +364,10 @@ $archVisit = $a1['items'][0]['visit']['id'];
 // 30 分钟内回来：回到实时列表，仍是同一次访问。
 $send( array( 'tab_id' => $archTab, 'events' => array( $ev( 'page_view', Tracker::now_ms(), $uuid(), 1, array( 'page_type' => 'home', 'path' => '/' ), array( 'visibility' => 'visible', 'activity' => 'active' ) ) ) ) );
 $visitCount = (int) $wpdb->get_var( $wpdb->prepare( 'SELECT COUNT(*) FROM ' . Schema::table( 'visits' ) . ' WHERE visitor_id = %d', $arch['id'] ) ); // phpcs:ignore
-$ok( 'returning visitor is live again, same visit', in_array( $arch['id'], $liveIds(), true ) && ! Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'] ) )['items'] && 1 === $visitCount );
+// 2026-11-10 起访客存档也列出正在逛的访问（原因是 ongoing），所以回来之后存档里仍有这一条，只是不再算“已离开”。
+$back = Query::archive( Tracker::now_ms(), array( 'q' => '#' . $arch['id'] ) )['items'];
+$ok( 'returning visitor is live again, same visit', in_array( $arch['id'], $liveIds(), true ) && 1 === $visitCount && 1 === count( $back ) && $archVisit === $back[0]['visit']['id'] );
+$ok( 'the archive now shows that visit as ongoing, not as left', 'ongoing' === ( $back[0]['reason'] ?? '' ) );
 // 那次访问变成 31 分钟前：超时推定进归档，事件还在。
 $wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'visits' ) . ' SET last_ms = %d, start_ms = %d WHERE id = %d', Tracker::now_ms() - 31 * 60000, Tracker::now_ms() - 40 * 60000, $archVisit ) ); // phpcs:ignore
 $wpdb->query( $wpdb->prepare( 'UPDATE ' . Schema::table( 'tabs' ) . ' SET last_signal_ms = %d WHERE visitor_id = %d', Tracker::now_ms() - 31 * 60000, $arch['id'] ) ); // phpcs:ignore

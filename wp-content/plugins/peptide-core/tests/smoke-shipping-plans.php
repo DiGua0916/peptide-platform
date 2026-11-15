@@ -25,6 +25,10 @@ $orig_plans = get_option( Plans::OPTION, null );
 $orig_rules = get_option( Plans::RULES, null );
 delete_option( Plans::OPTION );
 delete_option( Plans::RULES );
+// 店铺自己的运费折扣（营销 → 运费折扣，真实店铺的数据里会有）会把方案算出的运费再打折，第 6 步的 30 / 45 / 110 就对不上。
+// 这里核对的是方案本身的报价，所以本次运行里当作没有运费折扣：只在这个进程里生效，不改店铺的设置。
+// 方案和运费折扣一起算的结果由 smoke-marketing（运费折扣）和 m4-shadow-walkthrough-native 核对。
+add_filter( 'pre_option_' . \PeptideCore\Shipping\Discounts::OPTION, static fn() => array() );
 
 $products = array();
 foreach ( wc_get_products( array( 'status' => 'publish', 'type' => 'simple', 'limit' => 30 ) ) as $p ) {

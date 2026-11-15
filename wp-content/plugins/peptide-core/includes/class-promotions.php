@@ -654,6 +654,22 @@ final class Promotions {
 	 * @return array{applied:array[],evals:array[]}
 	 */
 	public static function discounts( \WC_Cart $cart, string $skip_code = '' ): array {
+		// 价格引擎“开”档（M4）：归属、门槛和金额由引擎给出；引擎出错时返回 null，照旧走下面的旧逻辑。
+		$engine = Pricing\Runtime::on() ? Pricing\Runtime::promotions( $cart, $skip_code ) : null;
+		if ( null !== $engine ) {
+			$applied = array();
+			foreach ( $engine['applied'] as $a ) {
+				$applied[] = array(
+					'id'            => $a['id'],
+					'title'         => self::customer_title( html_entity_decode( get_the_title( $a['id'] ) ) ),
+					'tier'          => self::tier_text( self::config( $a['id'] ), $a['reached'] ),
+					'discount'      => $a['discount'],
+					'discount_text' => self::money( $a['discount'] ),
+					'url'           => self::detail_url( $a['id'] ),
+				);
+			}
+			return array( 'applied' => $applied, 'evals' => $engine['evals'] );
+		}
 		$applied = array();
 		$evals   = array();
 		foreach ( self::assign( $cart, self::usable_ids( $cart, $skip_code ) ) as $id => $keys ) {

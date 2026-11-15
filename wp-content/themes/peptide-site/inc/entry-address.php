@@ -39,6 +39,21 @@ function vc_entry_address_category(): string {
     return is_wp_error( $link ) ? '' : vc_entry_address_path( (string) $link, home_url( '/' ) );
 }
 
+/**
+ * Id and permalink path of the product this request was entered through (/?vc_product=ID,
+ * which is also where /product/x/ links are redirected to), or null. The product dialog does
+ * not always carry a link to the product page and the product's card may not be on the page,
+ * so the script gets the permalink from here.
+ */
+function vc_entry_address_product(): ?array {
+    $raw = $_GET['vc_product'] ?? ''; // phpcs:ignore WordPress.Security.NonceVerification.Recommended
+    if ( ! is_string( $raw ) || ! preg_match( '/\A[1-9][0-9]{0,9}\z/D', $raw ) ) { return null; }
+    $id = (int) $raw;
+    if ( 'product' !== get_post_type( $id ) || 'publish' !== get_post_status( $id ) ) { return null; }
+    $path = vc_entry_address_path( (string) get_permalink( $id ), home_url( '/' ) );
+    return ( '' === $path || '/' === $path ) ? null : array( 'id' => $id, 'path' => $path );
+}
+
 add_action( 'wp_enqueue_scripts', static function (): void {
     // Only where the dialog layers are active (their script is enqueued at priority 95).
     if ( ! vc_entry_address_enabled() || ! wp_script_is( 'vc-live-commerce-navigation', 'enqueued' )
@@ -49,5 +64,6 @@ add_action( 'wp_enqueue_scripts', static function (): void {
         'enabled' => true,
         'home' => vc_entry_address_path( home_url( '/' ), home_url( '/' ) ) ?: '/',
         'category' => vc_entry_address_category(),
+        'product' => vc_entry_address_product(),
     ) );
 }, 120 );

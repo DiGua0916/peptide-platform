@@ -6,7 +6,7 @@
  * 约定：
  * - 时间段一律是 [from, to)，Unix 秒；店铺时区的换算由调用方用 Data\Range 或 Metrics::window() 做好。
  * - 金额一律是美分整数（*_cents），币种是订单币种；比率是百分数，保留 2 位，分母为 0 时是 null。
- * - 访问按 start_ms 落在时间段内算（和现有报表相同的“访问批次”口径）；订单按付款时间算。
+ * - 访问按 start_ms 落在时间段内算（和现有报表相同的“访问批次”口径）；订单按下单时间算（口径版本 2，和线上一致）。
  *
  * 七个指标：
  * - 访客        去重的 pc_track_visitors，只算 is_test = 0；爬虫在写入时就被 Tracker::is_automated() 挡掉，不会产生访客行。
@@ -36,8 +36,11 @@ defined( 'ABSPATH' ) || exit;
 
 final class Metrics {
 
-	/** 口径版本。口径变了就加 1，并在 docs/metrics.md 写明变了什么。 */
-	public const VERSION = 1;
+	/**
+	 * 口径版本。口径变了就加 1，并在 docs/metrics.md 写明变了什么。
+	 * 2：订单归到哪一天改按下单时间（和线上一致，平台所有者 2026-11-13 定），原来按付款时间。
+	 */
+	public const VERSION = 2;
 
 	/** 总后台回写的已标记退款（美分，OR-03）。 */
 	public const REFUND_META = '_pc_refund_cents';
@@ -273,7 +276,12 @@ final class Metrics {
 
 	// ---------- 订单 ----------
 
-	/** 测试单：收件信息全 1（Test_Orders），或者测试付款方式 / 演示商品（Overview 的旧规则）。 */
+	/**
+	 * 测试单：订单上的测试单标记 _pc_test_order（下单时收件信息全 1 自动打上，店主也可以事后标）、没有标记的老订单看地址是不是全 1
+	 * （这两项在 Test_Orders 里），或者测试付款方式 / 演示商品（Overview）。
+	 * 2026-11-11 起 Overview::is_test_order() 自己也先问 Test_Orders，所以两条规则现在结论相同；这里仍然两个都问，
+	 * 不依赖 Overview 以后怎么改。用真正的类核对的用例：tests/m6-test-order-flag-pure.php。
+	 */
 	public static function is_test_order( \WC_Order $order ): bool {
 		if ( class_exists( Test_Orders::class ) && Test_Orders::is_test_order( $order ) ) {
 			return true;
@@ -288,6 +296,15 @@ final class Metrics {
 			return true;
 		}
 		return 'refunded' === $status && null !== $order->get_date_paid();
+	}
+
+	/**
+	 * 订单算在哪个时刻（Unix 秒）：下单时间（订单的创建时间），和线上的运营数据、概览页一致（口径版本 2）。
+	 * 没有创建时间时退回付款时间。订单事实里的 paid_at 仍是付款时间（总后台的订单上报要用），只是不再决定订单归到哪一天。
+	 */
+	public static function order_at( \WC_Order $order ): int {
+		$created = $order->get_date_created();
+		return $created ? (int) $created->getTimestamp() : self::paid_at( $order );
 	}
 
 	/** 付款时间（Unix 秒）；没有记录时退回创建时间。 */
@@ -334,7 +351,9 @@ final class Metrics {
 	}
 
 	/**
-	 * 付款时间在 [from, to) 内的已付款订单的事实（含测试单，test = true，由 sum_orders() 排除）。
+	 * 下单时间在 [from, to) 内、收到过支付成功的订单的事实（含测试单，test = true，由 sum_orders() 排除）。
+	 * 口径版本 2（2026-11-13）：按下单时间归属，和线上的 Operations::paid_orders() 一致；版本 1 按付款时间。
+	 * 和线上那份的区别只剩“已退款但付过款的订单”这里也算（金额减去已标记的退款）。
 	 *
 	 * @return array<int,array<string,mixed>>
 	 */
@@ -350,11 +369,11 @@ final class Metrics {
 			$seen     = array();
 			$orders   = wc_get_orders(
 				array(
-					'type'      => 'shop_order',
-					'status'    => $statuses,
-					'date_paid' => $from . '...' . ( $to - 1 ),
-					'limit'     => -1,
-					'return'    => 'objects',
+					'type'         => 'shop_order',
+					'status'       => $statuses,
+					'date_created' => $from . '...' . ( $to - 1 ),
+					'limit'        => -1,
+					'return'       => 'objects',
 				)
 			);
 			foreach ( is_array( $orders ) ? $orders : array() as $order ) {
@@ -363,32 +382,8 @@ final class Metrics {
 				}
 				$seen[ $order->get_id() ] = true;
 				$fact                     = self::order_fact( $order );
-				if ( $fact['paid'] && $fact['paid_at'] >= $from && $fact['paid_at'] < $to ) {
-					$facts[]   = $fact;
-					$objects[] = $order;
-				}
-			}
-			// 状态是已付款但没有付款时间的订单（导入的、手工改状态的）：按创建时间归属。
-			$ids = wc_get_orders(
-				array(
-					'type'         => 'shop_order',
-					'status'       => $statuses,
-					'date_created' => $from . '...' . ( $to - 1 ),
-					'limit'        => -1,
-					'return'       => 'ids',
-				)
-			);
-			foreach ( is_array( $ids ) ? $ids : array() as $id ) {
-				$id = $id instanceof \WC_Order ? (int) $id->get_id() : (int) $id; // 有的环境不认 return => ids，给回来的是订单对象。
-				if ( isset( $seen[ $id ] ) ) {
-					continue;
-				}
-				$order = wc_get_order( $id );
-				if ( ! $order instanceof \WC_Order || null !== $order->get_date_paid() ) {
-					continue; // 有付款时间的已经按付款时间算过（或者不在这个时间段付的款）。
-				}
-				$fact = self::order_fact( $order );
-				if ( $fact['paid'] ) {
+				$at                       = self::order_at( $order );
+				if ( $fact['paid'] && $at >= $from && $at < $to ) {
 					$facts[]   = $fact;
 					$objects[] = $order;
 				}
@@ -401,7 +396,7 @@ final class Metrics {
 
 	/**
 	 * 和 order_facts() 同一批订单，但返回订单对象（含测试单，由调用方排除）。还在按订单对象算的旧报表在开关开着时用这一份，
-	 * 这样它们和上面的合计是同一批订单（按付款时间归属）。
+	 * 这样它们和上面的合计是同一批订单（按下单时间归属）。
 	 *
 	 * @return \WC_Order[]
 	 */
@@ -542,6 +537,56 @@ final class Metrics {
 
 	// ---------- 弃单 ----------
 
+	/** 每日汇总带弃单数的开关：每家店一个选项，值是 on 才算；默认关（线上现在的每日汇总没有弃单数）。 */
+	public const DAILY_ABANDONED_OPTION = 'peptide_core_daily_abandoned';
+
+	public static function daily_abandoned_on(): bool {
+		return function_exists( 'get_option' ) && 'on' === get_option( self::DAILY_ABANDONED_OPTION, 'off' );
+	}
+
+	/**
+	 * 按天的弃单数：店铺时区的日期 => abandoned_from_items() 的结果，按弃单创建那天归属；没有弃单的日子不在结果里。
+	 * 只读一次弃单列表，结果缓存 5 分钟。给 daily() 和总后台的每日汇总用。
+	 *
+	 * 2026-11-13：这是新功能（总后台的弃单率要用），模块发布只做优化，所以放在开关 DAILY_ABANDONED_OPTION 后面，默认关。
+	 * 关着时抛异常而不是返回空数组：总后台连接器（Hq_Connector::with_abandoned()）遇到异常就不往每日汇总里加弃单那几项，
+	 * 总后台看到没有这几项就知道这家店还没提供；返回空数组的话它会把每天都填成 0，成了错的数。
+	 *
+	 * @return array<string,array{count:int,open:int,failed:int,emailed:int,recovered:int,recovered_cents:int,rate:?float}>
+	 * @throws \RuntimeException 开关关着时。
+	 */
+	public static function abandoned_daily( int $from, int $to ): array {
+		if ( ! self::daily_abandoned_on() ) {
+			throw new \RuntimeException( 'Daily abandoned counts are off (option ' . self::DAILY_ABANDONED_OPTION . ').' );
+		}
+		if ( $to <= $from || ! class_exists( Recovery_Items::class ) ) {
+			return array();
+		}
+		$name   = 'pc_m6_abandoned_daily_' . md5( $from . '|' . $to );
+		$cached = get_transient( $name );
+		if ( is_array( $cached ) ) {
+			return $cached;
+		}
+		try {
+			$list = Recovery_Items::list( array( 'from_ms' => $from * 1000, 'to_ms' => $to * 1000 ), 1, 100000 );
+		} catch ( \Throwable $e ) {
+			return array(); // 弃单读不出来时不让每日汇总跟着出错。
+		}
+		$by_day = array();
+		foreach ( (array) ( $list['items'] ?? array() ) as $item ) {
+			$created = (int) ( $item['created_ms'] ?? 0 );
+			if ( $created >= $from * 1000 && $created < $to * 1000 ) {
+				$by_day[ wp_date( 'Y-m-d', intdiv( $created, 1000 ) ) ][] = $item;
+			}
+		}
+		$out = array();
+		foreach ( $by_day as $day => $items ) {
+			$out[ $day ] = self::abandoned_from_items( $items, $from * 1000, $to * 1000 );
+		}
+		set_transient( $name, $out, self::ABANDONED_TTL );
+		return $out;
+	}
+
 	/**
 	 * 弃单数和召回激活率（Recovery_Items 的去重规则）。读一次要查几百张订单，所以结果缓存 5 分钟。
 	 *
@@ -632,15 +677,16 @@ final class Metrics {
 		}
 		$by_day = array();
 		foreach ( self::order_facts( $from, $to ) as $fact ) {
-			$by_day[ wp_date( 'Y-m-d', (int) $fact['paid_at'] ) ][] = $fact;
+			$by_day[ wp_date( 'Y-m-d', (int) ( $fact['created_at'] ?: $fact['paid_at'] ) ) ][] = $fact; // 下单那天（口径版本 2）。
 		}
+		$abandoned = self::daily_abandoned_on() ? self::abandoned_daily( $from, $to ) : null; // 开关关着时每一行和以前一样，没有弃单那四项。
 		$cursor = ( new \DateTimeImmutable( '@' . $from ) )->setTimezone( wp_timezone() )->setTime( 0, 0 );
 		for ( $i = 0; $i < 400 && $cursor->getTimestamp() < $to; $i++ ) {
 			$next   = $cursor->modify( '+1 day' );
 			$day    = $cursor->format( 'Y-m-d' );
 			$sum    = self::sum_orders( $by_day[ $day ] ?? array() );
 			$counts = self::funnel( max( $from, $cursor->getTimestamp() ), min( $to, $next->getTimestamp() ) )['counts'];
-			$rows[] = array(
+			$row    = array(
 				'date'            => $day,
 				'visitors'        => (int) $counts['visitors'],
 				'paid_visitors'   => (int) $counts['paid'],
@@ -651,6 +697,16 @@ final class Metrics {
 				'sales_cents'     => $sum['sales_cents'],
 				'aov_cents'       => $sum['aov_cents'],
 			);
+			if ( null !== $abandoned ) {
+				// 弃单按创建那天归属（和 summary() 的 abandoned 同一个定义）。读不出弃单时这四项是 0。
+				$row += array(
+					'abandoned'        => (int) ( $abandoned[ $day ]['count'] ?? 0 ),
+					'abandoned_open'   => (int) ( $abandoned[ $day ]['open'] ?? 0 ),
+					'recall_emailed'   => (int) ( $abandoned[ $day ]['emailed'] ?? 0 ),
+					'recall_recovered' => (int) ( $abandoned[ $day ]['recovered'] ?? 0 ),
+				);
+			}
+			$rows[] = $row;
 			$cursor = $next;
 		}
 		return $rows;
