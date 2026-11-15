@@ -335,6 +335,27 @@ class Policy(unittest.TestCase):
         self.assertIn("'WP_SITEURL','https://s0002.admin.example.invalid'",cfg)
         self.assertNotIn('CREATE USER',cfg)
 
+    def test_admin_config_declares_payment_write_back_host(self):
+        # Every admin carries wp-content/db.php, which swaps $wpdb for a subclass that only
+        # prefixes `p:` to the host. peptide-panapay's Database::open() then cannot infer the
+        # write host and refuses to run, which broke payment write-back on 2026-11-14. The
+        # generated admin wp-config must state it. This test guards the coupling between
+        # configuration()'s literal formatting and admin_create()'s string replacement: if the
+        # generator ever emits a different spelling, the replacement silently no-ops.
+        t=dict(db='vc_s0002',uuid=str(uuid.uuid4()),management_url='https://s0002.admin.example.invalid',data=Path('/srv/tenant/s0002'))
+        web=w.configuration(t,dict(hq_url='https://hq.example.invalid'), 'vcf_s0002', '0'*64, {}, '1'*64)
+        self.assertIn("define('DB_HOST','localhost');",web)
+        cfg=web.replace("'DB_HOST','localhost'", "'DB_HOST','127.0.0.1:13361'")
+        cfg=cfg.replace("define('DB_HOST','127.0.0.1:13361');",
+                        "define('DB_HOST','127.0.0.1:13361');\ndefine('PC_PANAPAY_DB_HOST',DB_HOST);")
+        self.assertEqual(cfg.count("define('PC_PANAPAY_DB_HOST',DB_HOST);"),1)
+        self.assertNotIn('localhost',cfg)
+        # DB_HOST is referenced as a bare constant, so it has to be defined first.
+        self.assertLess(cfg.index("define('DB_HOST'"),cfg.index("define('PC_PANAPAY_DB_HOST'"))
+        source=Path(w.__file__).read_text(encoding='utf-8')
+        self.assertIn("define('PC_PANAPAY_DB_HOST',DB_HOST);",source)
+        self.assertIn("'payment_write_back_configuration'",source)
+
     def test_lifecycle_receipts_sync_before_new_provisioning(self):
         self.root_stat_model()
         with tempfile.TemporaryDirectory(dir=TEST_ROOT) as folder:
