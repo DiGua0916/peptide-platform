@@ -7,7 +7,9 @@
  *
  * 做两件事，结果只写进 <配置文件>（权限 600），屏幕上不打印登录信息：
  * 1. 给三个账号各开一个 2 小时的登录会话，记下浏览器要带的 cookie（compare.py 用它们以对应身份取页面）。
- * 2. 挑出这份库里比对要用的东西：一张已付款订单、一件简单商品、两件多规格商品、一个有商品的专辑。
+ * 2. 挑出这份库里比对要用的东西：一张已付款订单、一件简单商品（没有就跳过那 3 个地址）、两件多规格商品、一个有商品的专辑。
+ * 3. 记下前台地址（base，访客用）和后台管理地址（admin_base，员工用）。开了单独管理地址的站（沙盒、生产），
+ *    员工带着登录状态访问前台地址会被 Management_Host 直接 403，所以员工的地址一律发到管理地址（F1 2026-11-15 沙盒发现）。
  *
  * 用完跑 cleanup.php 把这些会话作废。配置文件里是登录凭据：不要提交到 Git，用完删掉。
  *
@@ -66,18 +68,31 @@ $f5_simple   = $f5_pick( 'simple', 1 );
 $f5_variable = $f5_pick( 'variable', 2 );
 $f5_orders   = wc_get_orders( array( 'type' => 'shop_order', 'status' => array( 'processing', 'completed' ), 'limit' => 1, 'orderby' => 'date', 'order' => 'DESC', 'return' => 'ids' ) );
 $f5_cats     = get_terms( array( 'taxonomy' => 'product_cat', 'hide_empty' => true, 'number' => 1 ) );
-if ( ! $f5_simple || count( $f5_variable ) < 2 || ! $f5_orders || is_wp_error( $f5_cats ) || ! $f5_cats ) {
-	WP_CLI::error( '这份库里缺比对要用的东西：要 1 件简单商品、2 件多规格商品、1 张已付款订单、1 个有商品的专辑。' );
+if ( count( $f5_variable ) < 2 || ! $f5_orders || is_wp_error( $f5_cats ) || ! $f5_cats ) {
+	WP_CLI::error( '这份库里缺比对要用的东西：要 2 件多规格商品、1 张已付款订单、1 个有商品的专辑。' );
+}
+if ( ! $f5_simple ) {
+	WP_CLI::warning( '这份库里没有简单商品，简单商品的 3 个地址会跳过。' );
+}
+
+// 前台地址（访客）和管理地址（员工）。没有单独管理地址的站两个一样。
+$f5_management = class_exists( '\PeptideCore\Management_Host' ) && \PeptideCore\Management_Host::enabled();
+$f5_base       = $f5_management ? \PeptideCore\Management_Host::public_url() : untrailingslashit( home_url() );
+$f5_admin_base = $f5_management ? untrailingslashit( \PeptideCore\Management_Host::management_url() ) : $f5_base;
+if ( $f5_management && '' === $f5_admin_base ) {
+	WP_CLI::warning( '这家店开了单独管理地址，但读不到 PEPTIDE_CORE_MANAGEMENT_URL：员工的地址只能发到前台，会被 403。' );
+	$f5_admin_base = $f5_base;
 }
 
 $f5_config = array(
-	'base'     => untrailingslashit( home_url() ),
+	'base'       => $f5_base,
+	'admin_base' => $f5_admin_base,
 	'created'  => gmdate( 'c' ),
 	'expires'  => gmdate( 'c', $f5_expires ),
 	'roles'    => $f5_roles,
 	'order'    => (int) $f5_orders[0],
 	'products' => array(
-		'simple'   => $f5_simple[0],
+		'simple'   => $f5_simple ? $f5_simple[0] : null,
 		'variable' => $f5_variable,
 	),
 	'category' => array(
@@ -96,12 +111,13 @@ if ( false === $f5_ok ) {
 
 WP_CLI::success(
 	sprintf(
-		'配置已写到 %s（含登录 cookie，2 小时内有效，用完跑 cleanup.php 并删掉文件）。站点 %s；身份：%s；订单 #%d；简单商品 %d；多规格商品 %s；专辑 %d。',
+		'配置已写到 %s（含登录 cookie，2 小时内有效，用完跑 cleanup.php 并删掉文件）。前台 %s；管理地址 %s；身份：%s；订单 #%d；简单商品 %s；多规格商品 %s；专辑 %d。',
 		$f5_out,
 		$f5_config['base'],
+		$f5_config['admin_base'],
 		implode( '、', array_keys( $f5_roles ) ),
 		$f5_config['order'],
-		$f5_simple[0]['id'],
+		$f5_simple ? (string) $f5_simple[0]['id'] : '没有（跳过）',
 		implode( '、', array_column( $f5_variable, 'id' ) ),
 		$f5_config['category']['id']
 	)
