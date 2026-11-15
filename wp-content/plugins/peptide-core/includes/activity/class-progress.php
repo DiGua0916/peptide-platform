@@ -222,7 +222,9 @@ final class Progress {
 			$reward = 'percent' === $tier['kind'] && $tier['value'] >= 100 ? __( 'free shipping', 'peptide-core' ) : $tier['label'];
 			$node = array( 'key' => $key, 'index' => $index, 'threshold' => $threshold, 'thresholdText' => self::measure_text( $threshold, false ), 'rewardText' => $reward, 'reached' => $reached, 'positionPercent' => round( 100 * $min / $max, 4 ), 'celebrationEligible' => $reached && $out['discountApplied'] && $out['celebration']['enabled'] );
 			$out['nodes'][] = $node;
-			if ( $reached && $out['discountApplied'] ) { $out['achievedKeys'][] = $key; }
+			// Reached = the bag total is over the tier. The applied discount only exists once a shipping rate
+			// is quoted (an address is in), so it drives the "saved $X" amount, not whether the tier is reached.
+			if ( $reached ) { $out['achievedKeys'][] = $key; }
 			if ( ! $reached && null === $out['next'] ) {
 				$remaining = self::measure( $min - $measure, false, true );
 				/* translators: 1: amount still needed, 2: shipping reward */
@@ -230,10 +232,10 @@ final class Progress {
 			}
 		}
 		$out['progressPercent'] = round( max( 0, min( 100, 100 * $measure / $max ) ), 4 );
-		$out['completed'] = null === $out['next'] && $out['discountApplied'];
+		$out['completed'] = null === $out['next'];
 		$out['visible'] = true;
 		$out['message'] = $out['next']['message'] ?? __( 'Free shipping unlocked.', 'peptide-core' );
-		$status = $out['discountApplied'] ? ( $out['completed'] ? 'complete' : 'tier_reached' ) : 'tracking';
+		$status = $out['completed'] ? 'complete' : ( $out['achievedKeys'] ? 'tier_reached' : 'tracking' );
 		return self::finish( $out, $status, 'shipping_tiers' );
 	}
 
