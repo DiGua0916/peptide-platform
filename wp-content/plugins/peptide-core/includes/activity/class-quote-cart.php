@@ -115,7 +115,8 @@ final class Quote_Cart extends \WC_Cart {
 	private static function unsupported_hook(): ?string {
 		global $wp_filter;
 		$allow = array(
-			'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart', \PeptideCore\Manual_Orders::class . '::apply_fees' ),
+			// Shipping protection (site 1 P0-5) adds one fixed fee that never depends on item prices, so quotes stay exact.
+			'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart', \PeptideCore\Manual_Orders::class . '::apply_fees', \PeptideCore\Shipping\Protection::class . '::add_fee' ),
 			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart', \PeptideCore\Manual_Orders::class . '::apply_prices' ),
 			'woocommerce_after_calculate_totals'  => array( 'WC_Cart_Session::set_session' ),
 			'woocommerce_product_get_price'       => array( 'Automattic\\WooCommerce\\Internal\\ScheduledSalePriceReconciler::reconcile_price' ),
