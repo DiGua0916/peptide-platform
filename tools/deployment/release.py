@@ -497,6 +497,9 @@ class Release:
             self.remotes[name].agent("cleanup", self.label, check=False)
         copies = sum(len(u["copies"]) for u in units)
         say(f"发布完成：{self.label}，提交 {self.commit[:7]}，{copies} 份副本全部一致，用时 {int(time.time()) - self.started} 秒")
+        hold = subprocess.run(["git", "-C", REPO, "cat-file", "-e", f"{self.commit}:tools/deployment/RELEASE_HOLD"], capture_output=True).returncode == 0
+        if hold and self.args.env == "production":
+            say("提醒：这次发的提交里还有发布暂停标记 tools/deployment/RELEASE_HOLD。线上已经等于这个提交了——跑一次 vc-release check 确认后，从主线删掉这个文件并推送，否则别人会一直以为发布还在暂停。")
         return 0
 
     def rollback_all(self):
