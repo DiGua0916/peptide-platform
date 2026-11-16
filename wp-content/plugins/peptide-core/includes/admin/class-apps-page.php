@@ -109,7 +109,7 @@ final class Apps_Page {
 				'icon' => 'dashicons-backup',
 				'on' => (bool) \PeptideCore\Recent\Store::effective()['enabled'],
 			),
-		);
+		) + Storefront_Switches::catalog(); // 前台的 5 个按店开关（F5，2026-11-16），见 Storefront_Switches。
 	}
 
 	public static function enqueue(): void {
@@ -182,6 +182,10 @@ final class Apps_Page {
 		}
 		if ( 'exit-intent' === ( $_GET['app'] ?? '' ) ) { // phpcs:ignore WordPress.Security.NonceVerification.Recommended
 			self::render_exit();
+			return;
+		}
+		if ( Storefront_Switches::handles( $requested ) ) {
+			Storefront_Switches::render( $requested );
 			return;
 		}
 		echo '<div class="wrap pc-pl pc-mk pc-apps">';

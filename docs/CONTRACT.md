@@ -1289,6 +1289,12 @@ F5 在「M14 前台主题」一节“FE-03 看过 / 已加购”里要的接口�
 
 ### M14 前台主题（`wp-content/themes/peptide-site/`，FE-02、NF-06）
 
+- **店主在后台自己开关（2026-11-16，`Admin\Storefront_Switches`）**：平台所有者要信任条“可以自定义打开”。前台的 5 个按店开关放进店铺后台的“插件”页（`admin.php?page=pc-apps`），每个一张卡片：商品弹窗信任条 `pc_trust_badges`、落地页提速 `pc_front_speed`、看过 / 已加购 `pc_product_activity`（设置页里还有人数下限 `pc_product_activity_min`，1–1000）、商品分享地址 `pc_entry_address`、老客静默 `pc_buyer_recognition`。
+  - 选项名和取值不变（值 `on` 才算开）；页面上关掉 = 删除选项，和 `wp option delete` 一样。进页面不改任何现值，命令行照样能改。
+  - 保存：`admin-post.php?action=pc_app_switch_save`，`manage_woocommerce` + 每个开关自己的 nonce + `Apps_Page::require_allowed()`；保存后 `Page_Cache::flush()`，首页缓存和片段缓存马上失效，不用再手动清缓存。
+  - 投手打不开插件页，保存请求也不在投手名单里（403）。总后台停用应用时 `App_Switch::set()` 先把开关关掉，重新开通后保持关着，和其他应用一样。
+  - 投手后台的 `pc_buyer_no_palette`、`pc_buyer_extras` 不在这里，仍用命令行。
+
 平台所有者 2026-11-10 确认：Codex 不再修改主题，主题由 F5 接手（`AGENTS.md` 已更新）；Q5 选“保留弹窗，换地址”。别的会话要改主题里的东西，在这里提，F5 来做。
 
 - **FE-02 商品 / 专辑地址**（`inc/entry-address.php`、`assets/entry-address.js`）
