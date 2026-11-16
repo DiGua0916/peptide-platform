@@ -525,16 +525,16 @@
       const name = report.source_product || productName;
       const titleText = name + (report.specification ? ' · ' + report.specification : '');
       if (!reportSlide.hidden) {
-        const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText + ' · Batch COA'; img.loading = 'lazy';
+        const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText + ' · Reference COA'; img.loading = 'lazy';
         img.addEventListener('error',()=>{reportSlide.hidden=true;track.scrollLeft=0;gallery.refresh();},{once:true});
-        reportSlide.append(img, node('span', 'vc-dialog-report-label', 'BATCH COA'));
-        reportSlide.setAttribute('aria-label', 'Open ' + titleText + ' batch report');
+        reportSlide.append(img, node('span', 'vc-dialog-report-label', 'REFERENCE DOCUMENT'));
+        reportSlide.setAttribute('aria-label', 'Open ' + titleText + ' reference report');
       }
       const copy = node('div', 'vc-dialog-document-copy');
       copy.append(node('p', 'vc-home-quick__eyebrow', 'Certificate of analysis'), node('h2', '', 'The report. In full view.'), node('strong', '', titleText));
-      const metadata = [report.source_lot ? 'Lot ' + report.source_lot : '', report.issuer_name, date(report.issued_on)].filter(Boolean).join(' · '); if (metadata) copy.append(node('p', '', metadata));
-      copy.append(node('p', 'vc-dialog-reference-note', 'Latest published report for this product and specification. Results apply to the lot named in the report.'));
-      copy.append(button('vc-dialog-report-open', 'View full report ↗', openReport)); documents.append(copy);
+      const metadata = [report.issuer_name, date(report.issued_on)].filter(Boolean).join(' · '); if (metadata) copy.append(node('p', '', metadata));
+      copy.append(node('p', 'vc-dialog-reference-note', 'Third-party reference report. Results apply to the sample named in the document, not a verified VialCove stock batch.'));
+      copy.append(button('vc-dialog-report-open', 'View reference COA ↗', openReport)); documents.append(copy);
       if (safeURL(report.thumbnail_url)) { const art = button('vc-dialog-document-art', '', openReport); const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText; img.loading = 'lazy'; img.addEventListener('error',()=>art.remove(),{once:true}); art.append(img); documents.prepend(art); }
     }
     async function readReports({resume = false, requested = ''} = {}) {
@@ -593,9 +593,9 @@
       // chosen. Restore only that exact, still-public document for this product.
       const opened = requested ? reports.find(item=>Number(item.product?.id)===productId && item.file?.mime==='application/pdf' && safeURL(item.view_url)===requested) : report;
       if (!opened) return false;
-      const box = children.create('vc-product-report-dialog', 'Batch COA');
-      const titleText = (opened.source_product || productName) + ' ' + (opened.specification || '') + ' · Batch COA';
-      box.append(node('p', 'vc-home-quick__eyebrow', 'Batch COA'), node('h2', '', titleText), node('p', 'vc-dialog-reference-note', 'Results apply to the lot named in the report.'));
+      const box = children.create('vc-product-report-dialog', 'Reference COA');
+      const titleText = (opened.source_product || productName) + ' ' + (opened.specification || '') + ' · Reference COA';
+      box.append(node('p', 'vc-home-quick__eyebrow', 'Third-party reference'), node('h2', '', titleText), node('p', 'vc-dialog-reference-note', 'Results apply to the sample named in the report. Not a verified VialCove stock batch certificate.'));
       const pdf = node('div', 'vc-product-pdf');
       pdf.innerHTML = '<div class="pdf-toolbar"><p class="pdf-status" role="status"></p><div class="pdf-zoom"><button type="button" data-pdf-zoom="out" aria-label="Zoom out">−</button><span class="pdf-zoom-value">100%</span><button type="button" data-pdf-zoom="in" aria-label="Zoom in">+</button></div></div><div class="pdf-pages"></div><button class="pdf-retry" type="button" hidden>Retry</button>';
       box.append(pdf);
