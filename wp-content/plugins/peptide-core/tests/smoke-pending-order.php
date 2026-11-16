@@ -14,9 +14,12 @@ $t(P::live_attempt_at('')===0 && P::live_attempt_at(['attempts'=>'x'])===0,'no o
 $t(!P::qualifies('checkout-draft',true,$now-60,$now),'draft excluded');
 $t(!P::qualifies('pending',true,$now-73*3600,$now),'old excluded');
 $t(!P::qualifies('processing',false,$now-60,$now),'paid excluded');
+// Product 10 exists only on the local test site; elsewhere use any published product or variation.
+$prod = wc_get_product(10) ?: wc_get_product((wc_get_products(['limit'=>1,'status'=>'publish','return'=>'ids','type'=>'simple']) ?: wc_get_products(['limit'=>1,'status'=>'publish','return'=>'ids','type'=>'variation']))[0] ?? 0);
+$t((bool)$prod,'test product available');
 $uid = wp_insert_user(['user_login'=>'laneb_po_'.wp_rand(),'user_pass'=>wp_generate_password(),'user_email'=>'laneb'.wp_rand().'@example.test']);
 wp_set_current_user($uid);
-$o = wc_create_order(['customer_id'=>$uid]); $o->add_product(wc_get_product(10),2); $o->calculate_totals(); $o->update_status('failed');
+$o = wc_create_order(['customer_id'=>$uid]); $o->add_product($prod,2); $o->calculate_totals(); $o->update_status('failed');
 $r = P::for_visitor();
 $t($r && $r['order_id']===$o->get_id() && $r['state']==='failed' && $r['items']===2 && str_contains($r['pay_url'],'order-pay') ,'failed order found '.json_encode($r));
 $t(!isset($r['email']) && !isset($r['address']), 'no personal data');
@@ -24,7 +27,7 @@ $o->update_meta_data('_pc_panapay_sessions',['active'=>'a','attempts'=>['a'=>['s
 $t(null===P::for_visitor(),'failed order with a payment just started is hidden');
 $o->delete_meta_data('_pc_panapay_sessions'); $o->save();
 sleep(1);
-$p = wc_create_order(['customer_id'=>$uid]); $p->add_product(wc_get_product(10),1); $p->calculate_totals(); $p->update_status('processing');
+$p = wc_create_order(['customer_id'=>$uid]); $p->add_product($prod,1); $p->calculate_totals(); $p->update_status('processing');
 $t(null===P::for_visitor(),'hidden after a later paid order');
 wp_set_current_user(0);
 $t(null===P::for_visitor(),'guest without session order sees nothing');

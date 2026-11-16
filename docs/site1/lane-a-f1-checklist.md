@@ -100,6 +100,14 @@ B 线的功能默认全部关闭，部署代码不会改变收费。F1 按店打
 - 1d44f9c：付款后浏览器另存的购物车没清，30 天内回来还会提示 “We saved your bag”，点了把买过的东西放回去。下单成功页和 /?pc_paid= 落地时清掉。
 
 F1 上线时注意：
-- **peptide-core 内容变了但版本号没抬**（沙盒用 `--allow-same-version` 试装）。正式发布前要抬版本号。
+- 版本号已处理（见下一节）：peptide-core 0.34.2、主题 peptide-site 0.3.1。
 - 店铺设置：页头模块打开 “Show account”（沙盒原来是关的）；物流球选 `panel`，不要选 `0`。
 - 运费基础价：**所有者已定（2026-11-15）用 $55**，即 Shipping $55 · $10 off over $150 · $20 off over $300 · free over $600（实付 $55 → $45 → $35 → 免费）。线上快照是 $45，位置在“运费方案” Fast International Shipping 的第一条费率 “UPS • FedEx • USPS”（选项 `peptide_core_shipping_plans`，费率 id `r86cf6be1`，小计 0–1000，`fee`）。上线时把它改成 55；$1000 以上那条 $15 不用动（$600 以上已经免运费）。三条运费折扣（选项 `peptide_core_shipping_discounts`）线上快照里已经是对的。
+
+## 合到新主线（2026-11-16）
+
+- `claude/site1-ui-merge` 已合入主线 0e5652d9（F5 店铺后台按店开关、核心 0.34.1），没有冲突。
+- 版本号：peptide-core 0.34.1 → **0.34.2**，主题 peptide-site 0.3.0 → **0.3.1**（两个组件都有 1 号站改动）。生产发布不需要 `--allow-same-version`。
+- 测试：和纯主线 0e5652d9 比，没有新增失败。`smoke-pending-order.php` 是要在 WordPress 里跑的（`wp eval-file`），原来写死商品 ID 10（只在本机副本有），改成找不到就用任意已发布商品；沙盒 17/17。
+- 沙盒发布 #22（site1-sbx-1116-6，提交 39eb6f5）：critical-path 54 通过 / 0 失败，3 份副本一致。手机 375px 抽查：前台加载 0.34.2；logo 97px，Sign in 和购物袋不重叠，无横向滚动；物流面板在、物流球不显示（`panel`）；2 盒运费 $55。
+- 生产发布用这个分支的最新提交；如果主线又前进了，再合一次、版本号再抬。
