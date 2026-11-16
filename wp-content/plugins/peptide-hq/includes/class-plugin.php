@@ -50,6 +50,9 @@ final class Plugin {
 			Admin\Ai_Page::hooks();
 			Admin\Fedex_Page::hooks();
 			Admin\Logistics_Page::hooks();
+			if ( class_exists( '\PeptideHq\Admin\Capi_Bridge_Page' ) ) {
+				\PeptideHq\Admin\Capi_Bridge_Page::hooks();
+			}
 		}
 	}
 }

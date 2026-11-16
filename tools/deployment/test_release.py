@@ -56,6 +56,8 @@ class PlanTest(unittest.TestCase):
     def test_components_by_kind_and_expected_hashes(self):
         self.assertIn("plugins/peptide-hq", release.components_for({"kind": "hq"}))
         self.assertNotIn("plugins/peptide-hq", release.components_for({"kind": "store"}))
+        for kind in ("store", "hq"):
+            self.assertIn("plugins/" + release.BRIDGE, release.components_for({"kind": kind}))
         self.assertEqual({"plugins/peptide-core": "a", "themes/peptide-site": "b"}, release.expected_hashes({"peptide-core": {"hash": "a"}, "peptide-site": {"hash": "b"}}))
 
 
@@ -206,6 +208,25 @@ class FlowTest(unittest.TestCase):
         self.assertTrue(self.commands("pchq-release finish 7 failed"))
         self.assertTrue(self.commands("reload-b"))
 
+    def test_bridge_activation_and_rollback_use_one_admin_per_database(self):
+        shop = unit("one")
+        shop["copies"].append(dict(shop["copies"][0], key="one/admin", root="/srv/one-admin", wp_user="vcs0001"))
+        template = unit("templates")
+        hq = unit("hq", kind="hq")
+        hq["copies"][0]["root"] = "/hq"
+        r = make([shop, template, hq])
+        comp = "plugins/" + release.BRIDGE
+        r.components[release.BRIDGE] = {"hash": "B"}
+        FakeRemote.hashes[comp] = "B"
+        FakeRemote.fail_on = "https://hq/"
+        self.assertEqual(1, r.run())
+        self.assertEqual(["sudo bash agent activate-bridge t1 /srv/one-admin vcs0001",
+                          "sudo bash agent activate-bridge t1 /hq u"], self.commands("activate-bridge t1"))
+        restore = "sudo bash agent restore-bridge t1 /hq u"
+        self.assertEqual([restore], self.commands("restore-bridge t1"))
+        commands = [command for _, command in FakeRemote.log]
+        self.assertLess(commands.index(restore), next(i for i, command in enumerate(commands) if "rollback t1 /hq" in command))
+
     def test_rollback_all_on_failure_also_reverts_earlier_units(self):
         FakeRemote.fail_on = "https://two/"
         r = make([unit("one"), unit("two", host="b")], rollback_all_on_failure=True)
@@ -218,6 +239,13 @@ class FlowTest(unittest.TestCase):
         r = make([unit("one")])
         self.assertEqual(1, r.run())
         self.assertTrue(self.commands("pchq-release finish 7 failed"))
+
+    def test_unreported_bridge_hash_is_a_failure(self):
+        shop = unit("one")
+        r = make([shop])
+        r.components[release.BRIDGE] = {"hash": "B"}
+        r.live_hashes = lambda copy: {"plugins/peptide-core": "H1"}
+        self.assertEqual(["one/x plugins/" + release.BRIDGE], r.g4_hashes([shop]))
 
     def test_production_needs_explicit_confirmation(self):
         r = make([unit("one")])

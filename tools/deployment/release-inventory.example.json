@@ -11,7 +11,7 @@
           "name": "sandbox", "stage": "G1", "check": "critical_path", "check_host": "admin",
           "copies": [
             {"key": "sandbox/shop", "host": "admin", "root": "/srv/vialcove-sandbox/shop/public", "kind": "store", "owner": "vcsandbox:vcsandbox"},
-            {"key": "sandbox/admin", "host": "admin", "root": "/srv/vialcove-sandbox/admin/public", "kind": "store", "owner": "vcsandbox:vcsandbox"},
+            {"key": "sandbox/admin", "host": "admin", "root": "/srv/vialcove-sandbox/admin/public", "kind": "store", "owner": "vcsandbox:vcsandbox", "wp_user": "vcsandbox"},
             {"key": "sandbox/hq", "host": "admin", "root": "/srv/vialcove-sandbox/hq/public", "kind": "hq", "owner": "vcsandbox:vcsandbox"}
           ],
           "health": [

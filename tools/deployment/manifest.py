@@ -21,8 +21,16 @@ COMPONENTS = {
     "peptide-ops": "wp-content/plugins/peptide-ops/",
     "peptide-panapay": "wp-content/plugins/peptide-panapay/",
     "peptide-site": "wp-content/themes/peptide-site/",
+    "wp-capi-stealth-bridge": "wp-content/plugins/wp-capi-stealth-bridge/",
 }
-MAIN = {"peptide-core": "peptide-core.php", "peptide-hq": "peptide-hq.php", "peptide-ops": "peptide-ops.php", "peptide-panapay": "peptide-panapay.php", "peptide-site": "style.css"}
+MAIN = {
+    "peptide-core": "peptide-core.php",
+    "peptide-hq": "peptide-hq.php",
+    "peptide-ops": "peptide-ops.php",
+    "peptide-panapay": "peptide-panapay.php",
+    "peptide-site": "style.css",
+    "wp-capi-stealth-bridge": "wp-capi-stealth-bridge.php",
+}
 SKIP_DIRS = {"tests", "node_modules", "vendor", "uploads", "cache", "backups", "private", "__pycache__"}
 
 

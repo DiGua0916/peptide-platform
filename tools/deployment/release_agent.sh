@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 # M1-5 发布代理：在一台服务器上以 root 执行，由 tools/deployment/release.py 通过 SSH 调用。
-# 只做文件层面的事：解包、整目录原子替换、回滚、算哈希、看错误日志、数据库快照。不碰数据库内容。
+# 负责发布目录和回滚点。桥接插件的启停通过站点账号运行 WP-CLI。
 #
 #   stage <发布包.zip> <版本标签>                  解包到 /var/lib/vialcove-release/<标签>/src，全部 PHP 做语法检查
 #   apply <标签> <站点根目录> <属主|keep> <组件…>    组件写成 plugins/peptide-core、themes/peptide-site
 #   rollback <标签> <站点根目录> <组件…>            把这次发布替换掉的目录换回去
+#   activate-bridge <标签> <站点根目录> <WP 用户>    在网关留空时启用桥接插件
+#   restore-bridge <标签> <站点根目录> <WP 用户>     撤销本次发布的插件启用操作
 #   hash <站点根目录> <组件…>                      每行：组件 <TAB> 清单哈希 <TAB> 文件数（和 manifest.py 同一个算法）
 #   fatals <起始时间戳> <日志文件…>                统计这个时间之后的 PHP 致命错误行数
 #   dbsnapshot <标签> <数据库名…>                  mysqldump 到 /root/vialcove-backups/release-<标签>/（只读生产库）
@@ -15,18 +17,32 @@
 # 回滚 = 再 rename 回来。回滚点放在站点根目录的上一级 .release-backups/ 里（不在 wp-content 里，WordPress 看不到）。
 set -euo pipefail
 STATE=/var/lib/vialcove-release
+BRIDGE=wp-capi-stealth-bridge
 die() { echo "失败：$*" >&2; exit 1; }
 [ "$(id -u)" = 0 ] || die "需要 root。"
 cmd="${1:-}"; shift || true
 
 label_ok() { [[ "$1" =~ ^[A-Za-z0-9][A-Za-z0-9._-]{0,59}$ ]] || die "版本标签不合法：$1"; }
-comp_ok() { [[ "$1" =~ ^(plugins|themes)/peptide-(core|hq|panapay|ops|site)$ ]] || die "不认识的组件：$1"; }
+comp_ok() { [[ "$1" == "plugins/$BRIDGE" || "$1" =~ ^(plugins|themes)/peptide-(core|hq|panapay|ops|site)$ ]] || die "不认识的组件：$1"; }
 root_ok() { # 站点根目录必须真的是一个 WordPress 安装
   [ -n "$1" ] && [ -d "$1/wp-content" ] && [ -f "$1/wp-includes/version.php" ] || die "不是 WordPress 站点根目录：$1"
 }
 backup_dir() { # <标签> <站点根目录>
   local real; real="$(readlink -f "$2")"
   echo "$(dirname "$real")/.release-backups/$1/$(basename "$real")"
+}
+
+bridge_status() {
+  bridge_wp eval 'require_once ABSPATH . "wp-admin/includes/plugin.php";
+    if ( is_plugin_active( "wp-capi-stealth-bridge/wp-capi-stealth-bridge.php" ) ) {
+      echo "active";
+    } else {
+      echo is_multisite() ? "network" : "site";
+    }'
+}
+
+bridge_wp() {
+  ( cd /tmp && sudo -u "$wp_user" -H wp --path="$root" --skip-plugins="$BRIDGE" "$@" )
 }
 
 case "$cmd" in
@@ -53,7 +69,7 @@ case "$cmd" in
     for comp in "$@"; do comp_ok "$comp"; [ -d "$src/$comp" ] || die "发布包里没有 $comp"; done
     for comp in "$@"; do
       dest="$root/wp-content/$comp"; new="$dest.new-$label"
-      [ ! -e "$bk/$comp" ] || die "这个版本已经在这份副本上替换过 $comp（回滚点已存在）。要重发请先 rollback 或换一个版本标签。"
+      [ ! -e "$bk/$comp" ] && [ ! -e "$bk/$comp.absent" ] || die "这个版本已经在这份副本上替换过 $comp（回滚点已存在）。要重发请先 rollback 或换一个版本标签。"
       rm -rf "$new"; cp -a "$src/$comp" "$new"
       if [ "$owner" = keep ]; then
         if [ -d "$dest" ]; then chown -R --reference="$dest" "$new"; else chown -R --reference="$(dirname "$dest")" "$new"; fi
@@ -82,6 +98,41 @@ case "$cmd" in
         echo "跳过 $comp（这份副本上没有这次发布的回滚点）"
       fi
     done
+    ;;
+  activate-bridge|restore-bridge)
+    label="${1:?}"; root="${2:?}"; wp_user="${3:?}"; label_ok "$label"; root_ok "$root"
+    bk="$(backup_dir "$label" "$root")"
+    marker="$bk/.bridge-activation"
+    if [ "$cmd" = restore-bridge ] && [ ! -f "$marker" ]; then exit 0; fi
+    status="$(bridge_status)"
+    case "$status" in active|network|site) ;; *) die "读不到 $BRIDGE 的启用状态。";; esac
+    if [ "$cmd" = activate-bridge ]; then
+      [ -d "$bk/plugins/$BRIDGE" ] || [ -d "$bk/plugins/$BRIDGE.absent" ] || die "找不到 $BRIDGE 的文件回滚点。"
+      bridge_wp eval 'require WP_PLUGIN_DIR . "/wp-capi-stealth-bridge/includes/class-config-manager.php";
+        $config = \StealthCapiBridge\Config_Manager::get_config();
+        if ( "" !== trim( (string) $config["gateway_base_url"] ) ) {
+          WP_CLI::error( "首次启用时必须保持网关地址为空。" );
+        }'
+      if [ "$status" = active ]; then echo "$BRIDGE 已启用"; exit 0; fi
+      printf '%s\n' "$status" > "$marker"
+      action=activate
+    else
+      if [ "$status" != active ]; then rm -f "$marker"; exit 0; fi
+      status="$(cat "$marker")"
+      action=deactivate
+    fi
+    case "$status" in
+      network) bridge_wp plugin "$action" "$BRIDGE" --network ;;
+      site) bridge_wp plugin "$action" "$BRIDGE" ;;
+      *) die "$BRIDGE 的回滚点无效。" ;;
+    esac
+    status="$(bridge_status)"
+    if [ "$action" = activate ]; then
+      [ "$status" = active ] || die "$BRIDGE 没有启用。"
+    else
+      [[ "$status" == network || "$status" == site ]] || die "$BRIDGE 仍处于启用状态。"
+      rm -f "$marker"
+    fi
     ;;
   hash)
     root="${1:?}"; shift; root_ok "$root"

@@ -25,6 +25,7 @@ import os
 import shlex
 import subprocess
 import sys
+import tempfile
 import time
 import urllib.parse
 
@@ -33,8 +34,9 @@ REPO = os.path.dirname(os.path.dirname(HERE))
 sys.path.insert(0, HERE)
 import manifest as manifest_lib  # noqa: E402
 
-STORE_COMPONENTS = ["plugins/peptide-core", "plugins/peptide-panapay", "plugins/peptide-ops", "themes/peptide-site"]
-HQ_COMPONENTS = ["plugins/peptide-hq", "plugins/peptide-panapay", "plugins/peptide-ops"]
+BRIDGE = "wp-capi-stealth-bridge"
+STORE_COMPONENTS = ["plugins/peptide-core", "plugins/peptide-panapay", "plugins/peptide-ops", f"plugins/{BRIDGE}", "themes/peptide-site"]
+HQ_COMPONENTS = ["plugins/peptide-hq", "plugins/peptide-panapay", "plugins/peptide-ops", f"plugins/{BRIDGE}"]
 REMOTE_DIR = "/var/tmp/vialcove-release-tools"
 
 
@@ -141,6 +143,7 @@ class Release:
         self.record_id = None
         self.results = {}
         self.applied = []       # 已经替换成功、还没回滚的 unit
+        self.activate_bridge = False
         self.started = int(time.time())
 
     # --- 总后台记录 ---
@@ -215,12 +218,10 @@ class Release:
             if not (self.args.php and self.args.node):
                 raise Failed("要跑本机测试需要 --php 和 --node（或者明确加 --skip-local-tests）。")
             # 测的是被打包的那个提交，不是工作区：导出到临时目录再跑。
-            tree = os.path.join(out_dir, "tree")
-            subprocess.run(["rm", "-rf", tree]); os.makedirs(tree)
-            archive = subprocess.run(["git", "-C", REPO, "archive", self.commit], capture_output=True)
-            subprocess.run(["tar", "-x", "-C", tree], input=archive.stdout, check=True)
-            test = subprocess.run([self.args.node, os.path.join(tree, "tests", "run-data-observations.cjs"), "--php", self.args.php], capture_output=True, text=True, cwd=tree)
-            subprocess.run(["rm", "-rf", tree])
+            with tempfile.TemporaryDirectory(prefix="tree-", dir=out_dir) as tree:
+                archive = subprocess.run(["git", "-C", REPO, "archive", self.commit], capture_output=True, check=True)
+                subprocess.run(["tar", "-xf", "-", "-C", tree], input=archive.stdout, check=True)
+                test = subprocess.run([self.args.node, os.path.join(tree, "tests", "run-data-observations.cjs"), "--php", self.args.php], capture_output=True, text=True, cwd=tree)
             tail = test.stdout.strip().splitlines()[-1] if test.stdout.strip() else test.stderr[-200:]
             if test.returncode != 0:
                 failed = [json.loads(l)["suite"] for l in test.stdout.splitlines() if l.startswith("{") and '"exit_code"' in l and json.loads(l).get("exit_code")]
@@ -250,6 +251,20 @@ class Release:
             self.remotes[name].run("sudo " + self.env["reload"][name])
         time.sleep(self.env.get("reload_wait", 2))
 
+    def bridge_targets(self, unit):
+        hq = self.env["hq_wp"]
+        for copy in unit["copies"]:
+            if copy["kind"] == "hq" and (copy["host"], copy["root"]) == (hq["host"], hq["path"]):
+                yield copy, hq["user"]
+            elif copy["kind"] == "store" and copy.get("wp_user"):
+                yield copy, copy["wp_user"]
+
+    def bridge_activation(self, unit, command):
+        for copy, user in self.bridge_targets(unit):
+            _, out, _ = self.remotes[copy["host"]].agent(command, self.label, copy["root"], user)
+            if out.strip():
+                say(f"  {copy['key']}：{out.strip()}")
+
     def apply_unit(self, unit):
         say(f"{unit['stage']} {unit['name']}：替换 {len(unit['copies'])} 份副本")
         done = []
@@ -260,8 +275,10 @@ class Release:
         except Failed:
             self.rollback_copies(done + [copy])
             raise
-        self.reload({c["host"] for c in unit["copies"]})
         self.applied.append(unit)
+        if self.activate_bridge:
+            self.bridge_activation(unit, "activate-bridge")
+        self.reload({c["host"] for c in unit["copies"]})
 
     def rollback_copies(self, copies):
         for copy in copies:
@@ -270,6 +287,7 @@ class Release:
 
     def rollback_unit(self, unit, reason):
         begin = time.time()
+        self.bridge_activation(unit, "restore-bridge")
         self.rollback_copies(unit["copies"])
         for copy in unit["copies"]:
             self.record_site(copy["key"], "rolled_back", reason)
@@ -367,7 +385,9 @@ class Release:
 
     # --- 每一组之前：线上和主线有没有在发布过程中变 ---
     def live_hashes(self, copy):
-        _, out, _ = self.remotes[copy["host"]].agent("hash", copy["root"], *components_for(copy), check=False)
+        code, out, _ = self.remotes[copy["host"]].agent("hash", copy["root"], *components_for(copy), check=False)
+        if code != 0:
+            return {}
         return {line.split("\t")[0]: line.split("\t")[1] for line in out.strip().splitlines() if line.count("\t") >= 2}
 
     def mainline_problem(self):
@@ -390,7 +410,7 @@ class Release:
         for copy in unit["copies"]:
             now = self.live_hashes(copy)
             before = self.before.get(copy["key"], {})
-            changed += [f"{copy['key']} {comp}" for comp, digest in now.items() if comp in before and before[comp] != digest]
+            changed += [f"{copy['key']} {comp}" for comp, digest in before.items() if now.get(comp) != digest]
         return ("这些副本在发布开始之后被别人改过：" + "，".join(changed)) if changed else ""
 
     # --- G4 ---
@@ -399,10 +419,9 @@ class Release:
         bad = []
         for unit in units:
             for copy in unit["copies"]:
-                _, out, _ = self.remotes[copy["host"]].agent("hash", copy["root"], *components_for(copy), check=False)
-                for line in out.strip().splitlines():
-                    comp, digest, _files = (line.split("\t") + ["", ""])[:3]
-                    if comp in want and digest != want[comp]:
+                actual = self.live_hashes(copy)
+                for comp in components_for(copy):
+                    if comp in want and actual.get(comp) != want[comp]:
                         bad.append(f"{copy['key']} {comp}")
         return bad
 
@@ -426,10 +445,15 @@ class Release:
             raise Failed("这是生产环境：必须带 --confirmed <版本标签>，表示平台所有者已经确认这次发布。")
         self.g0()
         units = self.units()
-        hosts = {c["host"] for u in units for c in u["copies"]} | {self.env["hq_wp"]["host"]}
-        self.stage(hosts)
         code, out, _ = self.hq_wp("pchq-release status", check=False)
         latest = (json.loads(out.strip().splitlines()[-1]).get("latest") or {}).get("components") if code == 0 and out.strip() else None
+        self.activate_bridge = BRIDGE in self.components and BRIDGE not in (latest or {})
+        if self.args.env == "production" and self.activate_bridge:
+            for unit in units:
+                if unit["name"] != "templates" and not list(self.bridge_targets(unit)):
+                    raise Failed(f"{unit['name']} 没有可用于启用 {BRIDGE} 的 WordPress 运行账号。")
+        hosts = {c["host"] for u in units for c in u["copies"]} | {self.env["hq_wp"]["host"]}
+        self.stage(hosts)
         unbumped = self.version_rule(latest)
         if unbumped:
             message = "内容变了但版本号没抬：" + "、".join(unbumped)
@@ -437,6 +461,10 @@ class Release:
                 raise Failed(message + "。抬高版本号后重新打包（沙盒试装可以加 --allow-same-version）。")
             say("  提示：" + message)
         self.before = {copy["key"]: self.live_hashes(copy) for unit in units for copy in unit["copies"]}
+        for unit in units:
+            for copy in unit["copies"]:
+                if set(components_for(copy)) - self.before[copy["key"]].keys():
+                    raise Failed(f"没有读到 {copy['key']} 的完整发布前指纹。")
         problem = self.mainline_problem()
         if problem:
             raise Failed(problem + "。基于新的主线重新打包后再发。")
@@ -509,6 +537,7 @@ class Release:
             self.remotes[name].run(f"mkdir -p {REMOTE_DIR}")
             self.remotes[name].put(os.path.join(HERE, "release_agent.sh"), REMOTE_DIR + "/release_agent.sh")
         for unit in reversed(units):
+            self.bridge_activation(unit, "restore-bridge")
             for copy in unit["copies"]:
                 _, out, _ = self.remotes[copy["host"]].agent("rollback", self.label, copy["root"], *components_for(copy), check=False)
                 say(f"{copy['key']}：" + "；".join(out.strip().splitlines()))

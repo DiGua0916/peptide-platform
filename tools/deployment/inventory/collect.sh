@@ -28,7 +28,7 @@ else
   HQ=$(cfg hq_root); [ -n "$HQ" ] && add "admin:hq" "$HQ"
 fi
 
-COMPONENTS="plugins/peptide-core plugins/peptide-hq plugins/peptide-panapay plugins/peptide-ops themes/peptide-site mu-plugins"
+COMPONENTS="plugins/peptide-core plugins/peptide-hq plugins/peptide-panapay plugins/peptide-ops themes/peptide-site plugins/wp-capi-stealth-bridge mu-plugins"
 for i in "${!ROOTS[@]}"; do
   label=${LABELS[$i]}; root=${ROOTS[$i]}
   printf 'R\t%s\t%s\t%s\n' "$label" "$root" "$(sudo readlink -f "$root")"

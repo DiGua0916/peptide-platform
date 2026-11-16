@@ -47,7 +47,9 @@ tools/deployment/vc-release go --fast --note "一句话：改了什么" --owner-
 
 顺序：主店（试点）→ s0006…s0010 → 两份开店模板 → 总后台。店铺名单每次从总后台的店铺注册表读，新开的店自动包含，停用的店自动跳过。开店模板每次都发，不会漏。
 
-**替换的只有 5 个组件目录**：`plugins/peptide-core`、`plugins/peptide-hq`（只在总后台）、`plugins/peptide-panapay`、`plugins/peptide-ops`、`themes/peptide-site`，整目录换。`wp-content/db.php`、各份 `wp-config.php`（含 `shared/wp-config.php`）、`mu-plugins`、`uploads`、报告文件都不在范围内，发布不改它们，也不会把它们换回旧版。
+**受管组件目录**为 `plugins/peptide-core`、`plugins/peptide-hq`（只在总后台）、`plugins/peptide-panapay`、`plugins/peptide-ops`、`plugins/wp-capi-stealth-bridge`、`themes/peptide-site`，均按整目录替换。`wp-content/db.php`、各份 `wp-config.php`（含 `shared/wp-config.php`）、`mu-plugins`、`uploads` 和报告文件保留原样。
+
+首次发布 CAPI 桥接插件时，发布代理确认网关留空，然后通过各店后台的站点账号和总后台账号启用插件。每家店的前后台共享插件启用状态，开店模板只同步文件。若本次发布回滚，代理恢复本次启用前的状态。
 
 ## 每一步自动做的检查
 
@@ -89,4 +91,4 @@ tools/deployment/vc-release go --fast --note "一句话：改了什么" --owner-
    6. 当天把同样的改动提交进主线；
    7. 在上线记录里写一条“紧急手工”，写明改了哪些文件、备份在哪；
    8. 告诉 F1，由 F1 跑一次 `vc-release check`，确认线上又等于主线。
-4. 不在 5 个组件目录里的配置（`wp-config.php`、`db.php` 等）本来就不归发布工具管：按第 3 条的 2–8 步做（不需要发布工具，但仍要所有者同意、要备份、要记录）。
+4. 发布工具范围之外的配置（`wp-config.php`、`db.php` 等）按第 3 条的 2–8 步处理。
