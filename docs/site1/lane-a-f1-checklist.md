@@ -102,4 +102,4 @@ B 线的功能默认全部关闭，部署代码不会改变收费。F1 按店打
 F1 上线时注意：
 - **peptide-core 内容变了但版本号没抬**（沙盒用 `--allow-same-version` 试装）。正式发布前要抬版本号。
 - 店铺设置：页头模块打开 “Show account”（沙盒原来是关的）；物流球选 `panel`，不要选 `0`。
-- 运费基础价：沙盒（今天导入的线上快照）是 **$45**，定稿文案写的是 “Shipping $55”。上线前请所有者确认用哪个，文案和运费方案要一致。
+- 运费基础价：**所有者已定（2026-11-15）用 $55**，即 Shipping $55 · $10 off over $150 · $20 off over $300 · free over $600（实付 $55 → $45 → $35 → 免费）。线上快照是 $45，位置在“运费方案” Fast International Shipping 的第一条费率 “UPS • FedEx • USPS”（选项 `peptide_core_shipping_plans`，费率 id `r86cf6be1`，小计 0–1000，`fee`）。上线时把它改成 55；$1000 以上那条 $15 不用动（$600 以上已经免运费）。三条运费折扣（选项 `peptide_core_shipping_discounts`）线上快照里已经是对的。
