@@ -82,6 +82,8 @@
   }
 
   async function run() {
+    // 付款成功回到首页（/?pc_paid=…）：购物车已经买过了，丢掉另存的那份。
+    if (/[?&]pc_paid=/.test(window.location.search)) { try { window.localStorage.removeItem(SNAP); } catch (_) {} }
     let cart = null;
     try { cart = await getJSON(cfg.cartApi); } catch (_) { return; }
     const items = (cart.items || []).map(i => [i.id, i.quantity]);

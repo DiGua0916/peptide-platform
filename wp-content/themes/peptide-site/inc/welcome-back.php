@@ -12,7 +12,17 @@
 defined( 'ABSPATH' ) || exit;
 
 add_action( 'wp_enqueue_scripts', static function (): void {
-	if ( is_admin() || ! is_front_page() || ! function_exists( 'wc_get_cart_url' ) ) {
+	if ( is_admin() || ! function_exists( 'wc_get_cart_url' ) ) {
+		return;
+	}
+	// 下单成功后丢掉浏览器另存的购物车，不然 30 天内回来还会提示 “We saved your bag”，把已经买过的东西放回去。
+	if ( function_exists( 'is_order_received_page' ) && is_order_received_page() ) {
+		wp_register_script( 'vc-welcome-back-clear', false, array(), null, true );
+		wp_enqueue_script( 'vc-welcome-back-clear' );
+		wp_add_inline_script( 'vc-welcome-back-clear', "try{localStorage.removeItem('vcBagSnapshot')}catch(e){}" );
+		return;
+	}
+	if ( ! is_front_page() ) {
 		return;
 	}
 	$dir = get_template_directory() . '/assets/';
