@@ -570,11 +570,10 @@ final class Accounts {
 		</form>
 		<button type="button" class="pc-acc__btn pc-acc__btn--ghost" data-pc-switch>I already have an account</button>
 		<?php
-		// 1 号站定稿 P1-2：不想注册也能查物流（复用 M11 的查订单页）。
-		$track = class_exists( Order_Lookup::class ) && method_exists( Order_Lookup::class, 'page_url' ) ? (string) Order_Lookup::page_url() : '';
-		if ( '' !== $track ) :
+		// 1 号站定稿 P1-2：不想注册也能查物流。M11 的查订单页已下线（Q20），这里打开线上的物流面板（Track_Widget）的订单号 + 邮箱查询。
+		if ( class_exists( Track_Widget::class ) && Track_Widget::enabled() ) :
 			?>
-		<a class="pc-acc__btn pc-acc__btn--text" href="<?php echo esc_url( $track ); ?>">Track an order without an account &rarr;</a>
+		<button type="button" class="pc-acc__btn pc-acc__btn--text" data-pc-open-track="lookup">Track an order without an account &rarr;</button>
 		<?php endif; ?>
 		<button type="button" class="pc-acc__btn pc-acc__btn--text" data-pc-signup-skip>Skip for now</button>
 	</div>
