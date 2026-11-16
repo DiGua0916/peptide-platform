@@ -22,7 +22,7 @@ defined( 'ABSPATH' ) || exit( 'Run with: wp eval-file' );
 $vc_lc_mode = in_array( 'apply', (array) ( $args ?? array() ), true ) ? 'apply'
 	: ( in_array( 'rollback', (array) ( $args ?? array() ), true ) ? 'rollback' : 'dry-run' );
 const VC_LC_BACKUP = '_vc_site1_lane_c_backup_v1';
-const VC_LC_MARK   = '<!-- vc-standard-faq v1 -->';
+const VC_LC_MARK   = '<!-- vc-standard-faq v2 -->';
 
 /** Exact current title => new title. Benzyl Alcohol 0.9% is a separate product and is not listed. */
 function vc_lc_title_map(): array {
@@ -36,8 +36,9 @@ function vc_lc_title_map(): array {
 /** Question => answer. Product-name free so each string has one translation. */
 function vc_lc_standard_faq(): array {
 	return array(
-		'How do I read the COA for this lot?'                 => 'Each report lists the lot number, test date, laboratory and HPLC purity. Match the lot number on your vial label with the report shown on this page, or search for it in the COA library.',
-		'Which lot will I receive?'                           => 'Orders ship from current stock. The lot number is printed on the vial label, and batch information appears in your order details after shipment.',
+		// 2026-11-16 F1 法务核对：COA 库多为别家样品的参考报告，前两问不能说“报告就是你收到的批次”。
+		'What does the COA on this page show?'                => 'It is a third-party laboratory report for a reference sample of this compound and specification. It lists the laboratory, test date and HPLC purity of the sample named in the report. It is not a certificate for the specific lot you receive.',
+		'Which lot will I receive?'                           => 'Orders ship from current stock. For the lot details of your order, contact our support team with your order number.',
 		'How is my order shipped?'                            => 'Orders ship with FedEx. The shipping cost and delivery estimate for your address are shown at checkout before you pay.',
 		'How should unopened vials be stored?'                => 'Keep unopened vials sealed at 2–8 °C, dry and protected from light.',
 		'What if my order arrives damaged or incomplete?'     => 'Contact our support team with your order number and photos of the package. We will review it with you.',
@@ -54,10 +55,14 @@ function vc_lc_faq_html(): string {
 }
 
 /** Offset where the FAQ question/answer run that starts at $from ends. */
-function vc_lc_faq_end( string $html, int $from ): int {
-	$pos = $from; $end = $from; $seen_question = false; $len = strlen( $html );
+function vc_lc_faq_end( string $html, int $from, string &$reopen = '' ): int {
+	$pos = $from; $end = $from; $seen_question = false; $len = strlen( $html ); $wrapped = 0;
 	while ( $pos < $len ) {
 		if ( preg_match( '~\G(?:\s+|<!--.*?-->)~s', $html, $ws, 0, $pos ) ) { $pos += strlen( $ws[0] ); continue; }
+		// Most products wrap the questions in one <div> (rich-text-editor-content) right after the heading:
+		// step into it, and take its closing </div> as part of the FAQ when the run inside ends there.
+		if ( ! $seen_question && ! $wrapped && preg_match( '~\G<div\b[^>]*>~i', $html, $open, 0, $pos ) ) { $pos += strlen( $open[0] ); $wrapped = 1; $reopen = $open[0]; continue; }
+		if ( $wrapped && $seen_question && preg_match( '~\G</div>~i', $html, $close, 0, $pos ) ) { $end = $pos + strlen( $close[0] ); $reopen = ''; return $end; }
 		if ( ! preg_match( '~\G<(h3|p|ul|ol)\b[^>]*>.*?</\1>~is', $html, $block, 0, $pos ) ) { break; } // any other element ends the FAQ
 		$tag = strtolower( $block[1] );
 		if ( 'h3' === $tag ) { $seen_question = true; }
@@ -65,7 +70,8 @@ function vc_lc_faq_end( string $html, int $from ): int {
 		elseif ( 'p' === $tag && preg_match( '~^\s*(?:disclaimer|references?|note)\b~i', wp_strip_all_tags( $block[0] ) ) ) { break; }
 		$pos += strlen( $block[0] ); $end = $pos;
 	}
-	return $end;
+	if ( ! $seen_question ) { $reopen = ''; return $from; } // nothing recognisable: replace only the heading
+	return $end; // wrapper not closed by the run: caller re-opens it
 }
 
 /**
@@ -86,11 +92,12 @@ function vc_lc_transform_content( string $html ): array {
 		if ( preg_match( '~<h2\b[^>]*>\s*(?:<[^>]+>\s*)*(?:FAQs?|Frequently\s+asked\s+questions)\s*[:：?]?\s*(?:</[^>]+>\s*)*</h2>~iu', $html, $m, PREG_OFFSET_CAPTURE ) ) {
 			$start = $m[0][1];
 			$after = $start + strlen( $m[0][0] );
-			$end   = vc_lc_faq_end( $html, $after );
+			$reopen = '';
+			$end   = vc_lc_faq_end( $html, $after, $reopen );
 			$old_questions = preg_match_all( '~<h3\b~i', substr( $html, $after, $end - $after ) );
 			$removed = trim( (string) preg_replace( '/\s+/u', ' ', wp_strip_all_tags( substr( $html, $after, $end - $after ) ) ) );
 			$kept    = trim( wp_strip_all_tags( substr( $html, $end ) ) );
-			$html = substr( $html, 0, $start ) . vc_lc_faq_html() . substr( $html, $end );
+			$html = substr( $html, 0, $start ) . vc_lc_faq_html() . $reopen . substr( $html, $end );
 			$changes[] = "FAQ section replaced ({$old_questions} old questions -> " . count( vc_lc_standard_faq() ) . ' standard; removes ' . strlen( $removed ) . ' chars: "' . mb_substr( $removed, 0, 160 ) . ( mb_strlen( $removed ) > 160 ? '…' : '' ) . '"; keeps ' . strlen( $kept ) . ' chars after it)';
 		}
 	}

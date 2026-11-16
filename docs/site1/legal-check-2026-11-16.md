@@ -22,3 +22,12 @@
 
 - 研究用途商品整体的销售方式（美国 FDA / FTC 对 “research use only” 多肽的执法口径），特别是第 4 条的正文内容。
 - 如果以后要用 “Batch COA” 说法：先下架别家样品报告，只留自己批次的报告，再恢复新文字。
+
+## 后续（2026-11-16 晚）
+
+- 所有者确认改写前两问后换上 FAQ。改写为：
+  - “What does the COA on this page show?” → 第三方实验室对本品参考样品的报告，列出实验室、日期、HPLC 纯度，不是你收到那一批的证书。
+  - “Which lot will I receive?” → 从现有库存发货；要知道订单的批次信息，带订单号联系客服。
+- 脚本修正：多数商品的问答包在一层 `<div class="rich-text-editor-content">` 里，原脚本会把新 FAQ 插在前面、旧问答原样留下。已改为进入这层 div 一起替换；NAD+ 的 FAQ 标题是加粗段落不是 `<h2>`，单独处理。
+- 6 家店各替换 37 个商品（只换 FAQ；改名和纯度笔误没动）。每个商品原内容备份在 `_vc_site1_lane_c_backup_v1`，`rollback` 可恢复。前台 Store API 核对：6 家都是 37 个新 FAQ、0 个旧问答、每个商品只有一个 FAQ 标题。
+- 西班牙文：新三句的翻译已加进 `storefront-es-content.json`，**随下一次代码发布生效**；在那之前西语访客看到这三句是英文。

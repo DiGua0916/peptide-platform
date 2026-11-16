@@ -1617,6 +1617,9 @@
     "What if my order arrives damaged or incomplete?": "¿Qué pasa si mi pedido llega dañado o incompleto?",
     "Contact our support team with your order number and photos of the package. We will review it with you.": "Contacta a nuestro equipo de soporte con tu número de pedido y fotos del paquete. Lo revisaremos contigo.",
     "Is this product for human or veterinary use?": "¿Este producto es para uso humano o veterinario?",
-    "No. It is supplied for laboratory research use only and is not intended for human or animal consumption.": "No. Se suministra solo para uso en investigación de laboratorio y no está destinado al consumo humano ni animal."
+    "No. It is supplied for laboratory research use only and is not intended for human or animal consumption.": "No. Se suministra solo para uso en investigación de laboratorio y no está destinado al consumo humano ni animal.",
+    "What does the COA on this page show?": "¿Qué muestra el COA de esta página?",
+    "It is a third-party laboratory report for a reference sample of this compound and specification. It lists the laboratory, test date and HPLC purity of the sample named in the report. It is not a certificate for the specific lot you receive.": "Es un informe de laboratorio de terceros sobre una muestra de referencia de este compuesto y presentación. Indica el laboratorio, la fecha de análisis y la pureza por HPLC de la muestra nombrada en el informe. No es un certificado del lote específico que recibirás.",
+    "Orders ship from current stock. For the lot details of your order, contact our support team with your order number.": "Los pedidos se envían desde el stock actual. Para conocer los datos del lote de tu pedido, contacta con nuestro equipo de soporte e indica tu número de pedido."
   }
 }
