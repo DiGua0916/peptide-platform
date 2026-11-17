@@ -424,19 +424,9 @@
     restore.move(root.querySelector('.vc-dialog-sticky'),null);
     const mainBuy = root.querySelector('[data-vc-quick-buy]');
     const purchaseDock = window.createVcProductPurchaseDock?.({root,dialog,form,mainAdd,mainBuy,selectedLabel,priceNode:summary.querySelector(':scope > .price'),enabled:settings.stickyPurchaseEnabled,signal});
-    const purchaseReturn = window.createVcConfirmedPurchaseReturn?.({dialog,signal,
-      isCurrent: ticket => !destroyed && dialog.open && root.isConnected && Number(root.dataset.vcProductId) === ticket.productId && root.vcHomeOpener === ticket.opener
-        && ![...document.querySelectorAll('dialog[open]')].some(layer => layer !== dialog),
-      close: () => { if (toolbarClose?.isConnected && dialog.open) toolbarClose.click(); }
-    });
-    // Buy remains the plugin's real checkout action. Never let a previous Add
-    // success close this view while the customer starts a different action.
-    mainBuy?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
-    // An explicit new interaction takes ownership from the short success beat.
-    // Pointerdown precedes the original Add submit, which starts a fresh ticket.
-    dialog.addEventListener('pointerdown', () => purchaseReturn?.cancel(), {capture:true,signal});
-    toolbar?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
-    form?.addEventListener('change', () => purchaseReturn?.cancel(), {signal});
+    // Site 1 (2026-11-17): a confirmed Add keeps the product open. Customers
+    // often add a second strength (e.g. 30mg after 20mg); the old automatic
+    // return to the homepage made them find and reopen the product again.
     // The plugin owns submitting, locking, failure/recovery and confirmed 201.
     // This listener only decorates that existing success, never guesses from cart totals.
     const feedbackConfig = window.vcLiveCommerce?.cartFeedback?.config || {};
@@ -449,7 +439,7 @@
     form?.addEventListener('submit',event=>{
       const trigger = form.vcSubmitTrigger || event.submitter || mainAdd; delete form.vcSubmitTrigger;
       if (destroyed || !dialog.open || !mainAdd || mainAdd.disabled || form.inert || mainAdd.classList.contains('disabled')) return;
-      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false,returnTicket:purchaseReturn?.begin({mode:'add',opener:root.vcHomeOpener,productId})};
+      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false};
       const submitted=pendingFeedback;
       Promise.resolve().then(()=>{
         // Native validation runs first. Decorate only a request it actually locks.
@@ -461,13 +451,13 @@
         if(!pendingFeedback.started && nativeFeedback?.state!=='pending')nativeFeedback?.begin(pendingFeedback.trigger);
         pendingFeedback.started = true;
       } else if(pendingFeedback?.started && ['drawer','live-cart'].includes(event.detail?.source)) {
-        pendingFeedback.stale=true; nativeFeedback?.cancel(); purchaseReturn?.cancel();
+        pendingFeedback.stale=true; nativeFeedback?.cancel();
       }
     },{signal});
     document.addEventListener('vc:cart-updated',event=>{
       const detail=event.detail;
       if(!pendingFeedback?.started || detail?.source!=='showcase' || detail.mutation!==true)return;
-      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel();purchaseReturn?.cancel(); }
+      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel(); }
       else if(detail.stale===false && Array.isArray(detail.cart?.items) && detail.cart?.totals) pendingFeedback.confirmed=true;
     },{signal});
     window.jQuery?.(document.body).on('added_to_cart' + feedbackNamespace,(_,fragments,hash,$trigger)=>{
@@ -476,15 +466,14 @@
       pendingFeedback = null;
       if(pending.confirmed && !pending.stale) {
         nativeFeedback?.confirm();
-        purchaseReturn?.confirm(pending.returnTicket,{confirmed:true,stale:false,presentation:nativeFeedback?.presentation});
-      } else { nativeFeedback?.cancel(); purchaseReturn?.cancel(); }
+      } else { nativeFeedback?.cancel(); }
     });
     function syncSticky() {
       if (destroyed) return;
       purchaseDock?.update();
       metaStrip?.update();
       if(pendingFeedback && nativeFeedback?.state==='pending' && form?.getAttribute('aria-busy')!=='true' && !pendingFeedback.confirmed) {
-        pendingFeedback=null;nativeFeedback?.cancel();purchaseReturn?.cancel();
+        pendingFeedback=null;nativeFeedback?.cancel();
       }
       nativeFeedback?.sync();
     }
@@ -671,7 +660,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
+      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
     };
     refresh(); if (!reportRequest) reportReadPromise=readReports(); readTicker(); return api;
   }

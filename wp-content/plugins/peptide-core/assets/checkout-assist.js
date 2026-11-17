@@ -132,8 +132,12 @@
     function payButton() {
         const btn = document.querySelector('.wc-block-components-checkout-place-order-button'); if (!btn) return;
         const label = payLabel(select()?.getCartData?.());
-        const text = btn.querySelector('.wc-block-components-button__text') || btn;
-        if (label && text.textContent !== label && !btn.classList.contains('wc-block-components-button--loading')) text.textContent = label;
+        // Never replace React's own text node: after a failed validation React re-renders the button
+        // (spinner inserted before that node) and a replaced node makes it unmount the whole pay area,
+        // so the shopper had no button until a full reload. The label lives in an attribute; CSS shows it.
+        const text = btn.querySelector('.wc-block-components-button__text');
+        if (text && label && text.getAttribute('data-pc-label') !== label) text.setAttribute('data-pc-label', label);
+        if (label && btn.getAttribute('aria-label') !== label) btn.setAttribute('aria-label', label); // what screen readers announce
         let save = btn.parentElement.parentElement.querySelector('[data-pc-pay-save]');
         const amount = global.VialCoveCheckoutSaving;
         if (amount) {

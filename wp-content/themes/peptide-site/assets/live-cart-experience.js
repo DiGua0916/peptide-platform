@@ -233,9 +233,10 @@
         const shipping = shippingSavingsTrace(cart);
         if (cart.needs_shipping) {
             if (shipping) {
-                rows.push({ key: 'shipping-original', label: 'Shipping before offers', minor: shipping.original });
-                shipping.discounts.forEach((entry, index) => rows.push({ key: 'shipping-offer-' + entry.id, label: nativeOfferName(entry.name) + ' · Shipping', minor: String(-entry.amount), savings: true,
-                    detail: index === shipping.discounts.length - 1 ? 'Shipping after offers: ' + money(shipping.payable, t) : '' }));
+                // Site 1 (2026-11-17): one Shipping line, the regular price struck through and the price paid
+                // after it, so the shopper sees at a glance that the offer is on shipping.
+                rows.push({ key: 'shipping', label: 'Shipping', minor: shipping.payable, reference: shipping.original, free: BigInt(shipping.payable) === 0n, savings: true,
+                    detail: shipping.discounts.map(entry => nativeOfferName(entry.name) + ' · −' + money(String(entry.amount), t)).join(' · ') });
                 saved += BigInt(shipping.discount);
             } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
             if (protect) rows.push({ key: 'ship-protect', label: label(protect.label) || 'Shipping protection', minor: String(protect.price_minor),
@@ -776,7 +777,10 @@
                 }
                 const label = el('span', 'vc-live-cart__total-label', clean(total.label));
                 if (total.detail) label.append(el('small', 'vc-live-cart__total-detail', clean(total.detail)));
-                row.append(label, el('strong', '', total.unknown ? 'At checkout' : money(total.minor, cart.totals))); return row;
+                const value = el('strong');
+                if (total.reference) value.append(el('s', 'vc-live-cart__protect-ref', money(total.reference, cart.totals)), ' ');
+                value.append(total.unknown ? 'At checkout' : total.free ? 'Free' : money(total.minor, cart.totals));
+                row.append(label, value); return row;
             })); }
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button,[data-cart-protect]').forEach(node => { node.disabled = !valid || pending; });

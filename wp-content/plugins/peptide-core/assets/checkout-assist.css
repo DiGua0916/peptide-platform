@@ -4,3 +4,5 @@
 .pc-phone-note.is-error { color: #b3261e; font-weight: 600; }
 .pc-pay-save { margin: 6px 0 0; text-align: center; font-size: 14px; font-weight: 700; color: #2e7d4f; }
 .pc-pay-help { margin: 6px 0 0; font-weight: 600; }
+.wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label] { font-size: 0; }
+.wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label]::after { content: attr(data-pc-label); font-size: 1rem; }
