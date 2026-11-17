@@ -71,13 +71,19 @@ if ( $apply ) { $new_backup['options']['peptide_core_resale_prompt'] = $resale; 
 // 4. 配送方式名称。
 $plans = (array) get_option( 'peptide_core_shipping_plans', array() ); $renamed = 0;
 foreach ( $plans as &$plan ) {
-	foreach ( $plan['rates'] ?? array() as &$rate ) {
+	if ( ! isset( $plan['rates'] ) || ! is_array( $plan['rates'] ) ) { continue; }
+	foreach ( $plan['rates'] as &$rate ) { // by reference on the real array (not a `?? array()` copy), so the rename is saved
 		if ( 'UPS • FedEx • USPS' === ( $rate['name'] ?? '' ) ) { $log( "配送方式「{$rate['name']}」({$rate['id']}) → FedEx" ); $rate['name'] = 'FedEx'; $renamed++; }
 	}
 	unset( $rate );
 }
 unset( $plan );
-if ( $apply && $renamed ) { $new_backup['options']['peptide_core_shipping_plans'] = get_option( 'peptide_core_shipping_plans' ); update_option( 'peptide_core_shipping_plans', $plans ); }
+if ( $apply && $renamed ) {
+	$new_backup['options']['peptide_core_shipping_plans'] = get_option( 'peptide_core_shipping_plans' );
+	update_option( 'peptide_core_shipping_plans', $plans );
+	$check = wp_json_encode( get_option( 'peptide_core_shipping_plans' ), JSON_UNESCAPED_UNICODE );
+	$log( str_contains( $check, 'UPS • FedEx • USPS' ) ? '警告：配送方式名称没有改成功' : '配送方式名称已改为 FedEx' );
+}
 
 // 5 + 6. 商品名和正文。
 $names = array( 'Cagriliintide' => 'Cagrilintide', 'adamax' => 'Adamax', 'bac.water' => 'Bacteriostatic Water' );

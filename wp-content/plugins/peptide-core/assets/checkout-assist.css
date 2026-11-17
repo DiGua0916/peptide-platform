@@ -6,3 +6,4 @@
 .pc-pay-help { margin: 6px 0 0; font-weight: 600; }
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label] { font-size: 0; }
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label]::after { content: attr(data-pc-label); font-size: 1rem; }
+.wc-block-checkout .wc-block-components-totals-item__value[data-pc-ref]::before { content: attr(data-pc-ref); margin-right: 6px; color: #7b8d93; font-weight: 400; text-decoration: line-through; }

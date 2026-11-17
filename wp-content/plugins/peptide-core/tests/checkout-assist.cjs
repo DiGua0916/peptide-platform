@@ -12,4 +12,16 @@ assert.deepEqual(d.shipping,{city:'Austin'});
 assert.equal(a.payLabel({totals:{total_price:'15599',currency_minor_unit:2,currency_prefix:'$'}}),'Pay $155.99');
 assert.equal(a.helpText([]),'Your details are saved. Please try again.');
 assert.equal(a.helpText(['Cash App','Klarna']),'Your details are saved. Try again, or pay another way: Cash App or Klarna.');
+// Site 1 2026-11-17: struck regular prices on the checkout summary.
+{
+  const cart = (o) => ({ totals: { currency_minor_unit: 2, currency_prefix: '$', total_shipping: o.pay }, extensions: { peptide_core: {
+    shipping_savings: { status: 'applied', complete: true, original_shipping: '5500', payable_shipping: o.pay, shipping_discount: String(5500 - Number(o.pay)) },
+    shipping_protection: { enabled: true, chosen: o.chosen !== false, price_minor: 99, reference_minor: 20000, label: 'Shipping protection' } } } });
+  const r = a.refPrices(cart({ pay: '4500' }));
+  assert.equal(r.shipping, '$55.00'); assert.equal(r.protection, '$200.00'); assert.equal(r.free, false);
+  assert.equal(a.refPrices(cart({ pay: '0' })).free, true);
+  assert.equal(a.refPrices(cart({ pay: '5500' })).shipping, '', 'no offer, no struck price');
+  assert.equal(a.refPrices(cart({ pay: '4500', chosen: false })).protection, '', 'protection opted out shows no struck price');
+  assert.equal(a.refPrices({}).shipping, '');
+}
 console.log('checkout-assist 17/17 ok');
