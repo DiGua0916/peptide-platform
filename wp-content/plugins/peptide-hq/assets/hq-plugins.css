@@ -57,6 +57,7 @@ body.pchq-workspace .pcp-link:hover{color:var(--vc-ink)}
 body.pchq-workspace .pcp-link.is-danger:hover{color:var(--pcp-bad)}
 body.pchq-workspace .pcp-tag{display:inline-flex;align-items:center;padding:2px 8px;border-radius:999px;background:var(--vc-soft);color:var(--vc-ink);font-size:11px;line-height:17px;font-weight:600;font-style:normal;white-space:nowrap}
 body.pchq-workspace .pcp-tag.is-on{background:var(--pcp-ok-bg);color:var(--pcp-ok)}
+body.pchq-workspace .pcp-tag.is-bad{background:var(--pcp-bad-bg);color:var(--pcp-bad)}
 body.pchq-workspace .pcp-tag.is-core{color:var(--vc-muted)}
 
 /* Store rows */
