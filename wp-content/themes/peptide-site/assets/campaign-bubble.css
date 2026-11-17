@@ -58,8 +58,11 @@
 .vc-campaign-strip .pc-campaign__description p,.vc-campaign-strip .pc-campaign__notes p{margin:0}
 .vc-campaign-strip .pc-campaign__rail-controls{display:none!important}
 .vc-campaign-strip .pc-campaign__tier.vc-campaign-loop-start{padding-left:0;border-left:0}
-/* Pin the native module, not its short inner wrapper, beneath the live header. */
-.vc-m.vc-campaign-pin{position:sticky;top:var(--vc-campaign-sticky-top,0px);z-index:59;padding-block:8px;background:transparent}
+/* Pin the native module, not its short inner wrapper, beneath the live header.
+   The band is opaque so content scrolling under the rounded strip is hidden
+   cleanly instead of showing around it (on phones the catalog filter buttons
+   looked half covered). */
+.vc-m.vc-campaign-pin{position:sticky;top:var(--vc-campaign-sticky-top,0px);z-index:59;padding-block:8px;background:var(--vc-campaign-pin-bg,#fff)}
 html.vc-campaign-pin-page{scroll-padding-top:var(--vc-campaign-anchor-offset,105px)}
 .vc-campaign-strip[data-vc-campaign-sticky]{width:min(calc(100% - 32px),1440px);margin-inline:auto;border-radius:9999px!important;overflow:hidden}
 .vc-campaign-strip[data-vc-campaign-sticky]>.pc-cb.vc-m__inner{width:calc(100% - 32px)}
