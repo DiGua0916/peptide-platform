@@ -9,7 +9,7 @@
  *
  * 改的内容：
  * 1. 黑五等“减商品价”的满减活动全部改成草稿（以后的活动都从运费上减，定稿 P0-5 / 店主 11-17 确认）；
- * 2. 运费险显示原价 $200（划线），实收 $0.99 不变；
+ * 2. 运费险显示原价 $8.50（划线，写“Customer appreciation offer”回馈客户），实收 $0.99 不变；
  * 3. 打开经销商 WhatsApp 弹窗（满 $600，门槛不变）；
  * 4. 配送方式名称 “UPS • FedEx • USPS” 改为 “FedEx”（定稿 P1-7：承运商统一写 FedEx）；
  * 5. 商品改名：Cagriliintide → Cagrilintide，adamax → Adamax，bac.water → Bacteriostatic Water（定稿 P2-1）；
@@ -58,10 +58,10 @@ foreach ( get_posts( array( 'post_type' => 'pc_promotion', 'post_status' => 'pub
 	if ( $apply ) { $new_backup['promotions'][ $promo->ID ] = 'publish'; wp_update_post( array( 'ID' => $promo->ID, 'post_status' => 'draft' ) ); }
 }
 
-// 2. 运费险原价 $200。
+// 2. 运费险原价 $8.50。
 $protect = (array) get_option( 'peptide_core_shipping_protection', array() );
-$log( '运费险：原价 ' . ( $protect['reference'] ?? '无' ) . ' → 200，实收 ' . ( $protect['price'] ?? '?' ) . ' 不变，开启：' . ( ! empty( $protect['enabled'] ) ? '是' : '否' ) );
-if ( $apply ) { $new_backup['options']['peptide_core_shipping_protection'] = $protect; $protect['reference'] = 200; update_option( 'peptide_core_shipping_protection', $protect ); }
+$log( '运费险：原价 ' . ( $protect['reference'] ?? '无' ) . ' → 8.5，实收 ' . ( $protect['price'] ?? '?' ) . ' 不变，开启：' . ( ! empty( $protect['enabled'] ) ? '是' : '否' ) );
+if ( $apply ) { $new_backup['options']['peptide_core_shipping_protection'] = $protect; $protect['reference'] = 8.5; update_option( 'peptide_core_shipping_protection', $protect ); }
 
 // 3. 经销商弹窗。
 $resale = (array) get_option( 'peptide_core_resale_prompt', array() );

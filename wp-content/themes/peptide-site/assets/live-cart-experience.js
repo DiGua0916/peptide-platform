@@ -241,6 +241,8 @@
             } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
             if (protect) rows.push({ key: 'ship-protect', label: label(protect.label) || 'Shipping protection', minor: String(protect.price_minor),
                 reference: Number.isSafeInteger(protect.reference_minor) && protect.reference_minor > protect.price_minor ? String(protect.reference_minor) : '',
+                // Owner 11-18: the struck price is shown as a customer appreciation offer.
+                detail: Number.isSafeInteger(protect.reference_minor) && protect.reference_minor > protect.price_minor ? 'Customer appreciation offer' : '',
                 protect: { namespace: protect.namespace, chosen: protect.chosen === true } });
         }
         if (positive(t.total_tax)) rows.push({ key: 'tax', label: 'Tax', minor: t.total_tax });
@@ -771,7 +773,7 @@
                     row.classList.add('vc-live-cart__protect'); row.classList.toggle('is-off', !total.protect.chosen);
                     const box = el('input'); box.type = 'checkbox'; box.checked = total.protect.chosen; box.dataset.cartProtect = ''; box.disabled = !valid || pending;
                     box.addEventListener('change', () => client.write('extensions', { namespace: total.protect.namespace, data: { on: box.checked } }).catch(() => {}));
-                    const name = el('label', 'vc-live-cart__total-label vc-live-cart__protect-label'); name.append(box, el('span', '', clean(total.label)));
+                    const name = el('label', 'vc-live-cart__total-label vc-live-cart__protect-label'); name.append(box, el('span', '', clean(total.label))); if (total.detail) name.append(el('small', 'vc-live-cart__total-detail vc-live-cart__protect-note', clean(total.detail)));
                     const value = el('strong'); if (total.reference) value.append(el('s', 'vc-live-cart__protect-ref', money(total.reference, cart.totals)), ' ');
                     value.append(money(total.minor, cart.totals)); row.append(name, value); return row;
                 }

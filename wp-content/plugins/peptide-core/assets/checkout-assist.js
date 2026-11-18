@@ -179,7 +179,11 @@
         document.querySelectorAll('.wc-block-checkout .wc-block-components-totals-shipping .wc-block-components-totals-item__value').forEach(el => mark(el, ref.shipping));
         document.querySelectorAll('.wc-block-checkout .wc-block-components-totals-item').forEach(item => {
             const label = item.querySelector('.wc-block-components-totals-item__label')?.textContent.trim();
-            if (label === ref.protectionLabel) mark(item.querySelector('.wc-block-components-totals-item__value'), ref.protection);
+            if (label !== ref.protectionLabel) return;
+            mark(item.querySelector('.wc-block-components-totals-item__value'), ref.protection);
+            // The offer note is an attribute on the item (drawn by CSS), never a React-owned node.
+            const note = ref.protection ? 'Customer appreciation offer' : '';
+            if (note && item.getAttribute('data-pc-note') !== note) item.setAttribute('data-pc-note', note); else if (!note && item.hasAttribute('data-pc-note')) item.removeAttribute('data-pc-note');
         });
     }
     let frame = 0;

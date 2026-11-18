@@ -7,3 +7,5 @@
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label] { font-size: 0; }
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label]::after { content: attr(data-pc-label); font-size: 1rem; }
 .wc-block-checkout .wc-block-components-totals-item__value[data-pc-ref]::before { content: attr(data-pc-ref); margin-right: 6px; color: #7b8d93; font-weight: 400; text-decoration: line-through; }
+.wc-block-checkout .wc-block-components-totals-item[data-pc-note] { flex-wrap: wrap; }
+.wc-block-checkout .wc-block-components-totals-item[data-pc-note]::after { content: attr(data-pc-note); flex-basis: 100%; order: 9; margin-top: 2px; color: #7b8d93; font-size: 12px; line-height: 16px; }
