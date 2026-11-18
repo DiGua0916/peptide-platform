@@ -88,6 +88,12 @@ function vc_shipping_campaign_strip( array $s, int $promotion_id, string $contex
         $out .= '<div class="pc-campaign__tier"><div class="pc-campaign__condition">over ' . esc_html( $money( $t['min'] ) ) . '</div><div class="pc-campaign__discount">' . $discount . '</div></div>';
     }
     $sticky = is_front_page() && 'editor' !== $context ? ' data-vc-campaign-sticky' : '';
+    // Same rolling motion as the native strip: the title stays put, only the offers scroll,
+    // so a tier that does not fit on a phone still comes into view. No native render ran here,
+    // so the script is loaded without the pc-commerce-blocks dependency.
+    if ( ! is_admin() && function_exists( 'wp_enqueue_script' ) ) {
+        wp_enqueue_script( 'vc-campaign-announcement', get_template_directory_uri() . '/assets/campaign-announcement.js', array(), (string) filemtime( get_template_directory() . '/assets/campaign-announcement.js' ), true );
+    }
     return '<div class="vc-campaign-strip vc-campaign-strip--shipping" data-vc-campaign-strip' . $sticky . '><div class="pc-cb vc-m__inner"><article class="pc-campaign" data-pc-campaign data-pc-activity="shipping"><header class="pc-campaign__head"><h2 class="pc-campaign__title">' . esc_html( $title ) . '</h2></header><div class="pc-campaign__rail"><div class="pc-campaign__tiers" tabindex="0" aria-label="Shipping offers">' . $out . '</div></div></article></div></div>';
 }
 // Before the native priority-10 renderer: opt-in presentation, one native render.
