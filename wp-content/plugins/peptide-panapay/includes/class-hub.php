@@ -71,14 +71,27 @@ final class Hub {
 		$binding = $settings['bindings'][ $key ];
 		$public_host = wp_parse_url( $public_url, PHP_URL_HOST );
 		$bare_domain = '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/';
+		// 结构坏了（字段缺失、site_id 对不上别家）——这是真出事了，永远不自动修。
 		if ( ! is_array( $binding ) || count( $binding ) !== 3 || array_diff( array_keys( $binding ), array( 'site_id', 'public_host', 'provider_site' ) )
 			|| ! is_int( $binding['site_id'] ?? null ) || $binding['site_id'] < 1 || $binding['site_id'] !== ( $site['id'] ?? null )
-			|| ! is_string( $public_host ) || ! is_string( $binding['public_host'] ?? null ) || $public_host !== $binding['public_host']
-			|| ! is_string( $binding['provider_site'] ?? null ) || strlen( $binding['provider_site'] ) > 253 || ! preg_match( $bare_domain, $binding['provider_site'] )
-			|| ( $public_host !== $binding['provider_site'] && ! str_ends_with( $public_host, '.' . $binding['provider_site'] ) ) ) {
+			|| ! is_string( $public_host ) || ! is_string( $binding['public_host'] ?? null )
+			|| ! is_string( $binding['provider_site'] ?? null ) || strlen( $binding['provider_site'] ) > 253 || ! preg_match( $bare_domain, $binding['provider_site'] ) ) {
+			Provider_Bindings::stuck( $site, $account, is_string( $public_host ) ? $public_host : '', 'structure' );
 			throw new Protocol_Error( 'provider_site_invalid', 503 );
 		}
-		return $binding['provider_site'];
+		if ( $public_host === $binding['public_host']
+			&& ( $public_host === $binding['provider_site'] || str_ends_with( $public_host, '.' . $binding['provider_site'] ) ) ) {
+			Provider_Bindings::clear( (int) $site['id'], $account );
+			return $binding['provider_site'];
+		}
+		// 域名变了。只有总后台自己认过这个新域名才自动跟上（见 Provider_Bindings）。
+		$healed = Provider_Bindings::heal( $site, $account, $binding, $public_host );
+		if ( null !== $healed ) {
+			Provider_Bindings::clear( (int) $site['id'], $account );
+			return $healed['provider_site'];
+		}
+		Provider_Bindings::stuck( $site, $account, $public_host, 'unauthorized' );
+		throw new Protocol_Error( 'provider_site_invalid', 503 );
 	}
 	private static function payload( array $p, array $site ): array {
 		$allowed = array( 'order_id', 'currency', 'amount', 'email', 'phone', 'ip', 'accept_language', 'user_agent', 'return_url', 'products' );
