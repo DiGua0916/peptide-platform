@@ -48,7 +48,7 @@
                 row = document.createElement('div');
                 row.setAttribute(ROW, '');
                 row.className = 'wc-block-components-totals-item pc-ship-protect';
-                row.innerHTML = '<label class="pc-ship-protect__label"><input type="checkbox" class="pc-ship-protect__box"><span class="pc-ship-protect__name"></span></label>' +
+                row.innerHTML = '<label class="pc-ship-protect__label"><input type="checkbox" class="pc-ship-protect__box"><span class="pc-ship-protect__text"><span class="pc-ship-protect__name"></span><small class="pc-ship-protect__note"></small></span></label>' +
                     '<span class="pc-ship-protect__price"><s class="pc-ship-protect__ref"></s> <span class="pc-ship-protect__now"></span></span>';
                 row.querySelector('input').addEventListener('change', event => toggle(event.target, p.namespace));
                 anchor.insertAdjacentElement(anchor.classList.contains('wc-block-components-totals-footer-item') ? 'beforebegin' : 'afterend', row);
@@ -59,6 +59,8 @@
             setText(row.querySelector('.pc-ship-protect__name'), p.label);
             const ref = row.querySelector('.pc-ship-protect__ref');
             setText(ref, p.reference_minor > p.price_minor ? money(p.reference_minor, cart) : '');
+            // Owner 11-18: the struck price is presented as a customer appreciation offer.
+            setText(row.querySelector('.pc-ship-protect__note'), p.reference_minor > p.price_minor ? 'Customer appreciation offer' : '');
             setText(row.querySelector('.pc-ship-protect__now'), money(p.price_minor, cart));
             row.classList.toggle('is-off', p.chosen !== true);
             hideNativeFee(root, p.label);
