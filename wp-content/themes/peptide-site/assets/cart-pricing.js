@@ -144,9 +144,16 @@
 
     // Site 1 P1-6: checkout opens with one compact line, stamp + "You're saving $X on this order".
     // The breakdown stays in the order summary. Shipping savings (tiers) are added to the total.
-    function shippingMinor() {
-        var cart = wp.data.select(window.wc.wcBlocksData.cartStore).getCartData();
+    function shippingMinor(cart) {
+        cart = cart || wp.data.select(window.wc.wcBlocksData.cartStore).getCartData();
         var v = Number(cart?.extensions?.peptide_core?.shipping_savings?.shipping_discount);
+        return Number.isSafeInteger(v) && v > 0 ? v : 0;
+    }
+    // Owner 11-18 (layout D): shipping protection's struck price counts as a saving while it is chosen.
+    function protectionMinor(cart) {
+        var p = cart?.extensions?.peptide_core?.shipping_protection;
+        if (!p || p.enabled !== true || p.chosen !== true) return 0;
+        var v = Number(p.reference_minor) - Number(p.price_minor);
         return Number.isSafeInteger(v) && v > 0 ? v : 0;
     }
     function CheckoutSavings() {
@@ -158,7 +165,7 @@
         var decimals = Number(pricing.currency_minor_unit);
         if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) return null;
         var items = pricing.savings_available === false ? 0 : Number(pricing.total_savings !== undefined ? pricing.total_savings : pricing.sale_savings);
-        var total = (Number.isFinite(items) ? items : 0) + shippingMinor(); // shipping-tier savings count even without item savings
+        var total = (Number.isFinite(items) ? items : 0) + shippingMinor(storedCart) + protectionMinor(storedCart); // same sum as the breakdown under the order summary
         var amount = money(total, pricing.currency_code, decimals);
         if (!amount || total <= 0) return null;
         window.VialCoveCheckoutSaving = amount;
@@ -168,12 +175,33 @@
         );
     }
 
+    // Owner 11-18, layout D: one line per kind of saving, then the sum, shown above the order total.
     function FooterSavings() {
-        var data = useSavings();
-        return data ? h('section', {className:'vc-order-savings', 'aria-label':text('Order savings','Ahorro del pedido')},
-            h('p', null, text('Total savings', 'Ahorro total')),
-            h(SavingsStamp, {amount:data.amount,label:text('Total saved','Ahorro total')})
-        ) : null;
+        var cart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
+        var pricing = cart?.extensions?.peptide_core?.sale_savings;
+        if (!pricing) return null;
+        var decimals = Number(pricing.currency_minor_unit);
+        if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) return null;
+        var items = 0;
+        if (pricing.savings_available !== false) {
+            var regular = Number(checkoutView ? pricing.display_regular_subtotal ?? pricing.regular_subtotal : pricing.regular_subtotal);
+            var sale = Number(checkoutView ? pricing.display_sale_subtotal ?? pricing.sale_subtotal : pricing.sale_subtotal);
+            if (Number.isSafeInteger(regular) && Number.isSafeInteger(sale) && regular > sale) items = regular - sale;
+        }
+        var parts = [
+            [text('Product savings', 'Ahorro en productos'), items],
+            [text('Shipping offer', 'Oferta de envío'), shippingMinor(cart)],
+            [text('Protection offer', 'Oferta de protección'), protectionMinor(cart)]
+        ].filter(function (part) { return part[1] > 0; });
+        var sum = parts.reduce(function (total, part) { return total + part[1]; }, 0);
+        var amount = money(sum, pricing.currency_code, decimals);
+        if (!parts.length || !amount) return null;
+        return h('section', {className:'vc-order-savings vc-order-savings--list', 'aria-label':text('Order savings','Ahorro del pedido')},
+            parts.map(function (part) {
+                return h('div', {key:part[0], className:'vc-order-savings__row'}, h('span', null, part[0]), h('strong', null, '−' + money(part[1], pricing.currency_code, decimals)));
+            }),
+            h('div', {className:'vc-order-savings__row vc-order-savings__sum'}, h('span', null, text('You save', 'Ahorras')), h('strong', null, amount))
+        );
     }
     window.VialCoveSavings = Object.freeze({ Footer:FooterSavings, Stamp:SavingsStamp });
 
