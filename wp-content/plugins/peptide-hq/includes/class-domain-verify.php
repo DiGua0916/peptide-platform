@@ -111,14 +111,22 @@ final class Domain_Verify {
 		if ( ! $online || '' === $host ) {
 			return $out;
 		}
+		// 总后台这台机器可能整体禁止外发请求（WP_HTTP_BLOCK_EXTERNAL）。那样这两项不是「不通过」，
+		// 是「查不了」——别让它变成假警报，照实说一句，让人去店铺那台机器上跑。
+		if ( self::blocked( $host ) ) {
+			$add( 'http', '店面可访问', null, '本机禁止外发 HTTP 请求（WP_HTTP_BLOCK_EXTERNAL），跳过；可在店铺那台机器上访问确认' );
+			$add( 'notify', '支付回调入口', null, '同上，跳过' );
+			return $out;
+		}
 
 		// 6. 真的访问一次：nginx、证书、WordPress 的 home 任何一处没跟上，这里就会掉出来。
 		$front = wp_remote_get( 'https://' . $host . '/', array( 'timeout' => 20, 'redirection' => 0, 'sslverify' => true ) );
 		$code  = is_wp_error( $front ) ? 0 : (int) wp_remote_retrieve_response_code( $front );
+		$skipped = static fn( $r ): bool => is_wp_error( $r ) && 'http_request_not_executed' === $r->get_error_code();
 		$add(
 			'http',
 			'店面可访问',
-			200 === $code,
+			$skipped( $front ) ? null : 200 === $code,
 			is_wp_error( $front ) ? ( '请求失败：' . $front->get_error_message() ) : ( 'HTTP ' . $code . '（444/421/525 说明 nginx 或证书没跟上）' )
 		);
 
@@ -129,7 +137,7 @@ final class Domain_Verify {
 		$add(
 			'notify',
 			'支付回调入口',
-			400 === $ncode && str_contains( $nbody, 'notification_not_accepted' ),
+			$skipped( $notify ) ? null : ( 400 === $ncode && str_contains( $nbody, 'notification_not_accepted' ) ),
 			is_wp_error( $notify ) ? ( '请求失败：' . $notify->get_error_message() ) : ( 'HTTP ' . $ncode . '；期待 400 notification_not_accepted' )
 		);
 
@@ -169,6 +177,21 @@ final class Domain_Verify {
 			return array( false, sprintf( '顾客域名 %s 不属于商户站点 %s，支付会 503', $host, $provider ) );
 		}
 		return array( true, sprintf( '%s → 发给收单方的商户站点是 %s', $bound, $provider ) );
+	}
+
+	/** 和 WP_Http::block_request() 同口径：这台机器允不允许请求这个域名。 */
+	public static function blocked( string $host ): bool {
+		if ( ! defined( 'WP_HTTP_BLOCK_EXTERNAL' ) || ! WP_HTTP_BLOCK_EXTERNAL ) { return false; }
+		$home = strtolower( (string) wp_parse_url( get_option( 'home' ), PHP_URL_HOST ) );
+		if ( '' !== $home && $home === $host ) { return false; }
+		$allowed = defined( 'WP_ACCESSIBLE_HOSTS' ) ? explode( ',', (string) WP_ACCESSIBLE_HOSTS ) : array();
+		foreach ( $allowed as $rule ) {
+			$rule = strtolower( trim( $rule ) );
+			if ( '' === $rule ) { continue; }
+			if ( $rule === $host ) { return false; }
+			if ( str_starts_with( $rule, '*.' ) && str_ends_with( $host, substr( $rule, 1 ) ) ) { return false; }
+		}
+		return true;
 	}
 
 	private static function cdn_authorized( int $site_id, string $bare ): bool {
