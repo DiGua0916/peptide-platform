@@ -49,7 +49,7 @@ final class Resale_Prompt {
 				'free'     => "You've unlocked free shipping",
 				'title'    => 'Buying for resale?',
 				'body'     => 'Your bag is over $' . rtrim( rtrim( number_format( $s['threshold'], 2, '.', ',' ), '0' ), '.' ) . '. Our account manager can give you dealer pricing on WhatsApp.',
-				'points'   => array( 'Dedicated account manager', 'Ships from our U.S. warehouse' ),
+				'points'   => array( 'Dedicated account manager', 'Get exclusive pricing' ),
 				'cta'      => 'Get dealer pricing on WhatsApp',
 				'continue' => 'Continue shopping',
 				'close'    => 'Close',
