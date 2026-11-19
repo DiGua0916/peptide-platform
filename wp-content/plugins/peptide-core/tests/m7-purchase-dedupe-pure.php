@@ -3,6 +3,11 @@
  * FE-09：购买事件（Purchase）不重复、不漏发。真正的 Pixels 和 Pixels\Server，只把 WordPress、WooCommerce 和网络换成桩。
  * 纯逻辑：php -n m7-purchase-dedupe-pure.php
  *
+ * 2026-11-17 起 facebook 不在 Server::SERVER_PLATFORMS 里（0a649df6）：Meta 的服务端回传改由
+ * wp-capi-stealth-bridge 承担，peptide-core 不再直连 graph.facebook.com。去重这套逻辑本身和平台无关，
+ * 所以这个用例用仍然走服务端的 tiktok 当载体来验证它，同时断言带令牌、域名也对得上的 facebook 像素
+ * 一个请求都不会发出去 —— 后面谁把 facebook 加回常量，这里会立刻红。
+ *
  * 一张订单的购买事件有四条路：
  *   A  付款时服务端发        Pixels::on_order_status()          订单上打 _pc_px_server
  *   B  每 5 分钟的补发任务   Pixels::purchase_catchup()         同一个标记
@@ -31,7 +36,11 @@ $GLOBALS['t_wc']       = new T_WC();
 $GLOBALS['m6_options']['peptide_core_px_log_db'] = '1';
 $GLOBALS['m6_options']['home']                   = 'https://www.store.test';
 $GLOBALS['m6_options'][ Pixels::OPTION ]         = array(
-	'platforms' => array( 'facebook' => array( 'pixels' => array( array( 'id' => '111', 'note' => 'main', 'domain' => '', 'token' => 'fbtoken' ) ) ) ),
+	'platforms' => array(
+		// facebook：令牌有、关联域名完全对上 —— 改动前百分之百会外发，现在必须一条都不发。
+		'facebook' => array( 'pixels' => array( array( 'id' => '111', 'note' => 'main', 'domain' => '', 'token' => 'fbtoken' ) ) ),
+		'tiktok'   => array( 'pixels' => array( array( 'id' => 'TT1', 'note' => 'main', 'domain' => '', 'token' => 'tttoken' ) ) ),
+	),
 );
 Server::$sync = true; // 不进后台队列，直接发：每个请求都记在 $GLOBALS['t_requests'] 里。
 
@@ -45,16 +54,18 @@ $order = static function ( int $id, int $paid_ago, bool $ctx = true ) use ( $now
 	}
 	return $o;
 };
-/** 发给 Conversions API 的购买事件：[ event_id, order_id ]。 */
+/** 服务端发出去的购买事件：[ event_id, order_id ]。TikTok 报文里事件名在 event、订单号在 properties。 */
 $server = static function (): array {
 	$out = array();
 	foreach ( $GLOBALS['t_requests'] as $request ) {
 		foreach ( (array) ( $request['body']['data'] ?? array() ) as $event ) {
-			if ( 'Purchase' === $event['event_name'] ) { $out[] = array( $event['event_id'], $event['custom_data']['order_id'] ?? null ); }
+			if ( 'Purchase' === ( $event['event'] ?? '' ) ) { $out[] = array( $event['event_id'], $event['properties']['order_id'] ?? null ); }
 		}
 	}
 	return $out;
 };
+/** 直连 Meta 的请求：必须永远是空的。 */
+$to_meta = static fn(): array => array_values( array_filter( $GLOBALS['t_requests'], static fn( array $r ): bool => str_contains( $r['url'], 'graph.facebook.com' ) ) );
 /** 当前页面交给浏览器的购买事件的 event_id。 */
 $browser = static function ( ?WC_Order $paid_popup = null, ?WC_Order $received = null ): array {
 	$GLOBALS['t_paid_order'] = $paid_popup;
@@ -72,6 +83,7 @@ $a         = $order( 9001, 30 );
 $a->number = 'hang-161188301';
 Pixels::on_order_status( 9001, 'pending', 'processing', $a );
 m6_check( '1: paying sends exactly one server Purchase', 1 === count( $server() ) );
+m6_check( '1: and nothing goes to Meta directly, although that pixel has a token and matches the domain', array() === $to_meta() );
 m6_check( '2: its event_id is the internal order id, the hang- number only travels as order_id', array( 'order_9001', 'hang-161188301' ) === $server()[0] && ! str_contains( $server()[0][0], 'hang' ) );
 m6_check( '1: the order is marked as sent', '' !== (string) $a->get_meta( Server::ORDER_SENT ) );
 Pixels::on_order_status( 9001, 'processing', 'completed', $a );
@@ -136,5 +148,8 @@ $ids = array_column( $server(), 0 );
 sort( $ids );
 m6_check( 'overall: every server Purchase has a distinct event_id', array( 'order_9001', 'order_9003', 'order_9004' ) === $ids );
 m6_check( 'overall: the send log has one accepted Purchase row per order', array( 'order_9001', 'order_9003', 'order_9004' ) === array_column( array_values( array_filter( $wpdb->log, static fn( array $row ): bool => 'Purchase' === $row['event'] && 1 === $row['ok'] ) ), 'event_id' ) );
+
+m6_check( 'overall: not one request reached graph.facebook.com (Meta runs through the bridge)', array() === $to_meta() );
+m6_check( 'overall: every server send went to the TikTok events API', $GLOBALS['t_requests'] && count( $GLOBALS['t_requests'] ) === count( array_filter( $GLOBALS['t_requests'], static fn( array $r ): bool => str_contains( $r['url'], 'business-api.tiktok.com' ) ) ) );
 
 echo 'PASS ', $GLOBALS['m6_passed'], " purchase de-duplication (FE-09) assertions\n";

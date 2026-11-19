@@ -39,6 +39,8 @@ namespace {
 	$_SERVER['HTTP_REFERER']    = 'https://store.test/checkout/';
 	$_COOKIE['_fbp']            = 'fb.1.1700000000000.123456';
 	$_COOKIE['_fbc']            = 'fb.1.1700000000000.AbCdEf';
+	$_COOKIE['_ttp']            = 'tt.1.1700000000000.987654';
+	$_COOKIE['pc_ttclid']       = 'TTCLID-abc123';
 
 	function wp_parse_url( $url, $component = -1 ) { return parse_url( (string) $url, $component ); }
 	function sanitize_text_field( $value ) { return trim( strip_tags( (string) $value ) ); }
@@ -75,7 +77,7 @@ namespace {
 	function wp_remote_retrieve_body( $response ) { return $response['body']; }
 	/** 假网络：记下每个请求；$GLOBALS['t_http'] 决定 Facebook 返回什么。 */
 	function wp_remote_post( $url, $args ) {
-		$GLOBALS['t_requests'][] = array( 'url' => (string) $url, 'body' => json_decode( (string) $args['body'], true ) );
+		$GLOBALS['t_requests'][] = array( 'url' => (string) $url, 'body' => json_decode( (string) $args['body'], true ), 'args' => $args );
 		if ( str_contains( (string) $url, 'graph.facebook.com' ) ) { return $GLOBALS['t_http']; }
 		return array( 'code' => 200, 'body' => '{"code":0}' );
 	}
