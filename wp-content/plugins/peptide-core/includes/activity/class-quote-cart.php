@@ -117,7 +117,8 @@ final class Quote_Cart extends \WC_Cart {
 		$allow = array(
 			// Shipping protection (site 1 P0-5) adds one fixed fee that never depends on item prices, so quotes stay exact.
 			'woocommerce_cart_calculate_fees'      => array( Promotions::class . '::apply_to_cart', \PeptideCore\Manual_Orders::class . '::apply_fees', \PeptideCore\Shipping\Protection::class . '::add_fee' ),
-			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart', \PeptideCore\Manual_Orders::class . '::apply_prices' ),
+			// US_Territories (Puerto Rico, 2026-11-19) only rewrites the customer's country/state (PR -> US/PR); item prices are untouched.
+			'woocommerce_before_calculate_totals' => array( Product_Offers::class . '::sync_cart', \PeptideCore\Manual_Orders::class . '::apply_prices', \PeptideCore\US_Territories::class . '::normalize_customer' ),
 			'woocommerce_after_calculate_totals'  => array( 'WC_Cart_Session::set_session' ),
 			'woocommerce_product_get_price'       => array( 'Automattic\\WooCommerce\\Internal\\ScheduledSalePriceReconciler::reconcile_price' ),
 			'woocommerce_is_purchasable'          => array( Store_Config::class . '::offline_purchasable', 'WC_Payments_Subscriptions_Disabler::make_subscription_products_unpurchasable' ),
