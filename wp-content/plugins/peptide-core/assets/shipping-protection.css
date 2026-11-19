@@ -6,3 +6,6 @@
 .pc-ship-protect.is-off .pc-ship-protect__now { opacity: 0.6; }
 /* The native fee row is hidden with the hidden attribute; Woo's display:flex would otherwise keep it visible (listed twice). */
 .wc-block-components-totals-item[hidden], .wc-block-components-totals-fees[hidden] { display: none !important; }
+.pc-ship-protect__text { display: flex; flex-direction: column; line-height: 1.25; }
+.pc-ship-protect__note { font-size: 12px; opacity: 0.7; }
+.pc-ship-protect__note:empty { display: none; }

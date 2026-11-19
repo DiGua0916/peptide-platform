@@ -28,10 +28,14 @@ body:has(dialog[open]) .vc-help-contact,body:has([data-vc-demo-header] details[o
 /* 1 号站定稿 P1-2：顶栏没登录时显示 “Sign in” 文字。 */
 .vc-demo-account.has-label{display:inline-flex;align-items:center;gap:6px;width:auto;padding-inline:8px}
 .vc-demo-account-label{font-size:13px;font-weight:700;white-space:nowrap}
+/* 登录后：头像（首字母圆形）。主题在手机上把账户按钮整个藏起来，这里让登录状态在手机上也看得见。 */
+.vc-demo-account-avatar{display:inline-grid;place-items:center;inline-size:28px;block-size:28px;border-radius:50%;background:#1b7f8e;color:#fff;font:700 13px/1 Geist,Arial,sans-serif;letter-spacing:0}
+.vc-demo-account-avatar svg{inline-size:16px;block-size:16px}
 /* 手机顶栏放得下 “Sign in”：主线语言切换器把顶栏图标按钮固定成 44px（优先级更高），“Sign in” 会压到购物袋上。
    ≤480px 且显示 “Sign in” 时：语言切换器只留地球图标（文字留给读屏），“Sign in” 只留文字，其余图标回到主题的 40px。 */
 @media(max-width:767px){
 .vc-demo-header .vc-demo-header-actions>.vc-demo-account.has-label{display:inline-flex;inline-size:auto;min-inline-size:0;padding-inline:6px}
+.vc-demo-header .vc-demo-header-actions>.vc-demo-account.is-signed-in{display:inline-flex;align-items:center;justify-content:center}
 }
 @media(max-width:480px){
 .vc-demo-header .vc-demo-header-actions:has(>.vc-demo-account.has-label){gap:0}

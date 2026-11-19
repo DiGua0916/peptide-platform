@@ -145,8 +145,16 @@ function vc_demo_site_header( array $s ): string {
     if ( ! empty( $s['showSearch'] ) ) { $out .= '<a class="vc-demo-icon-button" href="' . esc_url( $shop ) . '" data-vc-demo-search aria-label="Search products" aria-haspopup="dialog" aria-controls="' . esc_attr( $id . '-search' ) . '">' . vc_demo_site_part_icon( 'search' ) . '</a>'; }
     if ( ! empty( $s['showAccount'] ) ) {
         // 1 号站定稿 P1-2：没登录时人像图标旁写 “Sign in”，点了打开登录弹窗（account-gate.js 接管；脚本没加载时照常去账户页）。
+        // 登录后显示头像（姓名或邮箱首字母的圆形），手机上也显示，让客户看得出自己已登录。
         $signed_in = is_user_logged_in();
-        $out .= '<a class="vc-demo-icon-button vc-demo-account' . ( $signed_in ? ' is-signed-in' : ' has-label' ) . '" href="' . esc_url( $account ) . '" aria-label="' . ( $signed_in ? 'My account' : 'Sign in or create an account' ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . vc_demo_site_part_icon( 'user' ) . ( $signed_in ? '' : '<span class="vc-demo-account-label">Sign in</span>' ) . '</a>';
+        $avatar    = '';
+        if ( $signed_in ) {
+            $who     = wp_get_current_user();
+            $name    = trim( (string) ( $who->first_name ?: $who->display_name ?: $who->user_email ) );
+            $initial = '' !== $name ? strtoupper( function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 1 ) : substr( $name, 0, 1 ) ) : '';
+            $avatar  = '<span class="vc-demo-account-avatar" aria-hidden="true">' . ( '' !== $initial ? esc_html( $initial ) : vc_demo_site_part_icon( 'user' ) ) . '</span>';
+        }
+        $out .= '<a class="vc-demo-icon-button vc-demo-account' . ( $signed_in ? ' is-signed-in' : ' has-label' ) . '" href="' . esc_url( $account ) . '" aria-label="' . ( $signed_in ? 'My account' : 'Sign in or create an account' ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . ( $signed_in ? $avatar : vc_demo_site_part_icon( 'user' ) . '<span class="vc-demo-account-label">Sign in</span>' ) . '</a>';
     }
     if ( ! empty( $s['showCart'] ) ) {
         $count = function_exists( 'WC' ) && WC()->cart ? (int) WC()->cart->get_cart_contents_count() : 0;

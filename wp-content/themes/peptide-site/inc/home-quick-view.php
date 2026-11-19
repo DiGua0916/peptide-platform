@@ -33,6 +33,10 @@ function vc_home_quick_view_assets(): void {
         'reportApi' => rest_url( 'peptide/v1/report-library' ),
         'cartUrl' => function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : '',
         'assetBase' => $base,
+        // Site 1 (2026-11-19): Black Friday now discounts shipping. The product popup's offer box lists
+        // these store tiers when no product-price promotion is running (same data as the Store API cart).
+        'shippingTiers' => class_exists( '\\PeptideCore\\Shipping\\Discounts' ) ? ( \PeptideCore\Shipping\Discounts::tiers_for_cart( null )['tiers'] ?? array() ) : array(),
+        'currency' => function_exists( 'get_woocommerce_currency_symbol' ) ? array( 'currency_prefix' => html_entity_decode( get_woocommerce_currency_symbol(), ENT_QUOTES, 'UTF-8' ), 'currency_suffix' => '', 'currency_minor_unit' => 2 ) : null,
     ) );
 }
 

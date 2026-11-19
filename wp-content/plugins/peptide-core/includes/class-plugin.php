@@ -116,6 +116,8 @@ final class Plugin {
 		Pricing\Runtime::register_hooks();
 		Shipping\Protection::register_hooks();
 		Resale_Prompt::register_hooks();
+		Product_Codes::register_hooks();
+		Catalog_Labels::register_hooks();
 		Emails\Registry::register_hooks();
 		Emails\Chase_Copy::register_hooks();
 		Terms::register_hooks();

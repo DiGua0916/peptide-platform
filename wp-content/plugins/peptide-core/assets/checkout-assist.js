@@ -51,13 +51,24 @@
         if (!Number.isFinite(v)) return '';
         return 'Pay ' + (t.currency_prefix || t.currency_symbol || '$') + (v / Math.pow(10, unit)).toFixed(unit);
     }
+    // Struck-through regular prices for the checkout summary (site 1, 2026-11-17): the regular shipping
+    // when a shipping offer applies, and the shipping protection reference price. Minor units in, '' when none.
+    function refPrices(cart) {
+        const t = cart?.totals, unit = Number.isInteger(t?.currency_minor_unit) ? t.currency_minor_unit : 2;
+        const fmt = minor => (t?.currency_prefix || t?.currency_symbol || '$') + (Number(minor) / Math.pow(10, unit)).toFixed(unit);
+        const pc = cart?.extensions?.peptide_core || {}, trace = pc.shipping_savings, protect = pc.shipping_protection;
+        const shipping = trace && trace.status === 'applied' && trace.complete === true && Number(trace.shipping_discount) > 0
+            && trace.payable_shipping === t?.total_shipping && Number(trace.original_shipping) > Number(trace.payable_shipping) ? fmt(trace.original_shipping) : '';
+        const protection = protect && protect.enabled === true && protect.chosen === true && Number(protect.reference_minor) > Number(protect.price_minor) ? fmt(protect.reference_minor) : '';
+        return { shipping, protection, protectionLabel: protect?.label || 'Shipping protection', free: shipping !== '' && Number(trace.payable_shipping) === 0 };
+    }
     function helpText(others) {
         const list = (Array.isArray(others) ? others : []).filter(Boolean);
         if (!list.length) return 'Your details are saved. Please try again.';
         const named = list.length === 1 ? list[0] : list.slice(0, -1).join(', ') + ' or ' + list[list.length - 1];
         return 'Your details are saved. Try again, or pay another way: ' + named + '.';
     }
-    if (typeof module !== 'undefined' && module.exports) module.exports = { stateForZip, phoneOk, cleanDraft, payLabel, helpText };
+    if (typeof module !== 'undefined' && module.exports) module.exports = { stateForZip, phoneOk, cleanDraft, payLabel, helpText, refPrices };
 
     if (!global || !global.document) return;
     const document = global.document, data = global.wp?.data, KEY = 'wc/store/cart';
@@ -132,8 +143,12 @@
     function payButton() {
         const btn = document.querySelector('.wc-block-components-checkout-place-order-button'); if (!btn) return;
         const label = payLabel(select()?.getCartData?.());
-        const text = btn.querySelector('.wc-block-components-button__text') || btn;
-        if (label && text.textContent !== label && !btn.classList.contains('wc-block-components-button--loading')) text.textContent = label;
+        // Never replace React's own text node: after a failed validation React re-renders the button
+        // (spinner inserted before that node) and a replaced node makes it unmount the whole pay area,
+        // so the shopper had no button until a full reload. The label lives in an attribute; CSS shows it.
+        const text = btn.querySelector('.wc-block-components-button__text');
+        if (text && label && text.getAttribute('data-pc-label') !== label) text.setAttribute('data-pc-label', label);
+        if (label && btn.getAttribute('aria-label') !== label) btn.setAttribute('aria-label', label); // what screen readers announce
         let save = btn.parentElement.parentElement.querySelector('[data-pc-pay-save]');
         const amount = global.VialCoveCheckoutSaving;
         if (amount) {
@@ -157,10 +172,20 @@
             (banner.querySelector('.wc-block-components-notice-banner__content') || banner).append(p);
         });
     }
+    // Only attributes on Woo's (React-owned) value elements; CSS draws the struck price. Never their text.
+    function strikes() {
+        const ref = refPrices(select()?.getCartData?.());
+        const mark = (el, value) => { if (!el) return; if (value) { if (el.getAttribute('data-pc-ref') !== value) el.setAttribute('data-pc-ref', value); } else if (el.hasAttribute('data-pc-ref')) el.removeAttribute('data-pc-ref'); };
+        document.querySelectorAll('.wc-block-checkout .wc-block-components-totals-shipping .wc-block-components-totals-item__value').forEach(el => mark(el, ref.shipping));
+        document.querySelectorAll('.wc-block-checkout .wc-block-components-totals-item').forEach(item => {
+            const label = item.querySelector('.wc-block-components-totals-item__label')?.textContent.trim();
+            if (label === ref.protectionLabel) mark(item.querySelector('.wc-block-components-totals-item__value'), ref.protection);
+        });
+    }
     let frame = 0;
     function tick() {
         frame = 0;
-        restore(); zipToState(); phone(); payButton(); paymentHelp(); save();
+        restore(); zipToState(); phone(); payButton(); strikes(); paymentHelp(); save();
     }
     const schedule = () => { if (!frame) frame = setTimeout(tick, 60); }; // timer, not rAF: also runs in a background tab
     function start() {

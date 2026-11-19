@@ -79,23 +79,23 @@ function shipping(cart) {
 }
 test('a complete selected-rate shipping trace exposes original, discount and payable without changing native total', () => {
     const cart = shipping(fixture()), rows = totals(cart);
-    assert.equal(row(rows, 'shipping-original').minor, '4500'); assert.equal(row(rows, 'shipping-offer-10').minor, '-500'); assert.equal(row(rows, 'shipping-offer-10').detail, 'Shipping after offers: $40.00');
-    assert.equal(row(rows, 'saved').minor, '8600'); assert.equal(row(rows, 'payable').minor, '12000'); assert.equal(row(rows, 'shipping'), undefined);
+    assert.equal(row(rows, 'shipping').reference, '4500'); assert.equal(row(rows, 'shipping').minor, '4000'); assert.match(row(rows, 'shipping').detail, /· −\$5\.00$/);
+    assert.equal(row(rows, 'saved').minor, '8600'); assert.equal(row(rows, 'payable').minor, '12000'); assert.equal(rows.filter(r => r.key.startsWith('shipping')).length, 1);
 });
 test('absent or mismatched shipping metadata never reverse-calculates a discount', () => {
     for (const change of [{ currency_code: 'EUR' }, { complete: false }, { tax_basis: 'inclusive' }, { payable_shipping: '3999' }, { shipping_discount: '600' }, { packages: [] }]) {
         const cart = shipping(fixture()); Object.assign(cart.extensions.peptide_core.shipping_savings, change);
-        const rows = totals(cart); assert.equal(row(rows, 'shipping').minor, '4000'); assert.equal(row(rows, 'shipping-original'), undefined); assert.equal(row(rows, 'saved').minor, '8100');
+        const rows = totals(cart); assert.equal(row(rows, 'shipping').minor, '4000'); assert.equal(row(rows, 'shipping').reference, undefined); assert.equal(row(rows, 'saved').minor, '8100');
     }
     const cart = fixture(); assert.equal(row(totals(cart), 'shipping').minor, '4500'); assert.equal(row(totals(cart), 'saved').minor, '8100');
 });
 test('shipping traces must cover each actual selected package once and reconcile every native rate price', () => {
     for (const change of [pack => { pack.rate_id = 'foreign'; }, pack => { pack.payable_shipping = '4100'; }, pack => { delete pack.package_id; }, pack => { pack.discount_id = 0; }]) {
-        const cart = shipping(fixture()); change(cart.extensions.peptide_core.shipping_savings.packages[0]); assert.equal(row(totals(cart), 'shipping-original'), undefined);
+        const cart = shipping(fixture()); change(cart.extensions.peptide_core.shipping_savings.packages[0]); assert.equal(row(totals(cart), 'shipping').reference, undefined);
     }
     const duplicate = shipping(fixture()); duplicate.extensions.peptide_core.shipping_savings.packages.push({ ...duplicate.extensions.peptide_core.shipping_savings.packages[0] });
-    assert.equal(row(totals(duplicate), 'shipping-original'), undefined);
-    const invalidRates = shipping(fixture()); invalidRates.shipping_rates[0].shipping_rates = {}; assert.doesNotThrow(() => totals(invalidRates)); assert.equal(row(totals(invalidRates), 'shipping-original'), undefined);
+    assert.equal(row(totals(duplicate), 'shipping').reference, undefined);
+    const invalidRates = shipping(fixture()); invalidRates.shipping_rates[0].shipping_rates = {}; assert.doesNotThrow(() => totals(invalidRates)); assert.equal(row(totals(invalidRates), 'shipping').reference, undefined);
 });
 test('unknown shipping remains at checkout and never changes the native estimated payable', () => {
     const cart = shipping(fixture()); cart.has_calculated_shipping = false; cart.totals.total_shipping = null;
