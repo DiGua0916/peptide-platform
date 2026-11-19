@@ -162,3 +162,9 @@ F1 上线时注意：
 - 现在：没有减商品价活动在进行时，同一个优惠券框显示店里的运费三档：$10 OFF SHIPPING（满 $150）、$20 OFF SHIPPING（满 $300）、FREE SHIPPING（满 $600）。按购物车商品金额显示进度、“Add $X more”、解锁状态，数据来自服务端（Store API 购物车 shipping_tiers）。
 - 验收：手机宽度打开任一产品弹窗，图片下方看到三张运费券；购物车金额变化后券的解锁状态跟着变。
 - 只改代码；生产发布用这个分支的最新提交（core 0.34.8、主题 0.3.8）。
+
+## 证书：沙盒补文件 + 21 份未挂产品的报告（2026-11-19，店主同意挂上）
+
+- 沙盒：11-14 那批 33 份证书（#11860–#11892）在沙盒只有数据库记录、没有文件，弹窗一直显示旧报告。已从正式站公开证书库取回 PDF 和缩略图，逐个核对 sha256 和大小后放回。沙盒和正式站现在都是 252 份。**正式站本来就正常，这一步不用做。**
+- 两边都有 21 份公开报告没挂到产品上，因为报告上的名字和产品名不一样：TB-500、Semaglutide、Melanotan-1、Kisspeptin、Oxytocin、HGH_Somatropin，还有 1 份 Tirzepatide 60mg（09-22）。沙盒已挂上，弹窗按规格显示：TB500 10mg → 10-21 的报告；Melanotan I 只挂 MT-1 选项，MT-2/ML10 不显示。
+- **正式站（每个店）**：`wp eval-file tools/site1/coa-link-unlinked-20261119.php dry` 应列出 21 份 → `apply` → 再跑 `dry` 应为 0。按产品标题找产品，不依赖 ID；改动前的值存在 option `peptide_site1_coa_link_backup` 里，要撤销就跑 `revert`。
