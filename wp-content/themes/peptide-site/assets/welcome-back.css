@@ -1,0 +1,18 @@
+/* 1 号站定稿 P1-3 / P1-1：首页 “欢迎回来” / “订单待付款” 提示条。 */
+.vc-welcome{margin:12px auto 0;max-width:1180px;padding:0 16px}
+.vc-welcome__inner{display:flex;flex-wrap:wrap;align-items:center;gap:10px 14px;padding:12px 14px;border-radius:12px;background:#e2f1f3;border:1px solid #b9dde2;color:#17343e;position:relative}
+.vc-welcome--pending .vc-welcome__inner{background:#fff;border:1.5px solid #1b7f8e}
+.vc-welcome__text{display:grid;gap:2px;flex:1 1 220px;min-width:0;padding-right:24px}
+.vc-welcome__text strong{font-size:15px}
+.vc-welcome__text span{font-size:13.5px;color:#3d5a61}
+.vc-welcome__go{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 16px;border-radius:9px;background:#1b7f8e;color:#fff!important;font-weight:700;font-size:14px;text-decoration:none;white-space:nowrap}
+.vc-welcome__go:focus-visible,.vc-welcome__x:focus-visible,.vc-welcome__chip:focus-visible{outline:3px solid #127e98;outline-offset:3px}
+.vc-welcome__x{position:absolute;top:6px;right:8px;width:28px;height:28px;border:0;border-radius:50%;background:transparent;color:#3d5a61;font-size:18px;line-height:1;cursor:pointer}
+.vc-welcome__recent{display:grid;gap:6px;margin-top:10px}
+.vc-welcome__recent-title{font-size:13px;font-weight:700;color:#3d5a61}
+.vc-welcome__recent-list{display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;scrollbar-width:thin}
+.vc-welcome__chip{flex:0 0 auto;display:flex;gap:8px;align-items:center;max-width:220px;padding:6px 10px 6px 6px;border:1px solid #d6e0e1;border-radius:10px;background:#fff;color:#17343e;text-decoration:none}
+.vc-welcome__chip img{width:40px;height:40px;border-radius:7px;object-fit:cover;background:#eef3f3}
+.vc-welcome__chip-text{display:grid;min-width:0;font-size:12.5px}
+.vc-welcome__chip-text b{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-welcome__chip-text span{color:#5b6d72}

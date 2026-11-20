@@ -19,6 +19,7 @@ COMPONENTS = {
     "peptide-ops": "wp-content/plugins/peptide-ops/",
     "peptide-panapay": "wp-content/plugins/peptide-panapay/",
     "peptide-site": "wp-content/themes/peptide-site/",
+    "wp-capi-stealth-bridge": "wp-content/plugins/wp-capi-stealth-bridge/",
 }
 EXCLUDED_DIRS = {"tests", "node_modules", "vendor", "uploads", "cache", "backups", "private", "__pycache__"}
 FORBIDDEN_SUFFIXES = {".sql", ".sqlite", ".sqlite3", ".db", ".pem", ".key", ".p12", ".pfx", ".log", ".zip", ".7z", ".gz", ".tar", ".bak", ".bkp", ".dump", ".orig", ".ini", ".csv"}
@@ -56,10 +57,15 @@ def prepare(repo, output, ref):
     tracked_edits = git(repo, "status", "--porcelain", "--untracked-files=no").decode().strip()
     if tracked_edits:
         raise ValueError("Commit or preserve tracked edits before preparing a release.")
-    raw = git(repo, "archive", "--format=zip", commit, *[p.rstrip("/") for p in COMPONENTS.values()])
+    components = COMPONENTS.copy()
+    bridge_path = components["wp-capi-stealth-bridge"].rstrip("/")
+    if not git(repo, "ls-tree", commit, "--", bridge_path):
+        # Historical source archives predate the bridge.
+        del components["wp-capi-stealth-bridge"]
+    raw = git(repo, "archive", "--format=zip", commit, *[p.rstrip("/") for p in components.values()])
     files = []
     skipped = []
-    counts = {key: 0 for key in COMPONENTS}
+    counts = {key: 0 for key in components}
     payload = io.BytesIO()
     with zipfile.ZipFile(io.BytesIO(raw)) as source, zipfile.ZipFile(payload, "w", zipfile.ZIP_DEFLATED) as target:
         for member in sorted(source.infolist(), key=lambda item: item.filename):
@@ -68,7 +74,7 @@ def prepare(repo, output, ref):
             path = PurePosixPath(member.filename)
             if path.is_absolute() or ".." in path.parts or "\\" in member.filename:
                 raise ValueError("Unsafe archive path.")
-            component = next((name for name, prefix in COMPONENTS.items() if member.filename.startswith(prefix)), None)
+            component = next((name for name, prefix in components.items() if member.filename.startswith(prefix)), None)
             if component is None:
                 raise ValueError("Archive contains a non-allowlisted component.")
             if stat.S_ISLNK(member.external_attr >> 16):

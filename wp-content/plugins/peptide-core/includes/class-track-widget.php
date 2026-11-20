@@ -29,6 +29,14 @@ final class Track_Widget {
 		return '0' !== (string) get_option( self::OPTION, '1' );
 	}
 
+	/**
+	 * 选项值 panel：不显示右下角的球，物流面板照常输出，由页面上的 [data-pc-open-track] 链接打开
+	 * （1 号站：登录弹窗里的 “Track an order without an account”）。0 才是整个关掉。
+	 */
+	public static function ball(): bool {
+		return 'panel' !== (string) get_option( self::OPTION, '1' );
+	}
+
 	private static function visible(): bool {
 		return self::enabled() && ! is_admin() && ! is_customize_preview() && ! ( function_exists( 'is_checkout' ) && is_checkout() );
 	}
@@ -63,10 +71,14 @@ final class Track_Widget {
 		if ( ! self::visible() ) {
 			return;
 		}
-		?>
+		if ( self::ball() ) :
+			?>
 <button type="button" class="pc-trk-ball" data-pc-trk-ball aria-label="Track your order" title="Track your order">
 	<img src="<?php echo esc_url( plugins_url( 'assets/track-ball-van.png', PEPTIDE_CORE_FILE ) . '?v=' . (int) @filemtime( PEPTIDE_CORE_DIR . '/assets/track-ball-van.png' ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors ?>" width="44" height="44" alt="" decoding="async" loading="lazy">
 </button>
+			<?php
+		endif;
+		?>
 <dialog class="pc-trk" data-pc-trk aria-labelledby="pc-trk-title">
 	<div class="pc-trk__box">
 		<div class="pc-trk__head">

@@ -31,6 +31,7 @@ final class Board {
 		'ad'       => '按广告',
 		'adset'    => '按广告组',
 		'platform' => '按平台 / 版位',
+		'landing'  => '按落地页版本',
 	);
 	public const MODES = array(
 		'first' => '首次来源',
@@ -248,7 +249,7 @@ final class Board {
 
 		$out = array();
 		foreach ( $rows as $key => $row ) {
-			if ( 'platform' === $dim ) {
+			if ( 'platform' === $dim || 'landing' === $dim ) {
 				$row['spend_cents'] = $row['impressions'] = $row['link_clicks'] = null;
 			}
 			$out[] = array( 'key' => (string) $key ) + self::finish( $row, $min );
@@ -424,6 +425,8 @@ final class Board {
 				$p  = (string) ( $visit['utm_source'] ?? '' );
 				$pl = (string) ( $visit['placement'] ?? '' );
 				return array( 'platform:' . $p . '/' . $pl => ( '' !== $p ? $p : '未知平台' ) . ' / ' . ( '' !== $pl ? $pl : '未知版位' ) );
+			case 'landing':
+				return self::landing_key( $visit );
 		}
 		return self::attr_keys( $code, $creatives, $labels );
 	}
@@ -440,9 +443,25 @@ final class Board {
 				$set = (string) ( $ad['adset_id'] ?? '' );
 				return array( 'adset:' . $set => '' !== $set ? '广告组 ' . $set : '未知广告组' );
 			case 'platform':
-				return array(); // 花费按广告导入，分不到平台 / 版位。
+			case 'landing':
+				return array(); // 花费按广告导入，分不到平台 / 版位 / 落地页版本。
 		}
 		return self::attr_keys( $code, $creatives, $labels );
+	}
+
+	/**
+	 * 落地页版本这一行（2026-11-20）：链接带了 lp_ver 就按版本名；没带就按进站的页面路径（标“没标版本”）。
+	 *
+	 * @return array<string,string>
+	 */
+	public static function landing_key( array $visit ): array {
+		$v = (string) ( $visit['lp_ver'] ?? '' );
+		if ( '' !== $v ) {
+			return array( 'lp:' . $v => '版本 ' . $v );
+		}
+		$path = (string) ( $visit['landing_path'] ?? '' );
+		$path = '' !== $path ? (string) strtok( $path, '?#' ) : '';
+		return array( 'path:' . $path => '' !== $path ? '页面 ' . $path . '（没标版本）' : '没标版本' );
 	}
 
 	/** @return array<string,string> */
@@ -860,7 +879,7 @@ final class Board {
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$seen();
-		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id, ua, os, os_version, device_model, screen, isp, geo_city';
+		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, lp_ver, landing_path, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id, ua, os, os_version, device_model, screen, isp, geo_city';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 			$in   = implode( ',', $chunk );

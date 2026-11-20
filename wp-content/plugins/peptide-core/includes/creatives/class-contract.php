@@ -24,7 +24,18 @@ final class Contract {
 	public const CREATIVE_PARAM = 'cr';
 
 	/** 访问上要保存的广告参数（放宽后的白名单，线 1 在 Tracking\Attribution 里使用）。 */
-	public const PARAMS = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name', 'cr' );
+	public const PARAMS = array( 'utm_source', 'utm_medium', 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name', 'cr', 'lp_ver' );
+
+	/**
+	 * 落地页版本参数（2026-11-20）：投手给同一个落地页的不同版本起的名字（如 cat_best），可选。
+	 * 素材链接里带上它，看板就能按版本比较同一批流量的转化。
+	 */
+	public const LP_PARAM = 'lp_ver';
+
+	/** 落地页版本名：字母、数字、下划线、点、横线，1–32 个字符。 */
+	public static function valid_lp_ver( string $v ): bool {
+		return 1 === preg_match( '/^[A-Za-z0-9_.\-]{1,32}$/D', $v );
+	}
 
 	/** {{site_source_name}} 的取值。 */
 	public const PLATFORMS = array( 'fb', 'ig', 'msg', 'an' );

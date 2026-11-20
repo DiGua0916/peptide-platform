@@ -50,7 +50,7 @@ namespace VialCove\Panapay {
 }
 namespace {
 	require dirname( __DIR__, 2 ) . '/peptide-hq/includes/class-site-urls.php';
-	foreach ( array( 'protocol-error', 'hub-protocol', 'session-service', 'signature', 'hub-urls', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
+	foreach ( array( 'protocol-error', 'hub-protocol', 'session-service', 'signature', 'hub-urls', 'provider-bindings', 'hub' ) as $file ) { require dirname( __DIR__ ) . '/includes/class-' . $file . '.php'; }
 	use VialCove\Panapay\{Hub, Hub_Urls, Signature, Protocol_Error};
 	$checks = 0; $events = array(); $outbound = array(); $winner = true;
 	function check( string $name, bool $ok ): void { ++$GLOBALS['checks']; if ( ! $ok ) { throw new \RuntimeException( 'FAIL ' . $name ); } }

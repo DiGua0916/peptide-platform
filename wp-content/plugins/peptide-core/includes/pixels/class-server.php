@@ -80,9 +80,21 @@ final class Server {
 	// ---------- 发送 ----------
 
 	/** 要服务端回传的像素：[platform, pixel_id, token]，按关联域名筛选。 */
+	/**
+	 * 服务端回传还走这里的平台（2026-11-17，用户要求）。
+	 *
+	 * facebook 已经移出：Meta 的服务端回传改由 wp-capi-stealth-bridge 承担，这个插件不再直连
+	 * graph.facebook.com。前端的 Meta 像素适配器也已经从 assets/pixels.js 删除，所以设置里即便
+	 * 还留着带令牌的 facebook 像素，两头都不会再发。
+	 *
+	 * 想恢复直连就把 'facebook' 加回这个数组（test_event 会跟着一起恢复），但那会和桥重复上报，
+	 * 要先确认桥那边已经停了。tests/pixels-no-facebook-pure.php 会盯着这里。
+	 */
+	public const SERVER_PLATFORMS = array( 'tiktok' );
+
 	public static function targets( array $s, string $host ): array {
 		$out = array();
-		foreach ( array( 'facebook', 'tiktok' ) as $key ) {
+		foreach ( self::SERVER_PLATFORMS as $key ) {
 			foreach ( $s['platforms'][ $key ]['pixels'] as $px ) {
 				if ( '' !== $px['token'] && \PeptideCore\Pixels::pixel_domain( $px ) === $host ) {
 					$out[] = array( $key, $px['id'], $px['token'] );
@@ -161,7 +173,19 @@ final class Server {
 	 *         ok = 至少有一个像素，并且每个像素都通；reason：'' / no_pixel（一个 Facebook 像素都没填）。
 	 */
 	public static function test_event(): array {
-		$s       = Pixels::settings();
+		$s = Pixels::settings();
+		// 2026-11-17（用户要求）：facebook 不在 SERVER_PLATFORMS 里时，这个按钮也不再直连 Meta。
+		// 不发请求、不写发送记录，直接告诉操作的人该去哪里测。
+		if ( ! in_array( 'facebook', self::SERVER_PLATFORMS, true ) ) {
+			return array(
+				'ok'        => false,
+				'pixel'     => '',
+				'message'   => 'Meta 服务端回传已改走隐身桥，这里不再直连。请在桥的后台发送测试事件。',
+				'reason'    => 'meta_server_disabled',
+				'test_code' => '' !== (string) $s['test_code'],
+				'results'   => array(),
+			);
+		}
 		$results = array();
 		foreach ( (array) $s['platforms']['facebook']['pixels'] as $px ) {
 			$pixel = (string) ( $px['id'] ?? '' );

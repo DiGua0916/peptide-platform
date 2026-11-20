@@ -311,7 +311,11 @@ final class Site_Design {
 			if ( $s['showSearch'] ) {
 				$out .= '<details class="pc-header-search"><summary>' . esc_html__( 'Search', 'peptide-core' ) . '</summary><form role="search" method="get" action="' . esc_url( home_url( '/' ) ) . '"><label class="screen-reader-text" for="pc-header-search">' . esc_html__( 'Search products', 'peptide-core' ) . '</label><input id="pc-header-search" type="search" name="s" placeholder="' . esc_attr( $s['searchPlaceholder'] ) . '" required><input type="hidden" name="post_type" value="product"><button type="submit">' . esc_html__( 'Search', 'peptide-core' ) . '</button></form></details>';
 			}
-			if ( $s['showAccount'] ) { $out .= '<a class="account-link" href="' . esc_url( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url() ) . '">' . esc_html__( 'Account', 'peptide-core' ) . '</a>'; }
+			if ( $s['showAccount'] ) {
+				// 1 号站定稿 P1-2：没登录时写 “Sign in”，点了打开登录弹窗（data-pc-open-signin，由 account-gate.js 接管；脚本没加载时照常去账户页）。
+				$signed_in = is_user_logged_in();
+				$out .= '<a class="account-link' . ( $signed_in ? ' is-signed-in' : '' ) . '" href="' . esc_url( function_exists( 'wc_get_page_permalink' ) ? wc_get_page_permalink( 'myaccount' ) : wp_login_url() ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . ( $signed_in ? esc_html__( 'Account', 'peptide-core' ) : esc_html__( 'Sign in', 'peptide-core' ) ) . '</a>';
+			}
 			if ( $s['showCart'] ) {
 				$out .= '<a class="cart-link" href="' . esc_url( function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : home_url( '/' ) ) . '">' . esc_html__( 'Cart', 'peptide-core' ) . ' <span class="vc-cart-count">' . ( function_exists( 'WC' ) && WC()->cart ? (int) WC()->cart->get_cart_contents_count() : 0 ) . '</span></a>';
 			}

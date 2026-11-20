@@ -27,14 +27,15 @@ COMPONENTS = {
     "peptide-panapay": "wp-content/plugins/peptide-panapay/",
     "peptide-ops": "wp-content/plugins/peptide-ops/",
     "peptide-site": "wp-content/themes/peptide-site/",
+    "wp-capi-stealth-bridge": "wp-content/plugins/wp-capi-stealth-bridge/",
     "mu-plugins": "tools/deployment/mu-plugins/",
 }
 # 与 prepare_release.py 一致：这些目录不进发布包，线上没有它们不算缺失。
 EXCLUDED_DIRS = {"tests", "node_modules", "vendor", "uploads", "cache", "backups", "private", "__pycache__"}
 # 每类副本应该有哪些组件。
 EXPECTED = {
-    "store": ["peptide-core", "peptide-panapay", "peptide-ops", "peptide-site"],
-    "hq": ["peptide-hq", "peptide-panapay", "peptide-ops"],
+    "store": ["peptide-core", "peptide-panapay", "peptide-ops", "peptide-site", "wp-capi-stealth-bridge"],
+    "hq": ["peptide-hq", "peptide-panapay", "peptide-ops", "wp-capi-stealth-bridge"],
 }
 STATUS_TEXT = {
     "same": "一致",
@@ -138,12 +139,18 @@ def compare(copies, ref):
         entry = {"root": copy["root"], "resolved": copy["resolved"], "ops": copy["ops"], "kind": kind, "components": {}}
         for component in COMPONENTS:
             remote = copy["components"].get(component)
+            local = refs[component]
             expected = component in EXPECTED[kind]
+            if component == "wp-capi-stealth-bridge" and not local:
+                expected = False  # Historical reference commits predate the bridge.
             if remote is None:
                 entry["components"][component] = {"present": False, "expected": expected}
+                if expected:
+                    for rel in sorted(local):
+                        if packaged(rel):
+                            result["files"].setdefault(f"{component}/{rel}", {}).setdefault("missing||", []).append(label)
                 continue
             counts = collections.Counter()
-            local = refs[component]
             tree = sha("".join(f"{p}\0{h}\n" for p, h in sorted(remote.items())).encode())
             for rel in sorted(set(local) | set(remote)):
                 if component == "mu-plugins" and rel not in local:

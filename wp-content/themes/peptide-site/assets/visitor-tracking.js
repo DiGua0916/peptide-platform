@@ -58,7 +58,7 @@
         landing[name] = value;
       }
       // Optional ad names: kept when well formed, otherwise left out without rejecting the snapshot.
-      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16};
+      const limits = {utm_campaign: 120, utm_term: 120, utm_content: 120, placement: 64, ad_name: 255, cr: 16, lp_ver: 32};
       for (const name of Object.keys(limits)) if (Object.hasOwn(query, name)) {
         const value = query[name];
         if (typeof value === 'string' && value !== '' && [...value].length <= limits[name] && !/[\x00-\x1f\x7f]/.test(value)) landing[name] = value;
@@ -106,8 +106,14 @@
     checkout_address_completed: ['source'],
     checkout_shipping_selected: ['method', 'origin'], checkout_payment_selected: ['method', 'origin'],
     checkout_step_applicability: ['address_required', 'shipping_required'],
-    video_play: [], video_pause: [], video_progress: [], video_seek: [], video_end: []
+    video_play: [], video_pause: [], video_progress: [], video_seek: [], video_end: [],
+    // Site-1 plan P2-5: page code reports these through document 'vc:track' events (see start()).
+    product_load_failed: ['product_id', 'reason'],
+    pending_banner_click: ['order_state'],
+    whatsapp_click: ['source'],
+    catalog_search: ['term', 'results']
   };
+  const externalTypes = new Set(['product_load_failed', 'pending_banner_click', 'whatsapp_click', 'catalog_search']);
   function cleanData(type, input = {}) {
     const fields = type.startsWith('video_')
       ? ['video_id', 'module_id', 'position_s', 'duration_s', 'watched_s', 'autoplay', 'playback_origin']
@@ -124,6 +130,8 @@
       else if (key === 'origin') { if (['initial', 'user', 'automatic'].includes(value)) result[key] = value; }
       else if (key === 'source' && type === 'checkout_address_completed') { if (value === 'native_blocks') result[key] = value; }
       else if (key === 'method') { if (typeof value === 'string') result[key] = value.slice(0, 80); }
+      else if (key === 'results') { if (Number.isInteger(Number(value)) && Number(value) >= 0) result[key] = Math.min(100000, Number(value)); }
+      else if (key === 'term') { if (typeof value === 'string' && value.trim()) result[key] = value.trim().slice(0, 80); }
       else if (typeof value === 'string') result[key] = value.slice(0, 120);
     }
     return result;
@@ -233,6 +241,31 @@
       target.addEventListener(type, listener, opts);
       listeners.push(() => target.removeEventListener(type, listener, opts));
     };
+    // Page code (dialog, banners, popups) reports site-1 events without a reference to this
+    // observer: document.dispatchEvent(new CustomEvent('vc:track', {detail: {type, data}})).
+    listen(document, 'vc:track', event => {
+      const type = event?.detail?.type;
+      if (typeof type !== 'string' || !externalTypes.has(type)) return;
+      const data = cleanData(type, object(event.detail.data) ? event.detail.data : {});
+      if (data) emit(type, data);
+    });
+    // Homepage catalogue search (client-side filter): one event per settled, changed term.
+    let searchTimer, lastSearch = '';
+    listen(document, 'input', event => {
+      const input = event.target;
+      if (!(input instanceof HTMLInputElement) || !input.matches('[data-vc-catalog-search]')) return;
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(() => {
+        const term = input.value.trim().toLowerCase();
+        if (!term || term === lastSearch) return;
+        lastSearch = term;
+        const status = input.closest('[data-vc-catalog], section, main')?.querySelector('[data-vc-catalog-status]')?.textContent || '';
+        const found = /^(\d+)\s+products?\s+found/i.exec(status.trim());
+        const data = cleanData('catalog_search', {term, results: found ? Number(found[1]) : 0});
+        if (data) emit('catalog_search', data);
+      }, 1200);
+    }, true);
+    cleanups.push(() => clearTimeout(searchTimer));
     const state = () => {
       const hidden = document.visibilityState === 'hidden';
       const age = Math.max(0, Date.now() - lastActivity);

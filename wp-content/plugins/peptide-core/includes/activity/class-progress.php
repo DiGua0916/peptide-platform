@@ -24,9 +24,9 @@ final class Progress {
 			$out['cartSubtotal'] = self::money( $totals['subtotal'] );
 			if ( $cart->is_empty() || $totals['quantity'] < 1 ) { return self::finish( $out, 'empty', 'cart_empty' ); }
 			$id = $settings['promotionId'] ?? 0;
-			if ( ! is_int( $id ) || $id < 1 || Promotions::CPT !== get_post_type( $id ) ) { return self::finish( $out, 'unavailable', 'promotion_unavailable' ); }
+			if ( ! is_int( $id ) || $id < 1 || Promotions::CPT !== get_post_type( $id ) ) { return self::shipping_or( $out, $cart, 'promotion_unavailable' ); }
 			$status = Promotions::status( $id );
-			if ( 'active' !== $status ) { return self::finish( $out, 'unavailable', 'promotion_' . $status ); }
+			if ( 'active' !== $status ) { return self::shipping_or( $out, $cart, 'promotion_' . $status ); }
 			if ( ! self::valid_config( Promotions::config( $id ) ) ) { return self::finish( $out, 'unavailable', 'invalid_promotion' ); }
 			// This is the same eligible assignment/evaluation used by the existing fee engine.
 			$discounts = Promotions::discounts( $cart );
@@ -186,6 +186,57 @@ final class Progress {
 		$out['message'] = $out['next']['message'] ?? ( $out['completed'] ? __( 'You have reached the highest offer tier.', 'peptide-core' ) : __( 'This threshold is reached, but no promotion savings apply at the current prices.', 'peptide-core' ) );
 		$status = $preview ? 'preview' : ( $out['discountApplied'] ? ( $out['completed'] ? 'complete' : 'tier_reached' ) : ( $measure >= (float) $config['tiers'][0]['min'] ? 'no_savings' : 'tracking' ) );
 		return self::finish( $out, $status, $preview ? 'synthetic_preview' : ( 'no_savings' === $status ? 'no_discount_at_current_prices' : '' ) );
+	}
+
+	/** Pseudo promotion id for shipping tiers: never a real post id in the listener's identity check. */
+	public const SHIPPING_TIERS_ID = 2000000001;
+
+	/**
+	 * Site 1 P0-5 (2026-11-14): when no spend-and-save promotion runs, the cart progress bar tracks the
+	 * order-total shipping discount tiers instead ($150 / $300 / $600). Same DTO shape as build(), so the
+	 * theme bar renders it unchanged. The measure is the item total before coupons, as in Shipping\Discounts.
+	 */
+	private static function shipping_or( array $out, \WC_Cart $cart, string $reason ): array {
+		$info = \PeptideCore\Shipping\Discounts::tiers_for_cart( $cart );
+		$tiers = $info['tiers'];
+		if ( ! $tiers ) { return self::finish( $out, 'unavailable', $reason ); }
+		$decimals = wc_get_price_decimals();
+		$measure = $info['subtotal_minor'] / 100;
+		$max = end( $tiers )['min_minor'] / 100;
+		if ( $max <= 0 || ! self::safe_amount( $measure ) ) { return self::finish( $out, 'unavailable', $reason ); }
+		$trace = \PeptideCore\Shipping\Savings_Trace::for_cart( $cart );
+		$saved = is_array( $trace ) ? (float) $trace['shipping_discount'] / ( 10 ** $decimals ) : 0.0;
+		$out['basis'] = 'spend';
+		$out['measure'] = self::measure( $measure, false );
+		$out['measureText'] = self::measure_text( $out['measure'], false );
+		$out['eligibleSubtotal'] = self::money( $measure );
+		$out['actualDiscount'] = self::money( $saved );
+		$out['discountApplied'] = $saved > 0;
+		$out['promotion'] = array( 'id' => self::SHIPPING_TIERS_ID, 'title' => __( 'Shipping offer', 'peptide-core' ), 'type' => 'shipping', 'status' => 'active', 'url' => '' );
+		$out['promotionRevision'] = hash( 'sha256', wp_json_encode( array( 'shipping-tiers', $out['currency'], $decimals, $tiers ) ) );
+		foreach ( $tiers as $index => $tier ) {
+			$min = $tier['min_minor'] / 100;
+			$threshold = self::measure( $min, false );
+			$reached = $measure >= $min;
+			$key = 'ship:' . substr( $out['promotionRevision'], 0, 16 ) . ':tier' . $index . ':' . $threshold;
+			$reward = 'percent' === $tier['kind'] && $tier['value'] >= 100 ? __( 'free shipping', 'peptide-core' ) : $tier['label'];
+			$node = array( 'key' => $key, 'index' => $index, 'threshold' => $threshold, 'thresholdText' => self::measure_text( $threshold, false ), 'rewardText' => $reward, 'reached' => $reached, 'positionPercent' => round( 100 * $min / $max, 4 ), 'celebrationEligible' => $reached && $out['discountApplied'] && $out['celebration']['enabled'] );
+			$out['nodes'][] = $node;
+			// Reached = the bag total is over the tier. The applied discount only exists once a shipping rate
+			// is quoted (an address is in), so it drives the "saved $X" amount, not whether the tier is reached.
+			if ( $reached ) { $out['achievedKeys'][] = $key; }
+			if ( ! $reached && null === $out['next'] ) {
+				$remaining = self::measure( $min - $measure, false, true );
+				/* translators: 1: amount still needed, 2: shipping reward */
+				$out['next'] = array_merge( $node, array( 'remaining' => $remaining, 'remainingText' => self::measure_text( $remaining, false ), 'message' => sprintf( __( 'Add %1$s more for %2$s', 'peptide-core' ), self::measure_text( $remaining, false ), $reward ) ) );
+			}
+		}
+		$out['progressPercent'] = round( max( 0, min( 100, 100 * $measure / $max ) ), 4 );
+		$out['completed'] = null === $out['next'];
+		$out['visible'] = true;
+		$out['message'] = $out['next']['message'] ?? __( 'Free shipping unlocked.', 'peptide-core' );
+		$status = $out['completed'] ? 'complete' : ( $out['achievedKeys'] ? 'tier_reached' : 'tracking' );
+		return self::finish( $out, $status, 'shipping_tiers' );
 	}
 
 	private static function finish( array $out, string $status, string $reason ): array {

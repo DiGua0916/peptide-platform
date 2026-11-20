@@ -210,14 +210,69 @@ final class Store_Plugins {
 		$wpdb->update( Db::table( 'plugins' ), array( 'auto_new' => $on ? 1 : 0 ), array( 'slug' => $slug ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 	}
 
-	/** 只有没装在任何店铺上的插件才能从库里删除（删的是全部版本）。 */
-	public static function delete( string $slug ) {
+	/** 等所有店铺卸载完再从库里删掉的插件标识（一键删除时写进来，sync() 收尾）。 */
+	public const PENDING = 'pchq_plugins_pending_delete';
+
+	/** @return string[] */
+	public static function pending(): array {
+		$list = get_option( self::PENDING, array() );
+		return is_array( $list ) ? array_values( array_unique( array_filter( array_map( 'strval', $list ) ) ) ) : array();
+	}
+
+	private static function set_pending( array $list ): void {
+		$list = array_values( array_unique( array_filter( $list ) ) );
+		if ( $list ) {
+			update_option( self::PENDING, $list, false );
+		} else {
+			delete_option( self::PENDING );
+		}
+	}
+
+	/**
+	 * 从库里删除一个插件的全部版本。
+	 *
+	 * 还装在店铺上时：$force 为假按老规矩拒绝；为真就给每家店排队卸载，把这个标识记成“待删除”，
+	 * 等 sync() 看到所有店铺都卸干净了再真正删。排不进队的店铺（已停用 / 已下线 / 找不到）直接去掉记录。
+	 *
+	 * @return true|array{queued:int,dropped:int}|\WP_Error true = 已经删掉；数组 = 已排队，等卸载完成。
+	 */
+	public static function delete( string $slug, bool $force = false ) {
 		global $wpdb;
 		$s    = Db::table( 'site_plugins' );
-		$busy = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$s} WHERE slug = %s AND state <> 'removed'", $slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-		if ( $busy ) {
+		$rows = $wpdb->get_results( $wpdb->prepare( "SELECT * FROM {$s} WHERE slug = %s AND state <> 'removed'", $slug ), ARRAY_A ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+		$rows = (array) $rows;
+		if ( $rows && ! $force ) {
 			return new \WP_Error( 'pchq_plugin_in_use', '这个插件还装在店铺上，请先在所有店铺卸载。' );
 		}
+		if ( $rows ) {
+			$queued  = 0;
+			$dropped = 0;
+			foreach ( $rows as $r ) {
+				$res = self::request( (int) $r['site_id'], $slug, 'uninstall' );
+				if ( true === $res ) {
+					++$queued;
+					continue;
+				}
+				// 正在处理中 / 队列还没就绪：留着下次再试。其他原因（店铺已停用、已下线、库里没包）这家店没法卸，去掉记录。
+				if ( is_wp_error( $res ) && in_array( $res->get_error_code(), array( 'pchq_plugin_busy', 'pchq_plugin_queue' ), true ) ) {
+					continue;
+				}
+				$wpdb->delete( $s, array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+				++$dropped;
+			}
+			$left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$s} WHERE slug = %s AND state <> 'removed'", $slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $left ) {
+				self::set_pending( array_merge( self::pending(), array( $slug ) ) );
+				return array( 'queued' => $queued, 'dropped' => $dropped );
+			}
+		}
+		self::purge( $slug );
+		return true;
+	}
+
+	/** 真的删：包文件、库里的全部版本、店铺分配记录、待删除标记。 */
+	private static function purge( string $slug ): void {
+		global $wpdb;
 		$t    = Db::table( 'plugins' );
 		$shas = $wpdb->get_col( $wpdb->prepare( "SELECT sha256 FROM {$t} WHERE slug = %s", $slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		foreach ( (array) $shas as $sha ) {
@@ -227,8 +282,31 @@ final class Store_Plugins {
 			}
 		}
 		$wpdb->delete( $t, array( 'slug' => $slug ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		$wpdb->delete( $s, array( 'slug' => $slug ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
-		return true;
+		$wpdb->delete( Db::table( 'site_plugins' ), array( 'slug' => $slug ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
+		self::set_pending( array_diff( self::pending(), array( $slug ) ) );
+	}
+
+	/** 待删除的插件：所有店铺都卸干净了就真正删掉；库里已经没有的直接去掉标记。 */
+	public static function finish_pending(): void {
+		global $wpdb;
+		$list = self::pending();
+		if ( ! $list ) {
+			return;
+		}
+		$s = Db::table( 'site_plugins' );
+		$t = Db::table( 'plugins' );
+		foreach ( $list as $slug ) {
+			$left = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$s} WHERE slug = %s AND state <> 'removed'", $slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $left ) {
+				continue;
+			}
+			$known = (int) $wpdb->get_var( $wpdb->prepare( "SELECT COUNT(*) FROM {$t} WHERE slug = %s", $slug ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( ! $known ) {
+				self::set_pending( array_diff( self::pending(), array( $slug ) ) );
+				continue;
+			}
+			self::purge( $slug );
+		}
 	}
 
 	// ---------- 分配到店铺 ----------
@@ -346,6 +424,7 @@ final class Store_Plugins {
 				$wpdb->update( $s, array( 'state' => 'failed', 'error' => mb_substr( $msg, 0, 250 ), 'updated' => time() ), array( 'id' => (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 			}
 		}
+		self::finish_pending();
 	}
 
 	private static function receipt( string $path ): ?array {

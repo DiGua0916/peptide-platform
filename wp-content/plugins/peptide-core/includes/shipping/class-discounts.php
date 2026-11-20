@@ -7,6 +7,8 @@
  * - 仅会员日有效：只在选定的星期几（店铺时区）对已登录的注册顾客有效。
  * - 适用顾客：所有人 / 指定顾客（按结账邮箱或账户邮箱）。
  * - 同时满足多个折扣活动时，每个运费取折扣后最低的那个（Shopname：“取最低折扣值”）。
+ * - 订单金额门槛（min_subtotal，2026-11-14 1 号站 P0-5）：商品金额（售价，未扣优惠码）达到门槛才生效；
+ *   三条折扣（满 150 减 10、满 300 减 20、满 600 免运费）配合“取最低”就是分档运费。
  *
  * 结账时在 woocommerce_package_rates 里改运费（在物流方案之后），税按比例同步减少；
  * 订单的运费行记下折扣名称和原运费。运费缓存的键里带上当前可用的折扣，换邮箱、活动开始或结束时会重新计算。
@@ -49,6 +51,7 @@ final class Discounts {
 			'end'         => 0,        // 0 = 长期
 			'kind'        => 'amount', // amount：运费减元；percent：运费打折
 			'value'       => 0.0,
+			'min_subtotal' => 0.0,    // 商品金额（未扣优惠码）达到这个数才生效；0 = 不限
 			'stages'      => array(),  // [{start, end, value}]
 			'customers'   => 'all',    // all / emails
 			'emails'      => array(),
@@ -145,6 +148,8 @@ final class Discounts {
 			$d['start']  = $d['stages'] ? $d['stages'][0]['start'] : 0;
 			$d['end']    = $d['stages'] ? max( array_column( $d['stages'], 'end' ) ) : 0;
 		}
+		$min = $raw['min_subtotal'] ?? 0;
+		$d['min_subtotal'] = is_numeric( $min ) ? max( 0.0, round( (float) $min, 2 ) ) : 0.0;
 		$d['member_day']  = ! empty( $raw['member_day'] );
 		$d['member_days'] = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $raw['member_days'] ?? array() ) ), static fn( $n ) => $n >= 1 && $n <= 7 ) ) );
 		sort( $d['member_days'] );
@@ -303,6 +308,11 @@ final class Discounts {
 		if ( ! $list ) {
 			return $rates;
 		}
+		$subtotal = self::package_subtotal( is_array( $package ) ? $package : array() );
+		$list     = array_values( array_filter( $list, static fn( $row ) => $subtotal >= (float) ( $row[0]['min_subtotal'] ?? 0 ) ) );
+		if ( ! $list ) {
+			return $rates;
+		}
 		foreach ( $rates as $rate ) {
 			if ( ! $rate instanceof \WC_Shipping_Rate ) {
 				continue;
@@ -345,6 +355,39 @@ final class Discounts {
 		return $rates;
 	}
 
+	/**
+	 * 包裹里商品的金额：按售价、未扣优惠码（line_subtotal）。和购物车进度条用的是同一个数，
+	 * 所以首单券不会让客户掉出已经达到的运费档位。
+	 */
+	public static function package_subtotal( array $package ): float {
+		$sum = 0.0;
+		foreach ( (array) ( $package['contents'] ?? array() ) as $line ) {
+			$sum += (float) ( $line['line_subtotal'] ?? 0 );
+		}
+		return round( $sum, 2 );
+	}
+
+	/**
+	 * 分档运费（P0-5）给购物车进度条：现在可用、带订单金额门槛的折扣，按门槛从低到高。
+	 *
+	 * @return array{subtotal_minor:int,tiers:array<int,array{min_minor:int,kind:string,value:float,label:string}>}
+	 */
+	public static function tiers_for_cart( $cart = null ): array {
+		$subtotal = 0.0;
+		if ( is_object( $cart ) && method_exists( $cart, 'get_cart' ) ) {
+			$subtotal = self::package_subtotal( array( 'contents' => (array) $cart->get_cart() ) );
+		}
+		$tiers = array();
+		foreach ( self::applicable() as [ $d, $v ] ) {
+			$min = (float) ( $d['min_subtotal'] ?? 0 );
+			if ( $min > 0 ) {
+				$tiers[] = array( 'min_minor' => (int) round( $min * 100 ), 'kind' => (string) $d['kind'], 'value' => (float) $v, 'label' => self::value_text( (string) $d['kind'], (float) $v ) );
+			}
+		}
+		usort( $tiers, static fn( $a, $b ) => $a['min_minor'] <=> $b['min_minor'] );
+		return array( 'subtotal_minor' => (int) round( $subtotal * 100 ), 'tiers' => $tiers );
+	}
+
 	/** woocommerce_cart_shipping_packages：运费缓存的键带上现在可用的折扣。 */
 	public static function tag_packages( $packages ) {
 		if ( ! is_array( $packages ) ) {
@@ -376,8 +419,11 @@ final class Discounts {
 
 	/** @return string[] 优惠规则，每行一条（阶段折扣每个阶段一行）。 */
 	public static function rule_lines( array $d ): array {
+		$min = (float) ( $d['min_subtotal'] ?? 0 );
+		/* translators: %s: amount */
+		$cond = $min > 0 ? sprintf( __( 'Orders of %s or more: ', 'peptide-core' ), html_entity_decode( wp_strip_all_tags( wc_price( $min ) ) ) ) : '';
 		if ( 'fixed' === $d['mode'] ) {
-			return array( self::value_text( $d['kind'], (float) $d['value'] ) );
+			return array( $cond . self::value_text( $d['kind'], (float) $d['value'] ) );
 		}
 		$out = array();
 		foreach ( $d['stages'] as $st ) {

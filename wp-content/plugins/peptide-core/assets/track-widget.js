@@ -8,7 +8,7 @@
 	var cfg = window.pcTrack || {};
 	var ball = document.querySelector( '[data-pc-trk-ball]' );
 	var dlg = document.querySelector( '[data-pc-trk]' );
-	if ( ! ball || ! dlg ) {
+	if ( ! dlg ) {
 		return;
 	}
 	var body = dlg.querySelector( '[data-pc-trk-body]' );
@@ -56,6 +56,9 @@
 
 	/* ---- 位置：放在最高的那个悬浮球上面 ---- */
 	function place() {
+		if ( ! ball ) {
+			return; // 选项 panel：没有球，只有面板。
+		}
 		var top = window.innerHeight - 16;
 		Array.prototype.forEach.call( document.querySelectorAll( '.vc-help-widget, .vc-demo-cart-orb' ), function ( n ) {
 			var s = window.getComputedStyle( n );
@@ -112,7 +115,9 @@
 		}
 		document.documentElement.classList.remove( 'pc-trk-lock' );
 	}
-	ball.addEventListener( 'click', open );
+	if ( ball ) {
+		ball.addEventListener( 'click', open );
+	}
 	// 在物流面板里登录后刷新页面，自动再打开面板显示订单。
 	try {
 		if ( cfg.nonce && '1' === window.sessionStorage.getItem( 'pcTrkOpen' ) ) {
@@ -131,7 +136,23 @@
 		if ( x ) {
 			x.click();
 		}
+		// 从别的弹窗（登录弹窗）里点的：先关掉那个弹窗。
+		var host = t.closest( 'dialog' );
+		if ( host && host !== dlg ) {
+			if ( 'function' === typeof host.close && host.open ) {
+				host.close();
+			} else {
+				host.removeAttribute( 'open' );
+			}
+			if ( ! document.querySelector( 'dialog.pc-acc[open]' ) ) {
+				document.documentElement.classList.remove( 'pc-acc-lock' );
+			}
+		}
 		open();
+		// “Track an order without an account”：没登录、这台设备也没记住订单时，直接显示订单号 + 邮箱查询。
+		if ( 'lookup' === t.getAttribute( 'data-pc-open-track' ) && ! cfg.nonce && ! saved().length ) {
+			showLookup();
+		}
 	} );
 	dlg.querySelector( '[data-pc-trk-close]' ).addEventListener( 'click', close );
 	dlg.addEventListener( 'close', function () {

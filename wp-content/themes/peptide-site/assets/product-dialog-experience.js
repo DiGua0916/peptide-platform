@@ -304,6 +304,10 @@
     // 2026-11-11 店主：优惠券样式（D）里直接显示进度（C）：每张券按购物车金额从左往右填满。
     // 进度用服务端算好的购物车数据（Store API cart → extensions.peptide_core.activity_listener），浏览器不自己算折扣。
     let tierPromo = null, tierActivity = null, tierCartAsked = false, tierSeen = null;
+    // Site 1 (2026-11-19): Black Friday moved from product-price tiers to shipping tiers. With no
+    // active price promotion the same coupon box lists the store's shipping tiers. Thresholds,
+    // amounts and the measured item total all come from the Store API cart (shipping_tiers).
+    let tierShipMode = false, tierShip = null, tierCurrency = null;
     // 店主 2026-11-11：达标解锁时放加购同款烟花（复用 .add-feedback-burst 粒子样式），锁“弹开”。只在这次打开弹窗后新解锁的档位放，打开时已解锁的不放。
     const tierBurst = (anchor, delay, spread) => {
       window.setTimeout(() => {
@@ -336,6 +340,9 @@
     const takeTierCart = cart => {
       const a = cart?.extensions?.peptide_core?.activity_listener;
       tierActivity = a && a.enabled !== false && a.visible !== false && Array.isArray(a.nodes) ? a : null;
+      const st = cart?.extensions?.peptide_core?.shipping_tiers;
+      tierShip = st && Array.isArray(st.tiers) ? st : null;
+      tierCurrency = cart?.totals || tierCurrency;
       paintTiers();
     };
     const readTierCart = () => {
@@ -343,10 +350,51 @@
         .then(r => r.ok ? r.json() : null).then(c => { if (c) takeTierCart(c); }).catch(() => {});
     };
     document.addEventListener('vc:cart-updated', e => {
-      if (!tierPromo) return;
+      if (!tierPromo && !tierShipMode) return;
       if (e.detail?.cart && !e.detail.stale) takeTierCart(e.detail.cart); else readTierCart();
     }, {signal});
+    const shipMoney = minor => {
+      const c = tierCurrency || {}, unit = 10 ** Number(c.currency_minor_unit ?? 2), v = Number(minor) / unit;
+      return String(c.currency_prefix ?? '$') + (Number.isInteger(v) ? String(v) : v.toFixed(2)) + String(c.currency_suffix ?? '');
+    };
+    function paintShipTiers() {
+      const tiers = (tierShip?.tiers || []).filter(t => Number(t.min_minor) > 0);
+      tierBox.replaceChildren(); tierBox.hidden = !tiers.length;
+      if (!tiers.length) return;
+      placeTierBox();
+      const measure = Number(tierShip.subtotal_minor) || 0;
+      let nextShown = false;
+      const reachedNow = new Set(), fresh = [];
+      tiers.forEach((tier, i) => {
+        const min = Number(tier.min_minor), reached = measure >= min;
+        const isNext = !reached && !nextShown; if (isNext) nextShown = true;
+        const free = tier.kind === 'percent' && Number(tier.value) >= 100;
+        const reward = free ? 'FREE SHIPPING' : tierMoney(tier.label).toUpperCase();
+        const row = node_('div', 'vc-offer-ticket vc-offer-ticket--shipping' + (reached ? ' is-reached' : isNext ? ' is-next' : ''));
+        const main = node_('span', 'vc-offer-ticket__main');
+        main.append(node_('span', 'vc-offer-ticket__reward', reward));
+        main.append(node_('span', 'vc-offer-ticket__cond', isNext && measure > 0 ? 'Add ' + shipMoney(min - measure) + ' more \u00b7 over ' + shipMoney(min) : 'Orders over ' + shipMoney(min)));
+        if (!reached) {
+          const bar = node_('span', 'vc-offer-ticket__bar'); bar.setAttribute('aria-hidden', 'true');
+          const fill = node_('span', 'vc-offer-ticket__fill'); fill.style.width = Math.max(0, Math.min(99, Math.round(measure / min * 100))) + '%';
+          bar.append(fill); main.append(bar);
+        }
+        const stub = node_('span', 'vc-offer-ticket__stub');
+        const lock = node_('span', 'vc-offer-ticket__lock'); lock.setAttribute('aria-hidden', 'true');
+        lock.innerHTML = reached
+          ? '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 7.6-1.7"/><circle cx="12" cy="15.7" r="1.2"/></svg>'
+          : '<svg viewBox="0 0 24 24" width="22" height="22" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9.5" rx="2"/><path d="M8 11V7.5a4 4 0 0 1 8 0V11"/><circle cx="12" cy="15.7" r="1.2"/></svg>';
+        stub.append(lock, node_('span', 'vc-offer-ticket__state', reached ? 'Unlocked' : 'Locked'));
+        row.append(main, stub);
+        row.setAttribute('aria-label', (free ? 'Free shipping' : tierMoney(tier.label)) + ' on orders over ' + shipMoney(min) + (reached ? ', unlocked' : ', locked'));
+        tierBox.append(row);
+        if (reached) { const k = 'ship:' + min; reachedNow.add(k); if (tierSeen && !tierSeen.has(k)) fresh.push(row); }
+      });
+      tierSeen = reachedNow;
+      if (fresh.length) window.requestAnimationFrame(() => fresh.forEach(celebrateTier));
+    }
     function paintTiers() {
+      if (tierShipMode) { paintShipTiers(); return; }
       const active = tierPromo;
       tierBox.replaceChildren(); tierBox.hidden = !active;
       if (!active) return;
@@ -398,9 +446,20 @@
       const signature = JSON.stringify(active || null); if (signature === offerSignature) return;
       offerSignature = signature; offers.replaceChildren(); offers.hidden = !active;
       tierBox.replaceChildren(); tierBox.hidden = !active;
-      if (!active) return;
-      placeTierBox();
       tierPromo = active;
+      // Shipping tiers only when the page published them (vcHomeQuickView.shippingTiers); the cart read
+      // below then supplies the measured item total for the progress bars.
+      const shipConfig = window.vcHomeQuickView?.shippingTiers;
+      tierShipMode = !active && Array.isArray(shipConfig) && shipConfig.length > 0;
+      if (!active) {
+        if (!tierShipMode) return;
+        if (!tierShip) tierShip = {subtotal_minor: 0, tiers: shipConfig};
+        if (!tierCurrency) tierCurrency = window.vcHomeQuickView?.currency || null;
+        paintTiers();
+        if (!tierCartAsked) { tierCartAsked = true; readTierCart(); }
+        return;
+      }
+      placeTierBox();
       paintTiers();
       if (!tierCartAsked) { tierCartAsked = true; readTierCart(); }
       const title = node('h2', '', 'Order savings');
@@ -424,19 +483,9 @@
     restore.move(root.querySelector('.vc-dialog-sticky'),null);
     const mainBuy = root.querySelector('[data-vc-quick-buy]');
     const purchaseDock = window.createVcProductPurchaseDock?.({root,dialog,form,mainAdd,mainBuy,selectedLabel,priceNode:summary.querySelector(':scope > .price'),enabled:settings.stickyPurchaseEnabled,signal});
-    const purchaseReturn = window.createVcConfirmedPurchaseReturn?.({dialog,signal,
-      isCurrent: ticket => !destroyed && dialog.open && root.isConnected && Number(root.dataset.vcProductId) === ticket.productId && root.vcHomeOpener === ticket.opener
-        && ![...document.querySelectorAll('dialog[open]')].some(layer => layer !== dialog),
-      close: () => { if (toolbarClose?.isConnected && dialog.open) toolbarClose.click(); }
-    });
-    // Buy remains the plugin's real checkout action. Never let a previous Add
-    // success close this view while the customer starts a different action.
-    mainBuy?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
-    // An explicit new interaction takes ownership from the short success beat.
-    // Pointerdown precedes the original Add submit, which starts a fresh ticket.
-    dialog.addEventListener('pointerdown', () => purchaseReturn?.cancel(), {capture:true,signal});
-    toolbar?.addEventListener('click', () => purchaseReturn?.cancel(), {capture:true,signal});
-    form?.addEventListener('change', () => purchaseReturn?.cancel(), {signal});
+    // Site 1 (2026-11-17): a confirmed Add keeps the product open. Customers
+    // often add a second strength (e.g. 30mg after 20mg); the old automatic
+    // return to the homepage made them find and reopen the product again.
     // The plugin owns submitting, locking, failure/recovery and confirmed 201.
     // This listener only decorates that existing success, never guesses from cart totals.
     const feedbackConfig = window.vcLiveCommerce?.cartFeedback?.config || {};
@@ -449,7 +498,7 @@
     form?.addEventListener('submit',event=>{
       const trigger = form.vcSubmitTrigger || event.submitter || mainAdd; delete form.vcSubmitTrigger;
       if (destroyed || !dialog.open || !mainAdd || mainAdd.disabled || form.inert || mainAdd.classList.contains('disabled')) return;
-      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false,returnTicket:purchaseReturn?.begin({mode:'add',opener:root.vcHomeOpener,productId})};
+      pendingFeedback = {trigger,opener:root.vcHomeOpener,started:false,confirmed:false,stale:false};
       const submitted=pendingFeedback;
       Promise.resolve().then(()=>{
         // Native validation runs first. Decorate only a request it actually locks.
@@ -461,13 +510,13 @@
         if(!pendingFeedback.started && nativeFeedback?.state!=='pending')nativeFeedback?.begin(pendingFeedback.trigger);
         pendingFeedback.started = true;
       } else if(pendingFeedback?.started && ['drawer','live-cart'].includes(event.detail?.source)) {
-        pendingFeedback.stale=true; nativeFeedback?.cancel(); purchaseReturn?.cancel();
+        pendingFeedback.stale=true; nativeFeedback?.cancel();
       }
     },{signal});
     document.addEventListener('vc:cart-updated',event=>{
       const detail=event.detail;
       if(!pendingFeedback?.started || detail?.source!=='showcase' || detail.mutation!==true)return;
-      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel();purchaseReturn?.cancel(); }
+      if(detail.stale===true) { pendingFeedback.stale=true;nativeFeedback?.cancel(); }
       else if(detail.stale===false && Array.isArray(detail.cart?.items) && detail.cart?.totals) pendingFeedback.confirmed=true;
     },{signal});
     window.jQuery?.(document.body).on('added_to_cart' + feedbackNamespace,(_,fragments,hash,$trigger)=>{
@@ -476,15 +525,14 @@
       pendingFeedback = null;
       if(pending.confirmed && !pending.stale) {
         nativeFeedback?.confirm();
-        purchaseReturn?.confirm(pending.returnTicket,{confirmed:true,stale:false,presentation:nativeFeedback?.presentation});
-      } else { nativeFeedback?.cancel(); purchaseReturn?.cancel(); }
+      } else { nativeFeedback?.cancel(); }
     });
     function syncSticky() {
       if (destroyed) return;
       purchaseDock?.update();
       metaStrip?.update();
       if(pendingFeedback && nativeFeedback?.state==='pending' && form?.getAttribute('aria-busy')!=='true' && !pendingFeedback.confirmed) {
-        pendingFeedback=null;nativeFeedback?.cancel();purchaseReturn?.cancel();
+        pendingFeedback=null;nativeFeedback?.cancel();
       }
       nativeFeedback?.sync();
     }
@@ -671,7 +719,7 @@
       openReport,
       openImage,
       updateMedia(image) { productImage=image; renderProduct(); },
-      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; purchaseReturn?.destroy(); nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
+      destroy(reason = 'destroy') { if(destroyed)return; destroyed=true; document.dispatchEvent(new CustomEvent('vc:product-experience-disposed',{detail:{root,dialog,reason}})); clearInterval(tickerPoll); gallery.destroy(); reportOpenIntent++; pendingFeedback=null; nativeFeedback?.destroy(); window.jQuery?.(document.body).off(feedbackNamespace); lifecycle.abort(); navigation?.destroy(); reportRequest?.abort(); formObserver.disconnect(); cancelAnimationFrame(frame); metaStrip?.destroy(); purchaseDock?.destroy(); ticker?.destroy(); children.destroy(); restore.destroy(); }
     };
     refresh(); if (!reportRequest) reportReadPromise=readReports(); readTicker(); return api;
   }

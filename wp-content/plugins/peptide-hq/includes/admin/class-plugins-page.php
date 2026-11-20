@@ -267,10 +267,19 @@ final class Plugins_Page {
 		} elseif ( 'auto_on' === $do || 'auto_off' === $do ) {
 			Store_Plugins::set_auto( $slug, 'auto_on' === $do );
 			self::flash( 'success', 'auto_on' === $do ? '以后新开的店会自动安装这个插件。' : '已取消新店自动安装。' );
-		} elseif ( 'delete' === $do ) {
-			$res = Store_Plugins::delete( $slug );
+		} elseif ( 'delete' === $do || 'delete_force' === $do ) {
+			$res = Store_Plugins::delete( $slug, 'delete_force' === $do );
 			if ( true === $res ) {
 				self::flash( 'success', '已从插件库删除。' );
+			} elseif ( is_array( $res ) ) {
+				// 还装在店铺上：先排队卸载，卸干净后自动从插件库删掉。
+				self::flash(
+					'success',
+					'已提交 ' . (int) $res['queued'] . ' 家店铺卸载'
+						. ( $res['dropped'] ? '，' . (int) $res['dropped'] . ' 家店铺已停用或下线，直接去掉了记录' : '' )
+						. '。全部卸载完成后会自动从插件库删除，这期间插件标着「待删除」。'
+				);
+				$res = true;
 			}
 		}
 		if ( is_wp_error( $res ) ) {
@@ -451,8 +460,9 @@ final class Plugins_Page {
 
 	/** 第三方插件：上传；每个插件显示当前店铺的状态、全部店铺里装了几家，可一键装到所有店铺。返回是否有处理中的任务。 */
 	private static function render_plugins( array $sites, array $current, array $library, array $assign ): bool {
-		$pending = false;
-		$cid     = (int) $current['id'];
+		$pending        = false;
+		$cid            = (int) $current['id'];
+		$pending_delete = Store_Plugins::pending();
 		echo '<h2 class="pcp-section" id="plugins">第三方插件 <span>' . count( $library ) . '</span></h2>';
 		echo '<section class="pcp-card pcp-upload"><div class="pcp-card__head"><h2>上传插件</h2><span class="pcp-hint">.zip · 最大 32 MB</span></div>';
 		echo '<form method="post" enctype="multipart/form-data" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-upload__form" data-max="' . (int) ( 32 * 1024 * 1024 ) . '">';
@@ -491,17 +501,24 @@ final class Plugins_Page {
 			echo (int) $p['auto_new']
 				? '<span class="pcp-tag is-on">新店自动安装</span>' . self::button( $slug, 'auto_off', '取消', 0, 'pcp-link', '', $cid ) // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 				: self::button( $slug, 'auto_on', '设为新店自动安装', 0, 'pcp-link', '', $cid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-			if ( count( $sites ) > 1 && $active < count( $sites ) ) {
+			$waiting = in_array( $slug, $pending_delete, true );
+			if ( count( $sites ) > 1 && $active < count( $sites ) && ! $waiting ) {
 				echo self::button( $slug, 'install_all', '装到所有店铺', 0, 'pcp-link', '确定把「' . $p['name'] . '」装到所有还没装的店铺？每家装完都会自动检查首页和购物车。', $cid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
-			if ( ! $used ) {
+			if ( $waiting ) {
+				// 还在等卸载结果，让页面继续自动刷新，卸完会自己消失。
+				$pending = true;
+				echo '<span class="pcp-tag is-bad">待删除 · 正在从店铺卸载</span>';
+			} elseif ( ! $used ) {
 				echo self::button( $slug, 'delete', '删除', 0, 'pcp-link is-danger', '确定从插件库删除这个插件的所有版本？', $cid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			} else {
+				echo self::button( $slug, 'delete_force', '删除', 0, 'pcp-link is-danger', '「' . $p['name'] . '」还装在 ' . $used . ' 家店铺上。确定先把这 ' . $used . ' 家店铺上的它卸载掉，再从插件库删除全部版本？店铺上跟它有关的功能会立刻停掉，删除之后不能撤销。', $cid ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
 			}
 			echo '</div></div>';
 			$row     = $assign[ $slug ][ $cid ] ?? null;
 			$state   = $row['state'] ?? 'removed';
 			$actions = '';
-			if ( ! in_array( $state, array( 'installing', 'removing' ), true ) ) {
+			if ( ! $waiting && ! in_array( $state, array( 'installing', 'removing' ), true ) ) {
 				$installed = in_array( $state, array( 'active', 'failed' ), true );
 				$newer     = $installed && 'active' === $state && (string) $row['installed_version'] !== (string) $p['version'];
 				$actions  .= self::button( $slug, 'install', $installed ? ( $newer ? '更新到 ' . $p['version'] : '重新安装' ) : '安装到这个店铺', $cid, $installed && ! $newer ? 'button' : 'button button-primary', '', $cid );

@@ -117,6 +117,16 @@ test('real template reader reuses live work, replaces aborted work and ignores o
   const current = requests.get('1'); assert.equal(calls.length, 2); assert.equal(current.controller.signal.aborted, false);
   calls[0].reject(new Error('Old aborted read')); await firstRejected; await sameRejected;
   assert.equal(requests.get('1'), current, 'old finally cannot delete the replacement request');
-  calls[1].reject(new Error('Current read ended')); await nextRejected;
+  calls[1].reject(new Error('Current read ended'));
+  // Site-1 P0-1: a failed read is retried twice (500 ms, 1000 ms) before the shopper sees an error.
+  for (let n = 3; n <= 4; n++) {
+    await new Promise(resolve => setImmediate(resolve));
+    const id = Math.max(...timers.keys()), fire = timers.get(id); timers.delete(id); fire();
+    await new Promise(resolve => setImmediate(resolve));
+    assert.equal(calls.length, n, 'the read is retried');
+    assert.equal(calls[n - 1].options.headers['X-WP-Nonce'], undefined, 'retries drop a possibly stale nonce');
+    calls[n - 1].reject(new Error('Retry ended'));
+  }
+  await nextRejected;
   assert.equal(requests.size, 0); assert.equal(timers.size, 0);
 });

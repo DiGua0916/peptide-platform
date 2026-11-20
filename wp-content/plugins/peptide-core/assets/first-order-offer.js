@@ -29,7 +29,7 @@
         const codes = new Set(after.coupons.map(row => canonical(row.code)));
         return before.coupons.every(row => canonical(row.code) === canonical(incoming) || codes.has(canonical(row.code)));
     }
-    function createController({ code, client, copy, show, strings, preview = false }) {
+    function createController({ code, client, copy, show, strings, preview = false, remember = async () => false }) {
         let busy = false;
         async function copyCode(empty = false) {
             let copied = false;
@@ -46,7 +46,13 @@
                 await bridge.refresh();
                 const before = bridge.snapshot();
                 if (before?.pending || before?.valid !== true || !validCart(before.cart)) { show({kind:'error',message:strings.notReady}); return {state:'unavailable'}; }
-                if (before.cart.items_count === 0) { await copyCode(true); return {state:'empty'}; }
+                if (before.cart.items_count === 0) {
+                    // remember(): 'saved' (server kept or applied it), 'invalid' (server refused it), anything else = unknown.
+                    const saved = await remember(code);
+                    if (saved === true || saved === 'saved') { show({ kind:'saved', message:strings.saved }); return {state:'saved'}; }
+                    if (saved === 'invalid') { show({ kind:'error', message:strings.unavailable }); return {state:'invalid'}; }
+                    await copyCode(true); return {state:'empty'};
+                }
                 const already = couponResult(before.cart, code);
                 if (already) { show({ kind:'already',message:strings.already,result:already }); return {state:'already'}; }
                 // Never repeat a POST after a timeout. The shared writer handles its single reconciliation read.
@@ -118,11 +124,29 @@
             const range = document.createRange();range.selectNodeContents(codeNode); const selection=global.getSelection();selection.removeAllRanges();selection.addRange(range);
             try { return typeof document.execCommand === 'function' && document.execCommand('copy') === true; } catch (_) { return false; }
         };
-        const controller = createController({code:config.code,client:()=>global.VialCoveLiveCart,copy,show,strings,preview:config.preview===true});
+        // Empty bag: save the code in the shopper's session (same server path as a ?pc_coupon= link) so the
+        // first add-to-cart applies it. A failed save falls back to copying the code.
+        const remember = async code => {
+            try {
+                if (!config.rememberUrl) return false;
+                const url = new URL(config.rememberUrl, global.location.href); if (url.origin !== global.location.origin) return false;
+                url.searchParams.set('pc_coupon', code); url.searchParams.set('pc_coupon_json', '1');
+                const response = await global.fetch(url.href, { credentials:'same-origin', cache:'no-store', headers:{ Accept:'application/json' } });
+                if (!response.ok) return false;
+                const state = (await response.json())?.state;
+                return state === 'pending' || state === 'applied' ? 'saved' : state === 'invalid' ? 'invalid' : false;
+            } catch (_) { return false; }
+        };
+        const controller = createController({code:config.code,client:()=>global.VialCoveLiveCart,copy,show,strings,preview:config.preview===true,remember});
         applyButton.addEventListener('click',async()=>{
             if (controller.busy() || config.preview === true) return;
             applyButton.disabled=true;applyButton.textContent=strings.working;root.setAttribute('aria-busy','true');
-            try { await controller.apply(); } finally { applyButton.disabled=false;applyButton.textContent=strings.apply;root.removeAttribute('aria-busy'); }
+            let outcome=null;
+            try { outcome = await controller.apply(); } finally {
+                const done = outcome && ['applied','already','saved'].includes(outcome.state);
+                applyButton.disabled=!!done; applyButton.textContent=done ? strings.claimed : strings.apply; root.removeAttribute('aria-busy');
+                root.classList?.toggle?.('is-claimed', !!done);
+            }
         });
         global.addEventListener('pagehide',()=>{clock.cancel();if(dialog.open)dialog.close();},{once:true});
     }

@@ -143,10 +143,23 @@ function vc_demo_site_header( array $s ): string {
     $out .= '<a class="vc-demo-brand" href="' . esc_url( $home ) . '" aria-label="' . esc_attr( ( $s['brandName'] ?? 'VialCove' ) . ' home' ) . '">' . vc_demo_site_part_logo( $s ) . '</a>';
     $out .= '<nav class="vc-demo-desktop-nav" aria-label="Main navigation">' . vc_demo_site_part_nav( $menu ) . '</nav><div class="vc-demo-header-actions">';
     if ( ! empty( $s['showSearch'] ) ) { $out .= '<a class="vc-demo-icon-button" href="' . esc_url( $shop ) . '" data-vc-demo-search aria-label="Search products" aria-haspopup="dialog" aria-controls="' . esc_attr( $id . '-search' ) . '">' . vc_demo_site_part_icon( 'search' ) . '</a>'; }
-    if ( ! empty( $s['showAccount'] ) ) { $out .= '<a class="vc-demo-icon-button vc-demo-account" href="' . esc_url( $account ) . '" aria-label="My account">' . vc_demo_site_part_icon( 'user' ) . '</a>'; }
+    if ( ! empty( $s['showAccount'] ) ) {
+        // 1 号站定稿 P1-2：没登录时人像图标旁写 “Sign in”，点了打开登录弹窗（account-gate.js 接管；脚本没加载时照常去账户页）。
+        // 登录后显示头像（姓名或邮箱首字母的圆形），手机上也显示，让客户看得出自己已登录。
+        $signed_in = is_user_logged_in();
+        $avatar    = '';
+        if ( $signed_in ) {
+            $who     = wp_get_current_user();
+            $name    = trim( (string) ( $who->first_name ?: $who->display_name ?: $who->user_email ) );
+            $initial = '' !== $name ? strtoupper( function_exists( 'mb_substr' ) ? mb_substr( $name, 0, 1 ) : substr( $name, 0, 1 ) ) : '';
+            $avatar  = '<span class="vc-demo-account-avatar" aria-hidden="true">' . ( '' !== $initial ? esc_html( $initial ) : vc_demo_site_part_icon( 'user' ) ) . '</span>';
+        }
+        $out .= '<a class="vc-demo-icon-button vc-demo-account' . ( $signed_in ? ' is-signed-in' : ' has-label' ) . '" href="' . esc_url( $account ) . '" aria-label="' . ( $signed_in ? 'My account' : 'Sign in or create an account' ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . ( $signed_in ? $avatar : vc_demo_site_part_icon( 'user' ) . '<span class="vc-demo-account-label">Sign in</span>' ) . '</a>';
+    }
     if ( ! empty( $s['showCart'] ) ) {
         $count = function_exists( 'WC' ) && WC()->cart ? (int) WC()->cart->get_cart_contents_count() : 0;
-        $floating_cart = is_front_page();
+        // 1 号站定稿 P2-3：首页的购物车也放回顶栏（普通购物袋图标 + 数量），右下角只留一个客服按钮。
+        $floating_cart = false;
         $cart_image = $floating_cart ? '<img src="' . esc_url( get_template_directory_uri() . '/assets/storefront-cart-orb.webp' ) . '" width="48" height="48" alt="" decoding="async">' : vc_demo_site_part_icon( 'bag' );
         $out .= '<a class="cart-link vc-demo-icon-button vc-demo-bag' . ( $floating_cart ? ' vc-demo-cart-orb' : '' ) . '" href="' . esc_url( function_exists( 'wc_get_cart_url' ) ? wc_get_cart_url() : $home ) . '" aria-label="Open shopping bag">' . $cart_image . '<span class="vc-cart-count">' . $count . '</span></a>';
     }
@@ -154,7 +167,11 @@ function vc_demo_site_header( array $s ): string {
     if ( $secondary ) { $out .= '<nav class="vc-demo-secondary vc-demo-part-wrap" aria-label="Secondary navigation">' . vc_demo_site_part_nav( $secondary ) . '</nav>'; }
     $out .= '<dialog id="' . esc_attr( $id . '-menu' ) . '" class="vc-demo-part-dialog vc-demo-menu-dialog" aria-labelledby="' . esc_attr( $id . '-menu-title' ) . '"><div class="vc-demo-dialog-head"><span id="' . esc_attr( $id . '-menu-title' ) . '">Menu</span><button type="button" class="vc-demo-icon-button" data-vc-demo-close aria-label="Close menu">' . vc_demo_site_part_icon( 'close' ) . '</button></div><nav aria-label="Mobile navigation">' . vc_demo_site_part_nav( $menu ) . '</nav>';
     if ( $secondary ) { $out .= '<nav class="vc-demo-menu-secondary" aria-label="Secondary mobile navigation">' . vc_demo_site_part_nav( $secondary ) . '</nav>'; }
-    if ( ! empty( $s['showAccount'] ) ) { $out .= '<a class="vc-demo-menu-account" href="' . esc_url( $account ) . '">My account ' . vc_demo_site_part_icon( 'user' ) . '</a>'; }
+    if ( ! empty( $s['showAccount'] ) ) {
+        // 1 号站定稿 P1-2：手机菜单顶部的账户入口，没登录时同样打开登录弹窗。
+        $signed_in = is_user_logged_in();
+        $out .= '<a class="vc-demo-menu-account" href="' . esc_url( $account ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . ( $signed_in ? 'My account ' : 'Sign in or create account ' ) . vc_demo_site_part_icon( 'user' ) . '</a>';
+    }
     $out .= '</dialog>';
     if ( ! empty( $s['showSearch'] ) ) {
         $out .= '<dialog id="' . esc_attr( $id . '-search' ) . '" class="vc-demo-part-dialog vc-demo-search-dialog" aria-labelledby="' . esc_attr( $id . '-search-title' ) . '"><div class="vc-demo-dialog-head"><h2 id="' . esc_attr( $id . '-search-title' ) . '">Find your peptide.</h2><button type="button" class="vc-demo-icon-button" data-vc-demo-close aria-label="Close search">' . vc_demo_site_part_icon( 'close' ) . '</button></div><form role="search" method="get" action="' . esc_url( $home ) . '"><label class="screen-reader-text" for="' . esc_attr( $id . '-query' ) . '">Search products</label><input id="' . esc_attr( $id . '-query' ) . '" type="search" name="s" placeholder="' . esc_attr( $s['searchPlaceholder'] ?? 'Search products' ) . '" required><input type="hidden" name="post_type" value="product"><button type="submit">Search ' . vc_demo_site_part_icon( 'arrow' ) . '</button></form></dialog>';

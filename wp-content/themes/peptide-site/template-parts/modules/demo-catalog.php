@@ -10,6 +10,8 @@ foreach ( $products as $p ) {
     $specs = $display->is_type( 'variation' ) ? wc_get_formatted_variation( $display, true, false, false ) : '';
     $search = $p->get_name() . ' ' . $p->get_sku() . ' ' . $specs;
     if ( $p->is_type( 'variable' ) ) { foreach ( $p->get_variation_attributes() as $values ) { $search .= ' ' . implode( ' ', $values ); } }
+    // 1 号站简称搜索：TR30、RT10、CGL5……（店主报价表），以及改名前后的另一种拼写。
+    if ( class_exists( '\\PeptideCore\\Product_Codes' ) ) { $search .= ' ' . \PeptideCore\Product_Codes::search_words( $p->get_name() ); }
     $rows[] = array( $p, $ids, $search );
 }
 $uid = 'vc-catalog-' . $m['id'];

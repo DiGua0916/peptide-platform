@@ -25,9 +25,33 @@ final class Ads_Panel {
 		return Staff_Buyer::page_url( Staff_Buyer::PAGE_ADS );
 	}
 
-	/** 某个素材在某个落地页的投放链接。 */
-	public static function link( string $landing, string $code ): string {
-		return Onboarding::ad_link( $landing, '', '', $code );
+	/** 某个素材在某个落地页的投放链接；$lp_ver = 落地页版本名（可选，2026-11-20），带上后看板可以按版本比较。 */
+	public static function link( string $landing, string $code, string $lp_ver = '' ): string {
+		$link = Onboarding::ad_link( $landing, '', '', $code );
+		return Contract::valid_lp_ver( $lp_ver ) ? $link . '&' . Contract::LP_PARAM . '=' . rawurlencode( $lp_ver ) : $link;
+	}
+
+	/** 每个素材链接上的落地页版本名（2026-11-20）：选项 {编号: 版本名}，没填 = 不带。 */
+	public const LP_VERS = 'pc_cr_lp_vers';
+
+	public static function lp_ver_of( string $code ): string {
+		$v = (string) ( ( (array) get_option( self::LP_VERS, array() ) )[ $code ] ?? '' );
+		return Contract::valid_lp_ver( $v ) ? $v : '';
+	}
+
+	/** 记下版本名；空 = 去掉；名字不合规返回 false。 */
+	public static function set_lp_ver( string $code, string $v ): bool {
+		if ( '' !== $v && ! Contract::valid_lp_ver( $v ) ) {
+			return false;
+		}
+		$saved = (array) get_option( self::LP_VERS, array() );
+		if ( '' === $v ) {
+			unset( $saved[ $code ] );
+		} else {
+			$saved[ $code ] = $v;
+		}
+		update_option( self::LP_VERS, $saved, false );
+		return true;
 	}
 
 	/** 每个素材选的落地页（2026-11-13 店主：上传时就选落地页）：选项 {编号: 地址}，没选 = 首页。 */
@@ -165,7 +189,8 @@ final class Ads_Panel {
 			$st    = $stats[ $c['code'] ] ?? array( 'spend_cents' => 0, 'last_day' => '', 'visitors' => 0 );
 			$state = Creatives::display_state( $st, $today );
 			$land  = self::landing_of( $c['code'], $pages );
-			$link  = self::link( $land, $c['code'] );
+			$lpv   = self::lp_ver_of( $c['code'] );
+			$link  = self::link( $land, $c['code'], $lpv );
 			$video = $c['video_id'] > 0 || 'vid' === ( $c['attrs']['fmt'] ?? '' );
 			$tags  = array();
 			foreach ( array_merge( Contract::REQUIRED_ATTRS, array( 'lang' ) ) as $k ) {
@@ -178,10 +203,11 @@ final class Ads_Panel {
 			echo '<div class="pc-cr-link-main"><p class="pc-cr-link-head"><strong>' . esc_html( $c['code'] ) . '</strong> <span>' . esc_html( implode( ' · ', $tags ) ) . '</span>';
 			echo ' <span class="pc-cr-badge is-' . esc_attr( $state ) . '">' . esc_html( $badge[ $state ] ?? $state ) . '</span>';
 			echo ' <span class="pc-cr-nums">进站访客 ' . (int) $st['visitors'] . ' · 花费 ' . esc_html( Creatives::money( (int) $st['spend_cents'] ) ) . '</span></p>';
-			echo '<div class="pc-cr-landing-line"><span>落地页：<b>' . esc_html( (string) self::landing_label( $land, $pages ) ) . '</b></span>';
+			echo '<div class="pc-cr-landing-line"><span>落地页：<b>' . esc_html( (string) self::landing_label( $land, $pages ) ) . '</b>' . ( '' !== $lpv ? ' · 版本 <b>' . esc_html( $lpv ) . '</b>' : '' ) . '</span>';
 			echo '<details class="pc-cr-landing-change"><summary class="button button-small">换落地页</summary>';
 			Library_Page::form_open( 'landing' );
 			echo '<input type="hidden" name="code" value="' . esc_attr( $c['code'] ) . '">' . self::landing_select( 'landing', 'pc-cr-landing-' . strtolower( $c['code'] ), $land, $pages );
+			echo ' <input type="text" name="lp_ver" value="' . esc_attr( $lpv ) . '" maxlength="32" pattern="[A-Za-z0-9_.\-]{1,32}" placeholder="版本名（可不填），如 cat_best" aria-label="' . esc_attr( $c['code'] . ' 的落地页版本名' ) . '" class="pc-cr-lpver">';
 			echo ' <button type="submit" class="button button-primary button-small">保存</button></form></details></div>';
 			echo '<div class="pc-cr-copyrow"><input type="text" readonly value="' . esc_attr( $link ) . '" aria-label="' . esc_attr( $c['code'] . ' 的投放链接' ) . '" data-pc-cr-link-out>';
 			echo '<button type="button" class="button button-primary" data-pc-cr-copy>复制链接</button>';
@@ -246,6 +272,7 @@ final class Ads_Panel {
 .pc-cr-landing-change[open] summary{margin-bottom:6px}
 .pc-cr-landing-change form{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
 .pc-cr-landing-change select{max-width:280px}
+.pc-cr-lpver{width:200px}
 @media (max-width:782px){.pc-cr-upload-grid{grid-template-columns:1fr}.pc-cr-drop{max-width:220px}.pc-cr-attr-row{grid-template-columns:repeat(2,minmax(0,1fr))}
 .pc-cr-link-row{grid-template-columns:48px minmax(0,1fr);align-items:start}.pc-cr-link-thumb{width:48px;height:48px}
 .pc-cr-copyrow input{flex:1 1 100%}.pc-cr-landing-change select{flex:1 1 0;min-width:0;max-width:none}.pc-cr-nums{display:block;margin:2px 0 0}}

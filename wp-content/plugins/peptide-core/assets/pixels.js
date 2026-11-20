@@ -74,55 +74,13 @@
 
 	var A = {};
 
-	A.facebook = {
-		init: function ( list ) {
-			/* eslint-disable */
-			!function(f,b,e,v,n,t,s){if(f.fbq)return;n=f.fbq=function(){n.callMethod?n.callMethod.apply(n,arguments):n.queue.push(arguments)};if(!f._fbq)f._fbq=n;n.push=n;n.loaded=!0;n.version='2.0';n.queue=[];t=b.createElement(e);t.async=!0;t.src=v;s=b.getElementsByTagName(e)[0];s.parentNode.insertBefore(t,s)}(w,d,'script','https://connect.facebook.net/en_US/fbevents.js');
-			/* eslint-enable */
-			var am = {};
-			[ 'em', 'ph', 'external_id' ].forEach( function ( k ) {
-				if ( user[ k ] ) {
-					am[ k ] = user[ k ];
-				}
-			} );
-			list.forEach( function ( id ) {
-				w.fbq( 'init', id, am );
-			} );
-		},
-		custom: { view_list: 'ViewCategory', view_cart: 'ViewCart', place_order: 'PlaceAnOrder', login: 'Login' },
-		track: function ( e, name, p ) {
-			var items = e.items || [];
-			var cid = items.map( function ( i ) {
-				return 'sku' === p.contentId ? i.sku : i.spu;
-			} );
-			var params = {};
-			if ( 'page_view' !== e.name ) {
-				params = { value: val( e, p ), currency: e.currency };
-			}
-			if ( items.length ) {
-				params.content_ids = cid;
-				params.content_type = 'product';
-				params.contents = items.map( function ( i, n ) {
-					return { id: cid[ n ], quantity: i.quantity, item_price: i.price };
-				} );
-				params.num_items = qty( e );
-				var nm = { internal: 'internal', category: 'category', spu: 'spu' }[ p.contentName ] || 'name';
-				params.content_name = items[ 0 ][ nm ];
-				params.content_category = items[ 0 ].category;
-			}
-			if ( e.search ) {
-				params.search_string = e.search;
-			}
-			if ( e.order_id ) {
-				params.order_id = e.order_id;
-			}
-			if ( name ) {
-				w.fbq( 'track', name, params, { eventID: e.id } );
-			} else if ( p.custom && this.custom[ e.name ] ) {
-				w.fbq( 'trackCustom', this.custom[ e.name ], params, { eventID: e.id } );
-			}
-		}
-	};
+	// 2026-11-17（用户要求）：前端 Meta 像素适配器已整块删除。本文件不再加载
+	// connect.facebook.net/en_US/fbevents.js，也不再定义 fbq。Meta 回传改由
+	// wp-capi-stealth-bridge 用第一方脚本（自己域名下的 fp-pulse.js）承担。
+	// 下面的派发都带 A[key] 存在性判断（init 处 `list.length && A[key]`，track 只遍历
+	// 已初始化的 active），所以即便设置里还留着 facebook 配置，这里也只是安全空转：
+	// 不发事件、不报错、不影响 ga4/tiktok/bing 和购物流程。
+	// 不要重新加回来；tests/pixels-no-facebook-pure.php 会把这件事卡住。
 
 	A.ga4 = {
 		list: [],
@@ -861,7 +819,7 @@
 			}
 			var adapter = A[ key ];
 			var name = p.events[ e.name ];
-			if ( ! name && ! ( 'facebook' === key && p.custom ) ) {
+			if ( ! name ) {
 				return;
 			}
 			try {
@@ -876,6 +834,9 @@
 			w.console.info( '[pc-pixels]', e.name, e.id, sent, e );
 		}
 		// FE-09 验收：只有带着验收码的浏览器才有 cfg.check。把 Facebook 像素真的发出去的事件报给服务器，用来核对 event_id。
+		// 2026-11-17：前端 Meta 适配器删除后，sent 里不会再出现 facebook:，所以这段已经不会触发。
+		// 保留原样是为了不改动服务端 Pixels\Acceptance 和 /peptide/v1/pixel-check 的约定；
+		// 等桥那边有了自己的验收口径，再决定这段是改口径还是一起删掉。
 		if ( cfg.check && cfg.checkCode && w.fetch && sent.join( ',' ).indexOf( 'facebook:' ) !== -1 ) {
 			try {
 				w.fetch( cfg.check, { method: 'POST', credentials: 'same-origin', keepalive: true, headers: { 'Content-Type': 'application/json' }, body: JSON.stringify( { code: cfg.checkCode, name: e.name, id: String( e.id ) } ) } ).then( function () {}, function () {} );

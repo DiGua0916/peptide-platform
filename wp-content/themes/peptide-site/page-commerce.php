@@ -16,7 +16,7 @@ $vc_title = $vc_is_cart ? ( function_exists( 'vc_live_cart_settings' ) ? ( vc_li
     </div>
     <?php if ( ! $vc_is_cart && ! $vc_is_endpoint ) : ?>
     <div id="vc-checkout-pricing" class="vc-checkout-pricing"></div>
-    <?php if ( class_exists( '\PeptideCore\Campaign_Countdown' ) ) { echo \PeptideCore\Campaign_Countdown::render( 'checkout' ); } ?>
+    <?php /* Site 1 P1-6: no campaign countdown on checkout; the shopper has already decided. */ ?>
     <?php endif; ?>
     <div class="entry-content vc-commerce-content"><?php while ( have_posts() ) : the_post(); the_content(); endwhile; ?></div>
     <?php if ( ! $vc_is_cart && ! $vc_is_endpoint ) { echo vc_checkout_terms_html(); } ?>

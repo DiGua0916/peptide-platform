@@ -24,7 +24,7 @@ final class Cdn_Page {
 			},
 			21
 		);
-		foreach ( array( 'save', 'forget', 'check', 'add', 'remove' ) as $do ) {
+		foreach ( array( 'save', 'account', 'forget', 'check', 'add', 'remove' ) as $do ) {
 			add_action( 'admin_post_pchq_cdn_' . $do, array( self::class, 'handle' ) );
 		}
 		add_action( 'admin_enqueue_scripts', array( self::class, 'assets' ), 1001 );
@@ -57,16 +57,33 @@ final class Cdn_Page {
 		$domain = Provision_Page::customer_domain( (string) wp_unslash( $_POST['domain'] ?? '' ) );
 		switch ( $do ) {
 			case 'save':
-				$res = Cdn::update( trim( (string) wp_unslash( $_POST['token'] ?? '' ) ), ! empty( $_POST['enabled'] ), ! empty( $_POST['create_zones'] ) );
+				$res = Cdn::update( ! empty( $_POST['enabled'] ), ! empty( $_POST['create_zones'] ) );
 				if ( is_wp_error( $res ) ) {
 					self::flash( 'error', $res->get_error_message() );
 				} else {
 					self::flash( 'success', '已保存。' . ( Cdn::settings()['enabled'] ? '以后开新店会自动配置 CDN，每 5 分钟检查一次进度。' : '自动配置已关闭。' ) );
 				}
 				break;
+			case 'account':
+				$res = Cdn::save_account(
+					(string) wp_unslash( $_POST['account'] ?? '' ),
+					(string) wp_unslash( $_POST['label'] ?? '' ),
+					trim( (string) wp_unslash( $_POST['token'] ?? '' ) )
+				);
+				if ( is_wp_error( $res ) ) {
+					self::flash( 'error', $res->get_error_message() );
+				} else {
+					self::flash( 'success', '账号已保存并验证。域名会在下一次处理时自动认出属于哪个账号。' );
+				}
+				break;
 			case 'forget':
-				Cdn::forget_token();
-				self::flash( 'success', '已删除保存的令牌，自动配置已关闭。Cloudflare 里已经配好的不受影响。' );
+				$account = (string) wp_unslash( $_POST['account'] ?? '' );
+				if ( '' === $account ) {
+					self::flash( 'error', '没有指定要删除的账号。' );
+					break;
+				}
+				Cdn::remove_account( $account );
+				self::flash( 'success', '已删除这个账号的令牌。Cloudflare 里已经配好的不受影响。' );
 				break;
 			case 'check':
 				$row  = Cdn::domains()[ $domain ] ?? null;
@@ -125,17 +142,37 @@ final class Cdn_Page {
 			echo '<div class="pcp-flash ' . ( 'error' === $flash[0] ? 'is-bad' : 'is-ok' ) . '" role="status">' . esc_html( (string) $flash[1] ) . '</div>';
 		}
 
-		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>Cloudflare 连接</h2>' . ( '' !== $s['token_enc'] ? '<span class="pcp-state is-ok"><i></i>令牌已验证' . ( $s['verified_at'] ? ' · ' . esc_html( wp_date( 'Y-m-d H:i', $s['verified_at'] ) ) : '' ) . '</span>' : '<span class="pcp-state is-off"><i></i>未设置</span>' ) . '</div>';
+		$accounts = $s['accounts'];
+		echo '<section class="pcp-card"><div class="pcp-card__head"><h2>Cloudflare 账号</h2>' . ( $accounts ? '<span class="pcp-state is-ok"><i></i>已保存 ' . count( $accounts ) . ' 个账号</span>' : '<span class="pcp-state is-off"><i></i>未设置</span>' ) . '</div>';
+		echo '<p class="pcp-note">一个 Cloudflare 账号一条，名字建议填投手名。域名归哪个账号不用手工指定：处理某个域名时系统会拿每个账号的令牌问一遍 Cloudflare，谁能看到这个域名就固定用谁。</p>';
+		if ( $accounts ) {
+			echo '<div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">账号</th><th scope="col">令牌</th><th scope="col">负责的域名</th><th scope="col">操作</th></tr></thead><tbody>';
+			foreach ( $accounts as $id => $account ) {
+				$mine = array();
+				foreach ( Cdn::domains() as $domain => $row ) {
+					if ( (string) ( $row['account'] ?? '' ) === (string) $id ) {
+						$mine[] = (string) $domain;
+					}
+				}
+				echo '<tr><td><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-inline">' . wp_nonce_field( 'pchq_cdn_account', '_wpnonce', true, false ) . '<input type="hidden" name="action" value="pchq_cdn_account"><input type="hidden" name="account" value="' . esc_attr( (string) $id ) . '"><input name="label" value="' . esc_attr( $account['label'] ) . '" required><input type="password" name="token" autocomplete="new-password" spellcheck="false" placeholder="留空则不更换令牌"><button type="submit" class="pcp-link">保存</button></form></td>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+				echo '<td><span class="pcp-state is-ok"><i></i>已验证' . ( $account['verified_at'] ? ' · ' . esc_html( wp_date( 'Y-m-d H:i', $account['verified_at'] ) ) : '' ) . '</span></td>';
+				echo '<td class="pcp-cdn-msg">' . ( $mine ? esc_html( implode( '、', $mine ) ) : '<small>还没有认领的域名</small>' ) . '</td>';
+				echo '<td>' . self::form( 'forget', array( 'account' => (string) $id ), '删除', 'pcp-link is-danger', '确定删除「' . $account['label'] . '」的令牌？它负责的域名会变成没有账号可用，Cloudflare 里已配好的不受影响。' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+			}
+			echo '</tbody></table></div>';
+		}
+		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form">';
+		wp_nonce_field( 'pchq_cdn_account' );
+		echo '<input type="hidden" name="action" value="pchq_cdn_account"><input type="hidden" name="account" value="">';
+		echo '<label class="pcp-field"><span>账号名字</span><input name="label" placeholder="例如：老毛" autocomplete="off" required></label>';
+		echo '<label class="pcp-field"><span>API 令牌</span><input type="password" name="token" autocomplete="new-password" spellcheck="false" placeholder="粘贴 Cloudflare API 令牌" required></label>';
+		echo '<p><button type="submit" class="button button-primary">添加账号并验证</button></p></form>';
 		echo '<form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '" class="pcp-cdn-form">';
 		wp_nonce_field( 'pchq_cdn_save' );
 		echo '<input type="hidden" name="action" value="pchq_cdn_save">';
-		echo '<label class="pcp-field"><span>API 令牌</span><input type="password" name="token" autocomplete="new-password" spellcheck="false" placeholder="' . esc_attr( '' !== $s['token_enc'] ? '已保存（留空则不更换）' : '粘贴 Cloudflare API 令牌' ) . '"></label>';
 		echo '<label class="pcp-check"><input type="checkbox" name="enabled" value="1"' . checked( $s['enabled'], true, false ) . '> 开新店时自动配置 CDN</label>';
 		echo '<label class="pcp-check"><input type="checkbox" name="create_zones" value="1"' . checked( $s['create_zones'], true, false ) . '> 域名还不在 Cloudflare 时自动添加（之后需要你到注册商改 NS）</label>';
-		echo '<p><button type="submit" class="button button-primary">保存并验证</button></p></form>';
-		if ( '' !== $s['token_enc'] ) {
-			echo self::form( 'forget', array(), '删除保存的令牌', 'pcp-link is-danger', '确定删除令牌？自动配置会关闭，Cloudflare 里已配好的不受影响。' ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		}
+		echo '<p><button type="submit" class="button">保存开关</button></p></form>';
 		echo '<details class="pcp-details"><summary>怎么创建令牌</summary><ol class="pcp-steps">';
 		echo '<li>登录 Cloudflare → 右上角头像 → My Profile → API Tokens → Create Token → Create Custom Token。</li>';
 		echo '<li>权限（Permissions）添加：Zone · Zone · Read；Zone · DNS · Edit；Zone · Zone Settings · Edit；Zone · Bot Management · Edit（机器人拦截）；Zone · SSL and Certificates · Read；Zone · Cache Rules · Edit。要自动添加新域名，再加 Account · Account Settings · Read 和 Zone · Zone · Edit。</li>';
@@ -151,7 +188,9 @@ final class Cdn_Page {
 				$stage = (string) ( $row['stage'] ?? 'new' );
 				$cls   = 'done' === $stage ? 'is-ok' : ( 'error' === $stage ? 'is-bad' : ( in_array( $stage, array( 'ns', 'no_zone' ), true ) ? 'is-wait' : 'is-off' ) );
 				$site  = ! empty( $row['site_id'] ) ? \PeptideHq\Sites::get( (int) $row['site_id'] ) : null;
-				echo '<tr><td><strong>' . esc_html( (string) $domain ) . '</strong><small>' . esc_html( ( $site ? ( '' !== (string) $site['name'] ? $site['name'] : $site['url'] ) . ' · ' : '' ) . ( 'manual' === ( $row['source'] ?? '' ) ? '手动加入' : '自动开店' ) . ' · ' . ( $row['ip'] ?? '' ) ) . '</small></td>';
+				$owner = (string) ( $row['account'] ?? '' );
+				$owner = '' !== $owner && isset( $accounts[ $owner ] ) ? ( '' !== $accounts[ $owner ]['label'] ? $accounts[ $owner ]['label'] : $owner ) : '';
+				echo '<tr><td><strong>' . esc_html( (string) $domain ) . '</strong><small>' . esc_html( ( $site ? ( '' !== (string) $site['name'] ? $site['name'] : $site['url'] ) . ' · ' : '' ) . ( 'manual' === ( $row['source'] ?? '' ) ? '手动加入' : '自动开店' ) . ' · ' . ( $row['ip'] ?? '' ) . ( '' !== $owner ? ' · 账号：' . $owner : '' ) ) . '</small></td>';
 				echo '<td><span class="pcp-state ' . esc_attr( $cls ) . '"><i></i>' . esc_html( Cdn::STAGES[ $stage ] ?? $stage ) . '</span></td>';
 				echo '<td class="pcp-cdn-msg">' . esc_html( (string) ( $row['message'] ?? '' ) ) . ( ! empty( $row['updated'] ) ? '<small>' . esc_html( wp_date( 'm-d H:i', (int) $row['updated'] ) . ' 更新' ) . '</small>' : '' ) . '</td>';
 				echo '<td>' . self::form( 'check', array( 'domain' => $domain ), '立即检查' ) . ' ' . ( isset( Cdn::domains()[ $domain ] ) ? self::form( 'remove', array( 'domain' => $domain ), '移除', 'pcp-link is-danger', '只从列表移除，不改 Cloudflare。确定？' ) : '' ) . '</td></tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
@@ -168,7 +207,7 @@ final class Cdn_Page {
 		foreach ( \PeptideHq\Servers::all() as $srv ) {
 			echo '<option value="' . esc_attr( (string) $srv['ip'] ) . '">' . esc_html( $srv['name'] . ' · ' . $srv['ip'] ) . '</option>';
 		}
-		echo '</select></label><p><button type="submit" class="button"' . ( '' === $s['token_enc'] ? ' disabled' : '' ) . '>加入并检查</button></p></form>';
+		echo '</select></label><p><button type="submit" class="button"' . ( $s['accounts'] ? '' : ' disabled' ) . '>加入并检查</button></p></form>';
 		echo '<p class="pcp-note">已经走 CDN 的域名不会被改回灰色；遇到同名的 AAAA / CNAME 记录会停下提示，不会删除你的记录。</p></section>';
 		echo '</div>';
 	}

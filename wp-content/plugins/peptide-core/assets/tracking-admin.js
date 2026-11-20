@@ -444,7 +444,7 @@
 	}
 	function sourceText( n ) {
 		if ( ! n || ! n.creative && ! n.ad_id ) { return ''; }
-		return [ n.creative ? '素材 ' + n.creative : '', n.ad_id ? '广告 ' + n.ad_id : '', n.placement ].filter( Boolean ).join( ' · ' );
+		return [ n.creative ? '素材 ' + n.creative : '', n.ad_id ? '广告 ' + n.ad_id : '', n.placement, n.lp_ver ? '落地页版本 ' + n.lp_ver : '' ].filter( Boolean ).join( ' · ' );
 	}
 	// 店主 2026-11-14：原来十二张卡片平铺，看不出哪张重要，字段也是技术原值（Houston, Texas / America/Los_Angeles / en-US）。
 	// 改成三组：人在哪 / 用什么看的 / 哪来的，每项先给人话，技术原值放小字。

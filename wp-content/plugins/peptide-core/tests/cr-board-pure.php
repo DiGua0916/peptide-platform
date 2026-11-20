@@ -197,6 +197,13 @@ check( 'adset: grouped by utm_term', 5 === array_column( $adset['rows'], null, '
 $plat = Board::aggregate( $data, $opt + array( 'mode' => 'first', 'dim' => 'platform' ) );
 $prow = $plat['rows'][0];
 check( 'platform: label and no spend', 'fb / Facebook_Mobile_Feed' === $prow['label'] && null === $prow['spend_cents'] && null === $prow['cost_per_valid'] && null === $prow['roas'] );
+// 落地页版本（2026-11-20）：带 lp_ver 的按版本名，没带的按进站页面路径；分不到花费。
+check( 'landing key: version name', array( 'lp:cat_best' => '版本 cat_best' ) === Board::landing_key( array( 'lp_ver' => 'cat_best', 'landing_path' => '/shop/' ) ) );
+check( 'landing key: no version -> page path without query', array( 'path:/shop/' => '页面 /shop/（没标版本）' ) === Board::landing_key( array( 'lp_ver' => null, 'landing_path' => '/shop/?x=1' ) ) );
+check( 'landing key: nothing at all', array( 'path:' => '没标版本' ) === Board::landing_key( array() ) );
+$lp_data = array( 'visits' => array( $paid( 60, 160, $t0, $ad1, array( 'lp_ver' => 'cat_best' ) ), $paid( 61, 161, $t0, $ad1, array( 'lp_ver' => 'cat_best' ) ), $paid( 62, 162, $t0, $ad1, array( 'landing_path' => '/' ) ) ) ) + $data;
+$lp     = array_column( Board::aggregate( $lp_data, $opt + array( 'mode' => 'first', 'dim' => 'landing' ) )['rows'], null, 'key' );
+check( 'landing: grouped by version, rest by path, no spend', 2 === $lp['lp:cat_best']['visitors'] && isset( $lp['path:/'] ) && null === $lp['lp:cat_best']['spend_cents'] && isset( Board::DIMS['landing'] ) );
 
 // ---------- 指标的 0 分母 ----------
 $z = Board::metrics( array( 'visitors' => 0, 'spend_cents' => 0, 'link_clicks' => 0 ) );

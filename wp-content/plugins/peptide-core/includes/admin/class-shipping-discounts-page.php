@@ -146,6 +146,7 @@ final class Shipping_Discounts_Page {
 		}
 		/* translators: %d: maximum number of stages */
 		echo '</div><p><button type="button" class="button pc-mk-stage-add" data-max="' . (int) Discounts::MAX_STAGES . '">+ ' . esc_html__( 'Add stage', 'peptide-core' ) . '</button> <span class="pc-pl-muted">' . esc_html( sprintf( __( 'Up to %d stages. Stages must not overlap; between stages there is no discount.', 'peptide-core' ), Discounts::MAX_STAGES ) ) . '</span></p></div>';
+		echo '<div class="pc-mk-field">' . Marketing::label( __( 'Minimum order', 'peptide-core' ) ) . '<div class="pc-mk-inline"><input type="number" min="0" step="0.01" class="pc-mk-num" name="min_subtotal" value="' . esc_attr( (string) ( (float) ( $d['min_subtotal'] ?? 0 ) ?: '' ) ) . '" placeholder="0"> <span class="pc-pl-muted">' . esc_html__( 'Item total before coupons. Leave empty for every order. Several discounts with different minimums make tiers: the lowest shipping wins.', 'peptide-core' ) . '</span></div></div>';
 		Marketing::card_close();
 		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 
@@ -191,6 +192,7 @@ final class Shipping_Discounts_Page {
 				'end'         => $end,
 				'kind'        => (string) ( $in['kind'] ?? '' ),
 				'value'       => $in['value'] ?? '',
+				'min_subtotal' => $in['min_subtotal'] ?? 0,
 				'stages'      => $stages,
 				'customers'   => (string) ( $in['customers'] ?? '' ),
 				'emails'      => (string) ( $in['emails'] ?? '' ),
