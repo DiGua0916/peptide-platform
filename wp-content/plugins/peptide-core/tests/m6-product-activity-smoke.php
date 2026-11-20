@@ -10,6 +10,10 @@
  * 结束时删掉这 7 位访客、那张订单和临时商品。按店开关 pc_product_activity 和下限用这一次运行里的过滤器设定，
  * 选项不改；会留下接口自己的一条 60 秒缓存。不带 run 只打印说明。只在开发站 / 沙盒运行，不要在正式站点运行。
  *
+ * 2026-11-13 起开关关着时这条路由不注册（请求得到 WordPress 自己的 404，和没有这个接口的线上一样）。WordPress 的接口
+ * 表在脚本开始之前就已经建好了，所以用例先记下“店里原本有没有这条路由”（开关关着时应当没有），再在这一次运行里
+ * 自己补注册一次，后面的读数照常走真正的接口。
+ *
  * 通过标准（退出码 0）：最后一行是“结果：通过（N 项检查）”。
  *
  * @package PeptideCore
@@ -76,8 +80,15 @@ $m6p_min     = static function () use ( &$m6p_minimum ) {
 };
 $m6p_no_mail = static fn() => true;
 $m6p_no_http = static fn( $pre, $args, $url ) => new \WP_Error( 'm6_smoke_blocked', 'blocked during the smoke run' );
+// 店里原本有没有这条路由：开关（选项 pc_product_activity）关着时应当没有。
+$m6p_route         = '/peptide/v1/product-activity';
+$m6p_store_on      = Product_Activity::enabled();
+$m6p_route_before  = isset( rest_get_server()->get_routes( 'peptide/v1' )[ $m6p_route ] );
 add_filter( 'peptide_core_product_activity_enabled', $m6p_switch, PHP_INT_MAX );
 add_filter( 'pre_option_' . Product_Activity::MIN_OPTION, $m6p_min, PHP_INT_MAX );
+if ( ! $m6p_route_before ) {
+	Product_Activity::register_route(); // 这一次运行里开关开着，补注册一次；脚本结束就没了，不影响站点。
+}
 add_filter( 'pre_wp_mail', $m6p_no_mail, PHP_INT_MAX );
 add_filter( 'pre_http_request', $m6p_no_http, PHP_INT_MAX, 3 );
 
@@ -199,9 +210,10 @@ $m6p_check( '重新算之后：看过 6、已加购 5', 6 === ( $m6p_data['viewi
 
 $m6p_say( '' );
 $m6p_say( '5. 开关和 404' );
+$m6p_check( $m6p_store_on ? '店里开关开着：路由在' : '店里开关关着：本来就没有这条路由（请求得到 WordPress 自己的 404，和线上一样）', $m6p_store_on === $m6p_route_before, $m6p_route_before ? '路由在' : '路由不在' );
 $m6p_on = false;
 [ $m6p_status, $m6p_data, $m6p_headers ] = $m6p_get( (string) $m6p_pid );
-$m6p_check( '开关关着：404，正文里没有数字，同样带缓存头', 404 === $m6p_status && ! isset( $m6p_data['viewing'] ) && ! isset( $m6p_data['added'] ) && 'public, max-age=60' === ( $m6p_headers['Cache-Control'] ?? '' ), $m6p_status . ' ' . wp_json_encode( $m6p_data ) );
+$m6p_check( '请求中途关掉开关：接口自己再判断一次，404，正文里没有数字，同样带缓存头', 404 === $m6p_status && ! isset( $m6p_data['viewing'] ) && ! isset( $m6p_data['added'] ) && 'public, max-age=60' === ( $m6p_headers['Cache-Control'] ?? '' ), $m6p_status . ' ' . wp_json_encode( $m6p_data ) );
 $m6p_on = true;
 [ $m6p_status ] = $m6p_get( '999999999' );
 $m6p_check( '不存在的商品：404', 404 === $m6p_status, (string) $m6p_status );
