@@ -506,6 +506,8 @@ final class Board_Page {
 			echo '<p class="pc-cr-muted">每站日访客 100–200、广告组 20–30 个，单条广告的样本通常很小，只作参考，结论看“按素材属性”。</p>';
 		} elseif ( 'platform' === $f['dim'] ) {
 			echo '<p class="pc-cr-muted">花费按广告导入，分不到平台 / 版位，所以花费和成本列显示“—”。</p>';
+		} elseif ( 'landing' === $f['dim'] ) {
+			echo '<p class="pc-cr-muted">在“广告设置”的素材链接里给落地页填版本名（如 cat_best），链接会带上 lp_ver，这里就按版本分开算；没填的按进站页面算。花费分不到版本，显示“—”。</p>';
 		}
 		echo '<div class="pc-cr-scroll"><table class="widefat striped pc-cr-table"><thead><tr><th>' . esc_html( Board::DIMS[ $f['dim'] ] ) . '</th>';
 		foreach ( self::COLUMNS as $col ) {

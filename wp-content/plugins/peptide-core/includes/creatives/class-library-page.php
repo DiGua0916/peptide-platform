@@ -57,6 +57,7 @@ final class Library_Page {
 		$picked = isset( $_POST['attachment_id'] ) ? absint( $_POST['attachment_id'] ) : 0;
 		$panel  = isset( $_POST['from'] ) && 'ads' === sanitize_key( wp_unslash( $_POST['from'] ) ); // 广告设置页的上传表单：必须有图。
 		$landing = isset( $_POST['landing'] ) ? esc_url_raw( wp_unslash( $_POST['landing'] ) ) : ''; // 落地页（2026-11-13）
+		$lp_ver  = isset( $_POST['lp_ver'] ) ? trim( sanitize_text_field( wp_unslash( $_POST['lp_ver'] ) ) ) : null; // 落地页版本名（2026-11-20）
 		// phpcs:enable WordPress.Security.NonceVerification.Missing
 		$done = static function ( string $type, string $msg, string $to ): void {
 			Staff_Buyer::flash( $type, $msg );
@@ -86,10 +87,16 @@ final class Library_Page {
 			if ( ! Creatives::get( $code ) ) {
 				$done( 'error', '找不到这个素材。', $back );
 			}
+			if ( null !== $lp_ver && '' !== $lp_ver && ! Contract::valid_lp_ver( $lp_ver ) ) {
+				$done( 'error', '版本名只能用英文字母、数字、下划线、点和横线，最多 32 个字符。', $back );
+			}
 			if ( ! Ads_Panel::set_landing( $code, $landing ) ) {
 				$done( 'error', '这个落地页不在本店的页面里，请重新选。', $back );
 			}
-			$done( 'success', $code . ' 的落地页已换成“' . Ads_Panel::landing_label( $landing ) . '”。请重新复制链接，到 Meta 里替换这个素材所有广告的网址。', remove_query_arg( 'from_ad', $back ) . '#pc-cr-link-' . strtolower( $code ) );
+			if ( null !== $lp_ver ) {
+				Ads_Panel::set_lp_ver( $code, $lp_ver );
+			}
+			$done( 'success', $code . ' 的落地页已换成“' . Ads_Panel::landing_label( $landing ) . '”' . ( null !== $lp_ver && '' !== $lp_ver ? '（版本 ' . $lp_ver . '）' : '' ) . '。请重新复制链接，到 Meta 里替换这个素材所有广告的网址。', remove_query_arg( 'from_ad', $back ) . '#pc-cr-link-' . strtolower( $code ) );
 		}
 		if ( 'link' === $op ) {
 			if ( ! Creatives::ad( $ad ) || ! Creatives::get( $code ) ) {

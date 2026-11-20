@@ -46,6 +46,8 @@ final class Visit_Facts {
 		foreach ( array( 'utm_campaign', 'utm_term', 'utm_content', 'placement', 'ad_name' ) as $key ) {
 			$out[ $key ] = array_key_exists( $key, $query ) && is_string( $query[ $key ] ) ? $query[ $key ] : null;
 		}
+		$lp                   = is_string( $query[ Contract::LP_PARAM ] ?? null ) ? $query[ Contract::LP_PARAM ] : '';
+		$out['lp_ver']        = Contract::valid_lp_ver( $lp ) ? $lp : null; // 落地页版本（2026-11-20），名字不合规就不记。
 		$out['creative_code'] = Contract::code_from_params( $params ); // 素材链接的 cr 优先，其次广告名。
 		$out['has_fbclid']    = $fbclid ? 1 : 0;
 		$out['source_class']  = Contract::source_class( $params, $fbclid, $referrer, $user_agent );

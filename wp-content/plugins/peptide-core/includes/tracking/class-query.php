@@ -84,6 +84,7 @@ final class Query {
 			'creative'   => $str( 'creative_code' ),
 			'ad_id'      => $str( 'utm_content' ),
 			'placement'  => $str( 'placement' ),
+			'lp_ver'     => $str( 'lp_ver' ),
 			'source'     => $str( 'source_class' ),
 		) + self::plain( $s );
 	}

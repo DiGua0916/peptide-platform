@@ -148,3 +148,11 @@
 - **滚动深度**：`visit_features()` 记 `scroll_depth`（这次访问最深百分比），`Board::behavior()` 汇总停留、页数、最深滚动。
 - **部署**：店铺和总后台都要更新（总后台改了 AI 设置）。不需要改表。
 - **测试**：`cr-audience-pure`（54 项）、`peptide-hq/tests/cr-hq-ai-creative-pure`（12 项，HTTP 用替身，不请求 AI）、`cr-board-pure`（199 项，导出加 profiles）。
+
+## 落地页版本 lp_ver（2026-11-20）
+
+- 起因：外部分析建议在广告链接上加 `&lp_ver=版本名`，并说访客表“没存 cr / utm_content / utm_campaign / utm_term”。核对代码：后四项从 11-11 起就写进访问表（`creative_code`、`utm_content`、`utm_campaign`、`utm_term`，另有 `placement`、`ad_name`），这部分不用改；真正缺的是落地页版本。
+- 采集：`lp_ver` 进参数白名单（`Contract::PARAMS`、两份前台脚本、页面缓存的追踪参数）；名字只收字母、数字、`_ . -`，1–32 个字符（`Contract::valid_lp_ver`），不合规只丢这一项，不影响其余参数和付费判定。访问表加列 `lp_ver varchar(32) NULL`，追踪表版本 7 → 8（dbDelta 自动加列）。
+- 链接：广告设置“我的素材链接”里“换落地页”多一个可选的版本名，填了链接末尾带 `&lp_ver=版本名`（选项 `pc_cr_lp_vers`）。改了要重新复制链接到 Meta。
+- 看板：新维度“按落地页版本”——带版本的按版本名，没带的按进站页面路径（标“没标版本”）；花费分不到版本，显示“—”。访客详情的来源一行也会显示“落地页版本 xxx”。
+- 测试：cr-contract（45）、cr-capture（97）、cr-board（203）全过；相关的其余纯测试和主线一样（主线本来就有 6 个和本改动无关的失败：data-dimensions、data-product-exposure 和 4 个 tracking-*.cjs）。没在沙盒里实点（沙盒被系统清理了），上线后用一条带 lp_ver 的链接点一次确认。

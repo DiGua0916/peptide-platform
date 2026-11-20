@@ -33,7 +33,10 @@ check( 'parse: empty name', array( 'code' => '', 'attrs' => array(), 'custom' =>
 $name = C::build_ad_name( 'C0012', array( 'angle' => 'purity', 'hook' => 'LAB', 'fmt' => 'vid', 'lang' => 'en' ), 2 );
 check( 'build: fixed order, lowercase, version', 'C0012_hook-lab_fmt-vid_angle-purity_lang-en_v2' === $name );
 check( 'build -> parse round trip', 'C0012' === C::parse_ad_name( $name )['code'] && 'lab' === C::parse_ad_name( $name )['attrs']['hook'] && 2 === C::parse_ad_name( $name )['version'] );
-check( 'creative link carries every param', ! array_diff( C::PARAMS, array_map( static fn( $kv ) => explode( '=', $kv )[0], explode( '&', C::creative_query( 'C0012' ) ) ) ) );
+check( 'lp_ver: valid names', C::valid_lp_ver( 'cat_best' ) && C::valid_lp_ver( 'v2.1-a' ) && C::valid_lp_ver( str_repeat( 'a', 32 ) ) );
+check( 'lp_ver: invalid names', ! C::valid_lp_ver( '' ) && ! C::valid_lp_ver( str_repeat( 'a', 33 ) ) && ! C::valid_lp_ver( 'a b' ) && ! C::valid_lp_ver( '{{x}}' ) && ! C::valid_lp_ver( "a\n" ) && ! C::valid_lp_ver( '版本' ) );
+check( 'lp_ver: in param allowlist', in_array( C::LP_PARAM, C::PARAMS, true ) );
+check( 'creative link carries every param except the optional lp_ver', ! array_diff( array_diff( C::PARAMS, array( C::LP_PARAM ) ), array_map( static fn( $kv ) => explode( '=', $kv )[0], explode( '&', C::creative_query( 'C0012' ) ) ) ) );
 check( 'creative link starts with cr', str_starts_with( C::creative_query( 'C0012' ), 'cr=C0012&utm_source=' ) );
 check( 'creative link without valid code = template only', C::URL_TEMPLATE === C::creative_query( 'X1' ) );
 check( 'code: cr wins over ad name', 'C0007' === C::code_from_params( array( 'cr' => 'c0007', 'ad_name' => 'C0012_hook-lab' ) ) );
