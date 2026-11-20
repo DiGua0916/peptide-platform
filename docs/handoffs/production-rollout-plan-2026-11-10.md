@@ -972,3 +972,9 @@
 - 数据脚本（所有者确认“全部照做”，6 家店）：store-fixes-20261117 apply（黑五活动 #10980 改草稿、运费险划线 $8.50、经销商弹窗开、配送方式名 FedEx、3 个商品改名、57 个商品正文温度写法），再跑 dry 为 0，备份在 `pc_site1_fixes_20261117`；coa-link-unlinked-20261119 apply 21 份，再跑 dry 为 0，备份在 `peptide_site1_coa_link_backup`。
 - 前台检查：6 家店核心 0.34.9、首页无 “0+”、运费横条在。主店手机尺寸：横条滚动（标题 Black Friday 固定）；商品弹窗三张运费券；结账页节省明细 Product savings −$31.40 / Shipping offer −$10.00 / Protection offer −$7.51 / You save $48.91，和顶部一致；两个付款方式都在。
 - 注意：s0008/s0009/s0010 已在 11-17 换到 lumornea.com / korgavex.com / dalhoben.com，旧域名现在是 525。
+
+### 2026-11-20 12:00 UTC 素材链接加落地页版本 lp_ver：访问表加 lp_ver 列（追踪表 v8），看板加“按落地页版本”（vc-release 2026.11.20-1159，未完成）
+- 主线提交 `0ac6f9a4`；模式 完整；总后台发布记录可在“发布记录”页查看。
+- 失败：[admin] sudo bash /var/tmp/vialcove-release-tools/release_agent.sh activate-bridge 2026.11.20-1159 /srv/vialcove/store-admin/cur → 退出码 1：Error: 首次启用时必须保持网关地址为空。
+- 已回滚 s0001（6 秒）
+- 发布终止。失败的是 s0001；没有动的：['s0006', 's0007', 's0008', 's0009', 's0010', 'templates', 'hq']；保持新版本的：无
