@@ -44,18 +44,10 @@ final class Creatives_Page {
 		'lang'  => '语言',
 	);
 
-	/** 2026-11-21 用户要求先隐藏（和店铺端 Creatives\Module::HIDDEN 一起）：两页不进菜单，地址照样能打开，上报照收。 */
-	public const HIDDEN = true;
-
 	public static function hooks(): void {
 		add_action(
 			'admin_menu',
 			static function (): void {
-				if ( self::HIDDEN ) {
-					add_submenu_page( '', '素材对比', '素材对比', Menu::CAP, self::SLUG, array( self::class, 'render' ) );
-					add_submenu_page( '', '素材词表', '素材词表', Menu::CAP, self::VOCAB_SLUG, array( self::class, 'render_vocab' ) );
-					return;
-				}
 				add_submenu_page( 'pchq', '素材对比', '素材对比', Menu::CAP, self::SLUG, array( self::class, 'render' ) );
 				add_submenu_page( 'pchq', '素材词表', '素材词表', Menu::CAP, self::VOCAB_SLUG, array( self::class, 'render_vocab' ) );
 			},

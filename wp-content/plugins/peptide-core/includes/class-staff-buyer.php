@@ -664,9 +664,6 @@ final class Staff_Buyer {
 			if ( $locked && 'home' !== $key ) {
 				continue; // 还没改密码：只留首页（会转到向导）。
 			}
-			if ( 'adtrack' === $key && class_exists( Creatives\Module::class ) && Creatives\Module::hidden() ) {
-				continue; // 2026-11-21 用户要求先隐藏“广告数据追踪”（页面能打开，只是不进菜单）。
-			}
 			if ( 'campaigns' === $key && ! self::campaigns_visible() ) {
 				continue; // F2 的只读列表不在这份代码里，或者 F2 说这个人不能看。
 			}
