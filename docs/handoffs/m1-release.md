@@ -721,4 +721,4 @@ F1 的发布是整目录替换。新的包基于 fd0c316，所以：
   - `wp pchq-domain verify` 多一项“发信域名”；邮件中心“各店铺发送量”表多一列“发件地址”，退回默认邮箱或认证不齐的标红。
 - 线上只读核对（11-21）：s0008/9/10 店铺三处邮箱 11-17 已人工改好；但总后台 FluentSMTP 没有 orders@lumornea.com / korgavex.com / dalhoben.com，CDN 行没有 zone 编号，定时补齐一直跳过 → 这三家的邮件现在用 `orders@vialcovepeptides.com` 发出、显示名是新品牌。这个分支发上去后定时任务会自动补（需要那几个域名所在的 Cloudflare 账号令牌有 Email Sending + DNS 编辑权限）。
 - 测试：`peptide-core/tests/domain-mail-sync-pure.php` 36 项、`peptide-hq/tests/mail-domains-sync-pure.php` 22 项通过；`tests/run-data-observations.cjs` 112 过 0 失败；`domain-verify-pure` 29、`cdn-multi-account-pure` 35 通过。本机 WordPress 副本（SQLite）实跑：占位邮箱接上域名、`wp option update home` 换域名、直接改库后进后台补做、再跑幂等、外部邮箱不动，全部符合。总后台部分只有纯测试，没有在真实总后台或沙盒跑过；`management-addresses-pure`、`provision-customer-domain-pure` 在主线上本来就跑不起来（缺替身类），不是这次引入的。
-- 没做：合主线、沙盒、发布（主线发布还卡在隐身桥那一步，等所有者决定）。
+- 11-21 所有者在 F1 会话说“发布吧”：已合主线并发布（vc-release 2026.11.21-1649，主线 51f4d4bb，连同 lp_ver 和 LC120），见上线记录。三个新域名的发件地址被 Cloudflare 令牌的来源 IP 限制挡住，等令牌放行总后台服务器 IP。
