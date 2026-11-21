@@ -136,6 +136,7 @@ final class Plugin {
 		Api\Store_Api::register_hooks();
 		Cart_Write_Lock::register_hooks();
 		Mail_Outbox::register_hooks();
+		Domain_Mail_Sync::register_hooks();
 		Page_Cache::register_hooks();
 		Static_Cdn::register_hooks();
 
@@ -220,6 +221,7 @@ final class Plugin {
 			\WP_CLI::add_command( 'peptide layout', Cli\Layout_Command::class );
 			\WP_CLI::add_command( 'peptide tracking', Cli\Tracking_Command::class );
 			\WP_CLI::add_command( 'peptide recovery', Cli\Recovery_Command::class );
+			\WP_CLI::add_command( 'peptide mail-domain', Cli\Mail_Domain_Command::class );
 		}
 	}
 

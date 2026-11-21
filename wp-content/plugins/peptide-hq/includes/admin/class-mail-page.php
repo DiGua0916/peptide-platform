@@ -8,7 +8,10 @@
 
 namespace PeptideHq\Admin;
 
+use PeptideHq\Domain_Verify;
 use PeptideHq\Mail;
+use PeptideHq\Mail_Domains;
+use PeptideHq\Site_Urls;
 use PeptideHq\Sites;
 
 defined( 'ABSPATH' ) || exit;
@@ -125,10 +128,10 @@ final class Mail_Page {
 		$week  = Mail::per_site( 7 );
 		$day   = Mail::per_site( 1 );
 		echo '<h2 class="pcp-section">各店铺发送量 <span>' . count( $sites ) . '</span></h2>';
-		echo '<section class="pcp-card pcp-access"><div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">店铺</th><th scope="col">24 小时已发</th><th scope="col">7 天已发</th><th scope="col">7 天失败</th><th scope="col">7 天被拒（超上限 / 未连接）</th></tr></thead><tbody>';
+		echo '<section class="pcp-card pcp-access"><div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">店铺</th><th scope="col">发件地址</th><th scope="col">24 小时已发</th><th scope="col">7 天已发</th><th scope="col">7 天失败</th><th scope="col">7 天被拒（超上限 / 未连接）</th></tr></thead><tbody>';
 		foreach ( $sites as $id => $site ) {
 			$w = $week[ $id ] ?? array();
-			echo '<tr><td><strong>' . esc_html( '' !== (string) $site['name'] ? $site['name'] : $site['url'] ) . '</strong></td><td>' . (int) ( $day[ $id ]['sent'] ?? 0 ) . '</td><td>' . (int) ( $w['sent'] ?? 0 ) . '</td><td>' . (int) ( $w['failed'] ?? 0 ) . '</td><td>' . (int) ( $w['refused'] ?? 0 ) . '</td></tr>';
+			echo '<tr><td><strong>' . esc_html( '' !== (string) $site['name'] ? $site['name'] : $site['url'] ) . '</strong></td><td>' . self::sender_cell( $site ) . '</td><td>' . (int) ( $day[ $id ]['sent'] ?? 0 ) . '</td><td>' . (int) ( $w['sent'] ?? 0 ) . '</td><td>' . (int) ( $w['failed'] ?? 0 ) . '</td><td>' . (int) ( $w['refused'] ?? 0 ) . '</td></tr>';
 		}
 		echo '</tbody></table></div></section>';
 
@@ -148,5 +151,30 @@ final class Mail_Page {
 			echo '</tbody></table></div></section>';
 		}
 		echo '</div>';
+	}
+
+	/**
+	 * 这家店实际用哪个地址发信（2026-11-21）。换了域名但新域名还没有 orders@ 连接时，邮件会退回默认发信邮箱，
+	 * 这里标出来；最近一次在线检查（wp pchq-domain verify 或换域名后的自动检查）发现 SPF / DKIM 没齐也标出来。
+	 */
+	private static function sender_cell( array $site ): string {
+		$from = Mail::site_sender( $site );
+		$bare = Domain_Verify::bare( (string) wp_parse_url( Site_Urls::public_url( $site ), PHP_URL_HOST ) );
+		$html = esc_html( $from['email'] );
+		if ( '' === $bare ) {
+			return $html;
+		}
+		if ( ! $from['own_domain'] ) {
+			$check = Mail_Domains::check( $bare, false );
+			return $html . '<br><span class="pcp-state is-bad"><i></i>' . esc_html( $check['message'] ) . '</span>';
+		}
+		$last = Mail_Domains::last_check( $bare );
+		if ( is_array( $last ) && false === ( $last['ok'] ?? null ) ) {
+			return $html . '<br><span class="pcp-state is-bad"><i></i>' . esc_html( (string) $last['message'] ) . '</span>';
+		}
+		if ( is_array( $last ) && true === ( $last['ok'] ?? null ) ) {
+			return $html . '<br><span class="pcp-state is-ok"><i></i>SPF / DKIM 已核对（' . esc_html( wp_date( 'm-d H:i', (int) ( $last['at'] ?? 0 ) ) ) . '）</span>';
+		}
+		return $html;
 	}
 }

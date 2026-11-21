@@ -40,7 +40,7 @@ final class Mail_Domains {
 
 	/** @return array|\WP_Error 发送域名对象 */
 	private static function ensure_subdomain( string $domain, string $zone_id ) {
-		$list = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains?per_page=50' );
+		$list = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains?per_page=50', null, $domain );
 		if ( ! is_wp_error( $list ) ) {
 			foreach ( (array) $list as $row ) {
 				if ( strtolower( (string) ( $row['name'] ?? '' ) ) === $domain ) {
@@ -50,7 +50,7 @@ final class Mail_Domains {
 		} elseif ( 403 === (int) ( $list->get_error_data()['status'] ?? 0 ) || 10000 === (int) ( $list->get_error_data()['cf_code'] ?? 0 ) ) {
 			return new \WP_Error( 'pchq_mail_domain_token', 'Cloudflare 令牌缺少 Email Sending 权限，邮件域名没有自动接入。' );
 		}
-		$created = Cdn::request( 'POST', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains', array( 'name' => $domain ) );
+		$created = Cdn::request( 'POST', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains', array( 'name' => $domain ), $domain );
 		if ( is_wp_error( $created ) ) {
 			return new \WP_Error( 'pchq_mail_domain', '邮件发送域名没接上：' . $created->get_error_message() );
 		}
@@ -62,18 +62,18 @@ final class Mail_Domains {
 		if ( '' === $sub_id ) {
 			return true;
 		}
-		$expected = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains/' . rawurlencode( $sub_id ) . '/dns' );
+		$expected = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/email/sending/subdomains/' . rawurlencode( $sub_id ) . '/dns', null, $domain );
 		if ( is_wp_error( $expected ) ) {
 			return new \WP_Error( 'pchq_mail_domain_dns', '读不到邮件发送需要的 DNS 记录：' . $expected->get_error_message() );
 		}
 		$records = is_array( $expected['records'] ?? null ) ? $expected['records'] : ( is_array( $expected ) && isset( $expected[0]['type'] ) ? $expected : array() );
-		$existing = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/dns_records?per_page=200' );
+		$existing = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone_id ) . '/dns_records?per_page=200', null, $domain );
 		if ( is_wp_error( $existing ) ) {
 			return $existing;
 		}
 		$have = array();
 		foreach ( (array) $existing as $r ) {
-			$have[] = strtolower( (string) $r['type'] . '|' . (string) $r['name'] . '|' . trim( (string) $r['content'], '"' ) );
+			$have[] = strtolower( (string) $r['type'] . '|' . rtrim( (string) $r['name'], '.' ) . '|' . rtrim( trim( (string) $r['content'], '"' ), '.' ) ); // Cloudflare 存 MX 时不带末尾的点
 		}
 		foreach ( $records as $rec ) {
 			$type    = strtoupper( (string) ( $rec['type'] ?? '' ) );
@@ -82,14 +82,14 @@ final class Mail_Domains {
 			if ( '' === $type || '' === $name || '' === $content ) {
 				continue;
 			}
-			if ( in_array( strtolower( $type . '|' . $name . '|' . $content ), $have, true ) ) {
+			if ( in_array( strtolower( $type . '|' . $name . '|' . rtrim( $content, '.' ) ), $have, true ) ) {
 				continue;
 			}
 			$body = array( 'type' => $type, 'name' => $name, 'content' => 'MX' === $type ? rtrim( $content, '.' ) : $content, 'ttl' => 1, 'comment' => 'VialCove mail sending (auto)' );
 			if ( 'MX' === $type ) {
 				$body['priority'] = (int) ( $rec['priority'] ?? 10 );
 			}
-			$done = Cdn::request( 'POST', '/zones/' . rawurlencode( $zone_id ) . '/dns_records', $body );
+			$done = Cdn::request( 'POST', '/zones/' . rawurlencode( $zone_id ) . '/dns_records', $body, $domain );
 			if ( is_wp_error( $done ) && false === stripos( $done->get_error_message(), 'already exists' ) ) {
 				return new \WP_Error( 'pchq_mail_domain_dns', '邮件 DNS 记录 ' . $name . ' 没建上：' . $done->get_error_message() );
 			}
@@ -134,28 +134,204 @@ final class Mail_Domains {
 		return true;
 	}
 
-	/** 给所有 CDN 已完成、但还没有发件地址的店铺域名补上（定时调用）。 */
+	public static function register_hooks(): void {
+		add_action( 'pchq_site_moved', array( self::class, 'on_site_moved' ), 10, 2 );
+		add_action( self::MOVED_EVENT, array( self::class, 'run_moved' ), 10, 1 );
+	}
+
+	public const MOVED_EVENT = 'pchq_mail_domain_moved';
+
+	/** 换域名时 CDN 行可能没有记 zone 编号（11-17 那三家就是）：按域名问一次 Cloudflare 并记下。@return string|\WP_Error */
+	public static function zone_id( string $domain ) {
+		$row = Cdn::domains()[ $domain ] ?? array();
+		$zid = (string) ( $row['zone_id'] ?? '' );
+		if ( '' !== $zid ) {
+			return $zid;
+		}
+		$found = Cdn::request( 'GET', '/zones?name=' . rawurlencode( $domain ), null, $domain );
+		if ( is_wp_error( $found ) ) {
+			return $found;
+		}
+		$zid = (string) ( $found[0]['id'] ?? '' );
+		if ( '' === $zid ) {
+			return new \WP_Error( 'pchq_mail_domain_zone', $domain . ' 不在任何已保存的 Cloudflare 账号里，没法接邮件发送。' );
+		}
+		if ( $row ) {
+			self::set_domain( $domain, array( 'zone_id' => $zid ) );
+		}
+		return $zid;
+	}
+
+	/** 给所有 CDN 已完成、但还没有发件地址的店铺域名补上（定时调用）。没有记 zone 编号的也补。 */
 	public static function backfill(): void {
 		foreach ( Cdn::domains() as $domain => $row ) {
-			if ( 'done' !== ( $row['stage'] ?? '' ) || '' === (string) ( $row['zone_id'] ?? '' ) || self::has_connection( (string) $domain ) ) {
+			if ( 'done' !== ( $row['stage'] ?? '' ) || self::has_connection( (string) $domain ) ) {
 				continue;
 			}
 			if ( ! empty( $row['mail_error_at'] ) && time() - (int) $row['mail_error_at'] < 6 * HOUR_IN_SECONDS ) {
 				continue;
 			}
-			self::apply( (string) $domain, (string) $row['zone_id'] );
+			self::apply( (string) $domain, (string) ( $row['zone_id'] ?? '' ) );
 		}
 	}
 
-	/** 执行并把结果写进域名状态（mail_ok / mail_error）。 */
-	public static function apply( string $domain, string $zone_id ): void {
-		$res = self::ensure( $domain, $zone_id );
+	/** 执行并把结果写进域名状态（mail_ok / mail_error）。$zone_id 为空时自己去查。 */
+	public static function apply( string $domain, string $zone_id = '' ): void {
+		$zone = '' !== $zone_id ? $zone_id : self::zone_id( $domain );
+		$res  = is_wp_error( $zone ) ? $zone : self::ensure( $domain, $zone );
+		if ( is_wp_error( $res ) ) {
+			self::set_domain( $domain, array( 'mail_error' => $res->get_error_message(), 'mail_error_at' => time() ) );
+		} else {
+			self::set_domain( $domain, array( 'mail_ok' => time(), 'mail_error' => '', 'mail_error_at' => 0 ) );
+		}
+	}
+
+	private static function set_domain( string $domain, array $fields ): void {
+		if ( ! isset( Cdn::domains()[ $domain ] ) ) {
+			return; // 只更新 CDN 页已有的域名行，不凭空加行。
+		}
 		$ref = new \ReflectionMethod( Cdn::class, 'set_domain' );
 		$ref->setAccessible( true );
-		if ( is_wp_error( $res ) ) {
-			$ref->invoke( null, $domain, array( 'mail_error' => $res->get_error_message(), 'mail_error_at' => time() ) );
-		} else {
-			$ref->invoke( null, $domain, array( 'mail_ok' => time(), 'mail_error' => '', 'mail_error_at' => 0 ) );
+		$ref->invoke( null, $domain, $fields );
+	}
+
+	// ---------- 店铺换了顾客域名 ----------
+
+	/**
+	 * Sites::register 认出店铺换了顾客域名（'moved'）时调用。注册请求不能等 Cloudflare，
+	 * 所以放到稍后的单次任务里做；同一域名重复触发只排一次。
+	 */
+	public static function on_site_moved( int $site_id, array $before ): void {
+		$site = Sites::get( $site_id );
+		if ( ! $site ) {
+			return;
 		}
+		$new = Domain_Verify::bare( (string) wp_parse_url( Site_Urls::public_url( $site ), PHP_URL_HOST ) );
+		$old = Domain_Verify::bare( (string) wp_parse_url( Site_Urls::public_url( $before ), PHP_URL_HOST ) );
+		if ( '' === $new || $new === $old ) {
+			return;
+		}
+		if ( ! wp_next_scheduled( self::MOVED_EVENT, array( $site_id ) ) ) {
+			wp_schedule_single_event( time() + 30, self::MOVED_EVENT, array( $site_id ) );
+		}
+	}
+
+	/** 单次任务：给店铺现在的顾客域名准备 orders@ 发件地址，并把检查结果记下来给邮件中心看。 */
+	public static function run_moved( int $site_id ): void {
+		$site = Sites::get( (int) $site_id );
+		if ( ! $site ) {
+			return;
+		}
+		$domain = Domain_Verify::bare( (string) wp_parse_url( Site_Urls::public_url( $site ), PHP_URL_HOST ) );
+		if ( '' === $domain ) {
+			return;
+		}
+		if ( ! self::has_connection( $domain ) && 'done' === ( Cdn::domains()[ $domain ]['stage'] ?? '' ) ) {
+			self::apply( $domain );
+		}
+		self::remember_check( $domain, self::check( $domain, true ) );
+	}
+
+	// ---------- 发信域名检查 ----------
+
+	/** 最近一次在线检查的结果，邮件中心页面直接读，不在页面里发网络请求。 */
+	public const CHECKS = 'pchq_mail_domain_checks';
+
+	public static function remember_check( string $domain, array $check ): void {
+		$all = get_option( self::CHECKS, array() );
+		$all = is_array( $all ) ? $all : array();
+		$all[ $domain ] = $check + array( 'at' => time() );
+		update_option( self::CHECKS, $all, false );
+	}
+
+	public static function last_check( string $domain ): ?array {
+		$all = get_option( self::CHECKS, array() );
+		return is_array( $all[ $domain ] ?? null ) ? $all[ $domain ] : null;
+	}
+
+	/**
+	 * 这个域名能不能用自己的地址发信。
+	 *
+	 * ok=true：FluentSMTP 有 orders@域名 的连接，且（在线时）Cloudflare 要求的 SPF / DKIM / 退信记录都在 DNS 里。
+	 * ok=false：会退回总后台默认发信邮箱，或者发出去可能被拒；message 说明原因和怎么补。
+	 * ok=null：只做了离线检查，DNS 没核对。
+	 *
+	 * @return array{ok:?bool,sender:bool,missing:array<int,string>,message:string}
+	 */
+	public static function check( string $domain, bool $online ): array {
+		$sender = self::has_connection( $domain );
+		$row    = Cdn::domains()[ $domain ] ?? array();
+		if ( ! $sender ) {
+			$why = '' !== (string) ( $row['mail_error'] ?? '' ) ? '上次自动接入失败：' . $row['mail_error'] : ( $row ? '还没有自动接入（定时任务会补）' : '这个域名不在 CDN 页的域名表里，不会自动接入' );
+			return array( 'ok' => false, 'sender' => false, 'missing' => array(), 'message' => 'orders@' . $domain . ' 还不能发信，这家店的邮件会用总后台默认发信邮箱发出。' . $why . '。' );
+		}
+		if ( ! $online ) {
+			return array( 'ok' => null, 'sender' => true, 'missing' => array(), 'message' => 'orders@' . $domain . ' 已配好；DNS 认证没有在线核对。' );
+		}
+		$missing = self::missing_records( $domain );
+		if ( is_wp_error( $missing ) ) {
+			return array( 'ok' => null, 'sender' => true, 'missing' => array(), 'message' => 'orders@' . $domain . ' 已配好，但核对 DNS 认证时出错：' . $missing->get_error_message() );
+		}
+		if ( $missing ) {
+			return array( 'ok' => false, 'sender' => true, 'missing' => $missing, 'message' => $domain . ' 的发信认证记录（SPF / DKIM / 退信）没齐，邮件可能被收件方拒收：缺 ' . implode( '、', $missing ) . '。' );
+		}
+		return array( 'ok' => true, 'sender' => true, 'missing' => array(), 'message' => 'orders@' . $domain . ' 可以发信，SPF / DKIM 记录齐全。' );
+	}
+
+	/**
+	 * Cloudflare 邮件发送要求的记录里，DNS 区域里还没有的那些（类型 名称）。
+	 *
+	 * @return array<int,string>|\WP_Error
+	 */
+	public static function missing_records( string $domain ) {
+		$zone = self::zone_id( $domain );
+		if ( is_wp_error( $zone ) ) {
+			return $zone;
+		}
+		$list = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone ) . '/email/sending/subdomains?per_page=50', null, $domain );
+		if ( is_wp_error( $list ) ) {
+			return $list;
+		}
+		$sub = null;
+		foreach ( (array) $list as $row ) {
+			if ( strtolower( (string) ( $row['name'] ?? '' ) ) === $domain ) {
+				$sub = $row;
+				break;
+			}
+		}
+		if ( ! $sub ) {
+			return array( 'Cloudflare 邮件发送域名（没接入）' );
+		}
+		$expected = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone ) . '/email/sending/subdomains/' . rawurlencode( (string) ( $sub['id'] ?? $sub['tag'] ?? '' ) ) . '/dns', null, $domain );
+		if ( is_wp_error( $expected ) ) {
+			return $expected;
+		}
+		$records  = is_array( $expected['records'] ?? null ) ? $expected['records'] : ( is_array( $expected ) && isset( $expected[0]['type'] ) ? $expected : array() );
+		$existing = Cdn::request( 'GET', '/zones/' . rawurlencode( $zone ) . '/dns_records?per_page=200', null, $domain );
+		if ( is_wp_error( $existing ) ) {
+			return $existing;
+		}
+		return self::diff_records( $records, (array) $existing );
+	}
+
+	/** 纯函数：期望记录里哪些不在现有记录中。@return array<int,string> */
+	public static function diff_records( array $expected, array $existing ): array {
+		$have = array();
+		foreach ( $existing as $r ) {
+			$have[] = strtolower( (string) ( $r['type'] ?? '' ) . '|' . rtrim( (string) ( $r['name'] ?? '' ), '.' ) . '|' . rtrim( trim( (string) ( $r['content'] ?? '' ), '"' ), '.' ) );
+		}
+		$missing = array();
+		foreach ( $expected as $rec ) {
+			$type    = strtoupper( (string) ( $rec['type'] ?? '' ) );
+			$name    = rtrim( (string) ( $rec['name'] ?? '' ), '.' );
+			$content = rtrim( trim( (string) ( $rec['content'] ?? '' ), '"' ), '.' );
+			if ( '' === $type || '' === $name || '' === $content ) {
+				continue;
+			}
+			if ( ! in_array( strtolower( $type . '|' . $name . '|' . $content ), $have, true ) ) {
+				$missing[] = $type . ' ' . $name;
+			}
+		}
+		return array_values( array_unique( $missing ) );
 	}
 }

@@ -705,3 +705,20 @@ F1 的发布是整目录替换。新的包基于 fd0c316，所以：
 - 所有者在 F1 会话确认“确认，全部照做”（含经销商弹窗打开、运费险划线 $8.50）。详情见上线记录。
 - 生产上发现发布工具之外的改动：隐身桥插件 11-17 已装并启用（6 店 + 总后台），s0008–s0010 换了域名，主店和总后台目录换成 releases/ 下的新目录。F1 这次只换 5 个组件目录，隐身桥不动（所有者说不用 F1 管）。
 - 主线 b0515cd6 发布后 `vc-release check` 仍会报隐身桥目录差异（线上比仓库新），这是预期的。
+
+## 2026-11-21 换域名时邮箱自动联动（分支 `claude/m1-domain-mail`，没合主线、没发布）
+
+- 来源：所有者在 F1 会话贴的需求“店铺换公开域名时，全站发件与展示邮箱自动同步变更”。红线：只做“域名变更 → 邮箱字段与邮件中心同步”，不改追单 / 大客户模板文案，不碰 CAPI 隐身桥、区域路由斗篷、支付插件配置。
+- 店铺（peptide-core 0.34.11）：新类 `Domain_Mail_Sync`。`home` 变化时（`update_option_home` 钩子）当场同步；直接改库时进后台（`admin_init`）按上次记下的域名（选项 `pc_mail_domain_state`）补做；命令 `wp peptide mail-domain status|sync [--from=旧域名] [--dry-run]`。规则：
+  - 发件邮箱：空 / 测试占位 / 属于旧域名（含 `www.` 写法）→ `<原前缀，默认 orders>@新域名`；外部邮箱不动。
+  - 发件人名称：等于旧域名推出来的品牌名（VialCove 规则或域名首段）→ `Mail_Outbox::brand_for_host(新域名)`；自定义名字、空值不动。
+  - 客服邮箱 `peptide_core_settings[support][email]`：空的保持空；`@旧域名` → `@新域名`；外部不动。
+  - 对外品牌名（`pc_public_brand`）不改，若还是旧域名的名字只提示。`Mail_Outbox::brand()` 拆出 `brand_for_host()`，结果不变。
+- 总后台（peptide-hq 0.5.3）：
+  - `Sites::register` 认出“换了顾客域名”时发 `pchq_site_moved`；`Mail_Domains` 30 秒后单次任务给新域名建 orders@ 发件地址并做一次在线检查。
+  - `Mail_Domains::apply` / `backfill`：CDN 行没记 zone 编号（11-17 那三家就是这样）时按域名查 zone；所有 Cloudflare 调用带上域名，用该域名所属账号的令牌（多账号）。`ensure_dns` 比对时忽略 MX 末尾的点。
+  - `Mail_Domains::check()`：没有发件连接 → 明说会退回默认发信邮箱；在线时比对 Cloudflare 要求的 SPF / DKIM / 退信记录和 DNS 区域，缺哪条点名。结果记在 `pchq_mail_domain_checks`。
+  - `wp pchq-domain verify` 多一项“发信域名”；邮件中心“各店铺发送量”表多一列“发件地址”，退回默认邮箱或认证不齐的标红。
+- 线上只读核对（11-21）：s0008/9/10 店铺三处邮箱 11-17 已人工改好；但总后台 FluentSMTP 没有 orders@lumornea.com / korgavex.com / dalhoben.com，CDN 行没有 zone 编号，定时补齐一直跳过 → 这三家的邮件现在用 `orders@vialcovepeptides.com` 发出、显示名是新品牌。这个分支发上去后定时任务会自动补（需要那几个域名所在的 Cloudflare 账号令牌有 Email Sending + DNS 编辑权限）。
+- 测试：`peptide-core/tests/domain-mail-sync-pure.php` 36 项、`peptide-hq/tests/mail-domains-sync-pure.php` 22 项通过；`tests/run-data-observations.cjs` 112 过 0 失败；`domain-verify-pure` 29、`cdn-multi-account-pure` 35 通过。本机 WordPress 副本（SQLite）实跑：占位邮箱接上域名、`wp option update home` 换域名、直接改库后进后台补做、再跑幂等、外部邮箱不动，全部符合。总后台部分只有纯测试，没有在真实总后台或沙盒跑过；`management-addresses-pure`、`provision-customer-domain-pure` 在主线上本来就跑不起来（缺替身类），不是这次引入的。
+- 没做：合主线、沙盒、发布（主线发布还卡在隐身桥那一步，等所有者决定）。

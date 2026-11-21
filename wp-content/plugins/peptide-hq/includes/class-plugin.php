@@ -22,6 +22,7 @@ final class Plugin {
 		Cdn::register_hooks();
 		Design_Push::register_hooks();
 		Mail::register_hooks();
+		Mail_Domains::register_hooks();
 		Costs::register_hooks();
 		Ai::register_hooks();
 		Fedex::register_hooks();
