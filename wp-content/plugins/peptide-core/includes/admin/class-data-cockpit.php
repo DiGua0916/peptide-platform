@@ -231,7 +231,7 @@ final class Data_Cockpit {
 		}
 		echo '</div><a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . Data_Pages::SLUG ) ) . '">实时明细（地图、每分钟访客）</a> <a class="button" href="' . esc_url( admin_url( 'admin.php?page=' . Data_Review::SLUG ) ) . '">7 天复盘</a></div></div>';
 
-		if ( ! $any_spend ) {
+		if ( ! $any_spend && ! \PeptideCore\Creatives\Module::hidden() ) {
 			echo '<div class="notice notice-warning inline pc-rv-notice"><p><b>还没导入广告花费。</b>花费、ROAS、单单成本和素材建议都要靠它。在 Meta 广告管理工具按“天 + 广告”导出报表，然后 <a class="button button-small" href="' . esc_url( admin_url( 'admin.php?page=pc-creatives-spend' ) ) . '">去导入花费</a></p></div>';
 		}
 

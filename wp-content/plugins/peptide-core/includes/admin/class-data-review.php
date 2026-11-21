@@ -729,7 +729,7 @@ final class Data_Review {
 		}
 		echo '</div></div>';
 
-		if ( ! self::any_spend() ) {
+		if ( ! self::any_spend() && ! \PeptideCore\Creatives\Module::hidden() ) {
 			echo '<div class="notice notice-warning inline pc-rv-notice"><p><b>还没导入广告花费。</b>花费、ROAS、单单成本和素材建议都要靠它。在 Meta 广告管理工具按“天 + 广告”导出报表，然后 <a class="button button-small" href="' . esc_url( $spend_page ) . '">去导入花费</a></p></div>';
 		}
 
@@ -768,7 +768,7 @@ final class Data_Review {
 		echo '</section>';
 		$pay_rows = self::load_payments( $r );
 		echo '<section class="pc-rv-card" id="pc-rv-pay"><h2>支付结果：钱有没有真收到</h2>' . self::payment_html( $pay_rows, $pay, self::SLUG, array( 'range' => $key, 'dim' => $dim ) ) . '</section>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-		echo '<p class="pc-rv-foot">更细的报表：<a href="' . esc_url( admin_url( 'admin.php?page=pc-data-operations' ) ) . '">运营数据（旧版明细）</a> · <a href="' . esc_url( admin_url( 'admin.php?page=pc-data-conversion' ) ) . '">转化率详情</a> · <a href="' . esc_url( admin_url( 'admin.php?page=pc-creatives-board' ) ) . '">素材看板</a></p>';
+		echo '<p class="pc-rv-foot">更细的报表：<a href="' . esc_url( admin_url( 'admin.php?page=pc-data-operations' ) ) . '">运营数据（旧版明细）</a> · <a href="' . esc_url( admin_url( 'admin.php?page=pc-data-conversion' ) ) . '">转化率详情</a>' . ( \PeptideCore\Creatives\Module::hidden() ? '' : ' · <a href="' . esc_url( admin_url( 'admin.php?page=pc-creatives-board' ) ) . '">素材看板</a>' ) . '</p>';
 		echo '</div>';
 	}
 

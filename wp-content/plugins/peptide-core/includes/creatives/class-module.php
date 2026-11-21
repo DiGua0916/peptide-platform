@@ -71,6 +71,17 @@ final class Module {
 	public const MENU_LABEL = '广告数据追踪';
 
 	/**
+	 * 2026-11-21 用户要求：整个“广告数据追踪”栏目先隐藏（管理员、投手的左侧菜单，总后台的素材对比、素材词表，
+	 * 数据页里指向素材页面的链接和“还没导入花费”提醒）。只是不显示：页面地址照样能打开，访客参数照样采集，数据不丢。
+	 * 恢复显示：改成 false（总后台那边是 PeptideHQ\Admin\Creatives_Page::HIDDEN），或用过滤器 pc_adtrack_hidden。
+	 */
+	public const HIDDEN = true;
+
+	public static function hidden(): bool {
+		return (bool) apply_filters( 'pc_adtrack_hidden', self::HIDDEN );
+	}
+
+	/**
 	 * 管理员：顶层栏目“广告数据追踪” → 广告设置、素材库；花费导入和看板不进菜单，从素材库页面顶部的标签切换。
 	 * 投手：菜单由 Staff_Buyer 生成（同样是“广告数据追踪”一项，下面两个子菜单），这里登记的页面只决定能不能打开。
 	 */
@@ -78,6 +89,14 @@ final class Module {
 		$cap  = Staff_Buyer::CAP_VIEW;
 		$ads  = Staff_Buyer::PAGE_ADS;
 		$view = array( \PeptideCore\Admin\Onboarding::class, 'render_ads' );
+		if ( self::hidden() ) {
+			// 隐藏：只登记页面（地址能打开），不进菜单。
+			add_submenu_page( '', '广告设置', '广告设置', $cap, $ads, $view );
+			add_submenu_page( '', '素材库', '素材库', $cap, self::PAGE_LIBRARY, array( Library_Page::class, 'render' ) );
+			add_submenu_page( '', '花费导入', '花费导入', $cap, self::PAGE_SPEND, array( Spend_Page::class, 'render' ) );
+			add_submenu_page( '', '素材看板', '素材看板', $cap, self::PAGE_BOARD, array( Board_Page::class, 'render' ) );
+			return;
+		}
 		add_menu_page( self::MENU_LABEL, self::MENU_LABEL, $cap, $ads, $view, 'dashicons-megaphone', 57 );
 		add_submenu_page( $ads, '广告设置', '广告设置', $cap, $ads, $view );
 		add_submenu_page( $ads, '素材库', '素材库', $cap, self::PAGE_LIBRARY, array( Library_Page::class, 'render' ) );
