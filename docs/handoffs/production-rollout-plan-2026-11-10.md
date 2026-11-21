@@ -978,3 +978,5 @@
 - 失败：[admin] sudo bash /var/tmp/vialcove-release-tools/release_agent.sh activate-bridge 2026.11.20-1159 /srv/vialcove/store-admin/cur → 退出码 1：Error: 首次启用时必须保持网关地址为空。
 - 已回滚 s0001（6 秒）
 - 发布终止。失败的是 s0001；没有动的：['s0006', 's0007', 's0008', 's0009', 's0010', 'templates', 'hq']；保持新版本的：无
+
+### 2026-11-20 13:08 UTC 数据：LC120（lipo-c_6fac2602）描述去掉 Inositol，6 店（s0001、s0006–s0010），脚本 tools/catalog/lc120-remove-inositol.php（5f3a8b51），改前改后副本在总后台 /root/vialcove-backups/lc120-inositol-20261120/（短描述为空，不动）
