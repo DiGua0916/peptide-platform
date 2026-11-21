@@ -44,6 +44,7 @@ final class Module {
 		// 联调：素材归位、花费导入（线 2）之后，让每日上报（线 4）重报受影响的日期。
 		add_action( 'pc_creatives_spend_imported', array( self::class, 'rereport_days' ), 10, 1 );
 		add_action( 'pc_creatives_relinked', array( self::class, 'rereport_ad' ), 10, 1 );
+		AdBrain_Bridge::register_hooks(); // Ad Brain 双桥接口（2026-11-21）：没配密钥时全部 503。
 	}
 
 	/** 花费导入之后：重报导入涉及的日期。 */

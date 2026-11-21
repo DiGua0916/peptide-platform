@@ -1295,6 +1295,19 @@
       ]
     },
     {
+      "name": "cr-adbrain-bridge-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/cr-adbrain-bridge-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "CR",
+      "extensions": [
+        "pdo_sqlite",
+        "mbstring"
+      ]
+    },
+    {
       "name": "m4-price-engine-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/m4-price-engine-pure.php",

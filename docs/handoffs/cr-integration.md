@@ -156,3 +156,16 @@
 - 链接：广告设置“我的素材链接”里“换落地页”多一个可选的版本名，填了链接末尾带 `&lp_ver=版本名`（选项 `pc_cr_lp_vers`）。改了要重新复制链接到 Meta。
 - 看板：新维度“按落地页版本”——带版本的按版本名，没带的按进站页面路径（标“没标版本”）；花费分不到版本，显示“—”。访客详情的来源一行也会显示“落地页版本 xxx”。
 - 测试：cr-contract（45）、cr-capture（97）、cr-board（203）全过；相关的其余纯测试和主线一样（主线本来就有 6 个和本改动无关的失败：data-dimensions、data-product-exposure 和 4 个 tracking-*.cjs）。没在沙盒里实点（沙盒被系统清理了），上线后用一条带 lp_ver 的链接点一次确认。
+
+## Ad Brain 双桥接口（2026-11-21，peptide-core 0.34.12，只在 claude/creative-merge）
+
+文件：`peptide-core/includes/creatives/class-adbrain-bridge.php`，在 `Creatives\Module::register_hooks()` 挂载。不改任何表结构，只复用素材表、广告表、花费表、词表、访问表和选项 `pc_cr_landings` / `pc_cr_lp_vers`；新增选项只有 `pc_adbrain_bridge_secret`（可用常量 `PEPTIDE_ADBRAIN_SECRET` 代替）、`pc_adbrain_idem_map`（最近 500 条发号结果）和处理中的锁 `pc_adbrain_lock_*`。
+
+- **默认关闭**：密钥没配或短于 32 个字符时，`/peptide/v1/adbrain/*` 全部 503 `{"ok":false,"code":"bridge_not_configured"}`。
+- **验签**（permission_callback，不看登录态）：头 `X-AdBrain-Site` / `Time` / `Nonce` / `Sign`；签名原文 = `方法大写\n路由\n时间\nNonce\nsha256(原始请求体)`，路由固定写 `/peptide/v1/adbrain/...`（/wp-json 和 ?rest_route= 一样）。时间差超过 ±300 秒、签名不对、Nonce 600 秒内用过 → 401。查询参数不在签名里（PRD 原样），靠 Nonce 防重放。
+- 出错统一 `{"ok":false,"code","message"}`。
+- 接口：`GET options`、`POST creatives/issue`（幂等键、属性按值 / 中文名匹配否则回退首项并在 `attr_notes` 注明、落地页不在本店列表时用首页并在 `warnings` 注明、可带 Base64 图片写媒体库、`from_ad_id` 补登记归位）、`POST creatives/update-landing`、`POST creatives/relink-ad`、`GET pull`（`from`/`to` 店铺时区、最多 62 天、`mode=last|first`）。
+- `pull` 返回：`creatives_catalog`、`ads_map`、`unregistered_ads`、`range_board`（区间汇总行 + `total` + 15 维 `profiles` + `untagged_visitors` / `paid_visitors` / `missing_param_ads`）、`daily_rows`（按天 × 素材，结构同 `Contract::report_row()` 加 `day`）、`orders_ledger`（脱敏订单，最多 5000 张，超出时 `orders_truncated: true`）。
+- 订单不返回明文姓名、邮箱、电话、地址、IP；`customer_hash` = 邮箱小写去空格 sha256 前 24 位（没有邮箱用电话末 10 位）。归因：下单那次访问之前该访客的付费访问里，last 取最后一次、first 取第一次。
+- Page_Cache 只缓存首页 GET，Staff_Buyer 只给投手临时加能力，都不拦这几个接口，所以没改这两个类。Management_Host 也只限制 HQ 机器路由，这几个接口在公开域名和管理域名都能调。
+- 测试：`tests/cr-adbrain-bridge-pure.php`（121 项，已登记进 `tests/data-observations-suites.json`）。
