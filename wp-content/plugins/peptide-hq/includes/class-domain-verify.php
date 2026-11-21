@@ -108,6 +108,18 @@ final class Domain_Verify {
 			$add( 'capi', 'CAPI 桥域名', $found, $found ? ( $host . ' 已同步' ) : ( $host . ' 不在桥的域名表里' ) );
 		}
 
+		// 6. 邮件中心的发件地址（2026-11-21）：没有 orders@新域名 的连接时，邮件会悄悄用默认发信邮箱发出；
+		// 在线时再核对 Cloudflare 要求的 SPF / DKIM 记录，没齐就明确提示，避免被收件方静默拒收。
+		if ( '' !== $bare && class_exists( Mail_Domains::class ) ) {
+			try {
+				$mail = Mail_Domains::check( $bare, $online );
+				if ( $online ) { Mail_Domains::remember_check( $bare, $mail ); }
+			} catch ( \Throwable $e ) {
+				$mail = array( 'ok' => null, 'message' => '检查出错：' . $e->getMessage() );
+			}
+			$add( 'mail', '发信域名', $mail['ok'], $mail['message'] );
+		}
+
 		if ( ! $online || '' === $host ) {
 			return $out;
 		}

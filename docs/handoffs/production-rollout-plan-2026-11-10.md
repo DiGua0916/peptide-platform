@@ -980,3 +980,12 @@
 - 发布终止。失败的是 s0001；没有动的：['s0006', 's0007', 's0008', 's0009', 's0010', 'templates', 'hq']；保持新版本的：无
 
 ### 2026-11-20 13:08 UTC 数据：LC120（lipo-c_6fac2602）描述去掉 Inositol，6 店（s0001、s0006–s0010），脚本 tools/catalog/lc120-remove-inositol.php（5f3a8b51），改前改后副本在总后台 /root/vialcove-backups/lc120-inositol-20261120/（短描述为空，不动）
+
+### 2026-11-21 17:09 UTC 换域名邮箱联动（核心 0.34.11、总后台 0.5.3）+ 落地页版本 lp_ver（追踪表 v8，主题 0.3.9）+ LC120 描述（vc-release 2026.11.21-1649，成功）
+- 主线提交 `51f4d4bb`；模式 完整；总后台发布记录可在“发布记录”页查看。所有者在 F1 会话直接确认“发布吧”。lp_ver 不再单独发（素材会话已知会）。
+- 沙盒先发（标签 mail-1121-1，发布记录 #38，81 秒）：关键链路 54 过 / 0 失败 / 3 跳过；沙盒店铺 `wp peptide mail-domain` 首次只记域名、0 改动；追踪表 v8。
+- 测试单订单号（店内编号）：11897，金额 9799（分），付款方式 pc_panapay_68fd702dbfb5274393ecbd580f9014fe。它会留在店里，状态待付款。
+- 收款回写（s0001/s0006/s0007/s0008/s0009/s0010，admin）：全部 PASS 签名和支付库都正常（HTTP 400，探测事件按预期被拒）
+- 发布完成：2026.11.21-1649，提交 51f4d4b，15 份副本全部一致，用时 1188 秒
+- 发布后只读核对：6 家店核心 0.34.11、追踪表 8、6 个前台域名 HTTP 200；6 家店 `wp peptide mail-domain sync --dry-run` 都是 0 改动（店铺邮箱 11-17 已人工改好）；总后台 0.5.3，`wp pchq-domain verify all --offline` 的“发信域名”：s0001/s0006/s0007 已配好，s0008/9/10（lumornea / korgavex / dalhoben）还没有 orders@ 发件地址，等 CDN 定时任务补。
+- 发布后第一次 CDN 定时任务（约 17:13 UTC）已按新逻辑给 lumornea / korgavex / dalhoben 补发件地址，三家都被 Cloudflare 拒绝：“Cannot use the access token from location <总后台服务器的 IPv6>”。原因是这三个账号（cfguanghui01 / cflaomao0001 / cfmangguo001）的令牌限定了来源 IP，总后台服务器的 IPv6 不在名单里，不是代码问题。错误已记在 CDN 域名行（mail_error），6 小时后自动重试；在这之前三家的邮件照旧用 orders@vialcovepeptides.com 发出。要解决：在这三个 Cloudflare 账号的 API 令牌设置里，把总后台服务器的 IPv6（和 IPv4）加进允许的来源，或者去掉 IP 限制。

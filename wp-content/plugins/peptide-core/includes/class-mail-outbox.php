@@ -51,14 +51,17 @@ final class Mail_Outbox {
 		if ( null !== $brand ) {
 			return $brand;
 		}
-		$host  = strtolower( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
-		$label = (string) strtok( preg_replace( '/^www\./', '', $host ), '.' );
-		if ( str_starts_with( $label, 'vialcove' ) ) {
-			$brand = 'peptides' === substr( $label, 8 ) ? 'VialCove' : 'VialCove' . ucfirst( substr( $label, 8 ) ); // 主店 vialcovepeptides.com 的品牌就叫 VialCove
-		} else {
-			$brand = function_exists( 'vc_brand_name' ) ? vc_brand_name() : wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
-		}
+		$brand = self::brand_for_host( (string) wp_parse_url( home_url( '/' ), PHP_URL_HOST ) );
 		return $brand;
+	}
+
+	/** 给定域名的品牌名（不缓存；换域名同步时用新、旧域名各算一次）。 */
+	public static function brand_for_host( string $host ): string {
+		$label = (string) strtok( preg_replace( '/^www\./', '', strtolower( $host ) ), '.' );
+		if ( str_starts_with( $label, 'vialcove' ) ) {
+			return 'peptides' === substr( $label, 8 ) ? 'VialCove' : 'VialCove' . ucfirst( substr( $label, 8 ) ); // 主店 vialcovepeptides.com 的品牌就叫 VialCove
+		}
+		return function_exists( 'vc_brand_name' ) ? vc_brand_name() : wp_specialchars_decode( (string) get_option( 'blogname' ), ENT_QUOTES );
 	}
 
 	public static function brand_in_string( $string ) {

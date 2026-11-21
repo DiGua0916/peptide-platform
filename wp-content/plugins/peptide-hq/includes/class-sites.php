@@ -127,6 +127,7 @@ final class Sites {
 					$id,
 					$fields
 				);
+				do_action( 'pchq_site_moved', $id, $site ); // 邮件中心：给新顾客域名准备发件地址（Mail_Domains）。
 				return array( $id, 'moved' );
 			}
 			return array( $id, 'same' );
