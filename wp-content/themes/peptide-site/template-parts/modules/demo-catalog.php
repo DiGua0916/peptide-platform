@@ -10,25 +10,31 @@ foreach ( $products as $p ) {
     $specs = $display->is_type( 'variation' ) ? wc_get_formatted_variation( $display, true, false, false ) : '';
     $search = $p->get_name() . ' ' . $p->get_sku() . ' ' . $specs;
     if ( $p->is_type( 'variable' ) ) { foreach ( $p->get_variation_attributes() as $values ) { $search .= ' ' . implode( ' ', $values ); } }
-    // 1 号站简称搜索：TR30、RT10、CGL5……（店主报价表），以及改名前后的另一种拼写。
     if ( class_exists( '\\PeptideCore\\Product_Codes' ) ) { $search .= ' ' . \PeptideCore\Product_Codes::search_words( $p->get_name() ); }
-    $rows[] = array( $p, $ids, $search );
+    $price_val = (float) wc_get_price_to_display( $display );
+    $rows[] = array( $p, $ids, $search, $price_val );
 }
 $uid = 'vc-catalog-' . $m['id'];
-// Cards after the first page start hidden, exactly as demo-catalog.js renders them, so phones
-// neither lay them out nor start their images before the script runs (2026-11-07).
 $page_size = max( 1, (int) $s['demoPageSize'] ); $index = 0;
 ?>
 <div class="vc-demo-catalog vc-demo-wrap<?php echo 'product_first' === ( $s['catalogLayout'] ?? '' ) ? ' vc-demo-catalog--product-first' : ''; ?>" data-vc-catalog data-page-size="<?php echo (int) $s['demoPageSize']; ?>">
  <header class="vc-demo-catalog__heading"><div><?php if ( $s['eyebrow'] ) : ?><p class="vc-demo-kicker"><?php echo esc_html( $s['eyebrow'] ); ?></p><?php endif; ?><h2><?php echo esc_html( $s['title'] ); ?></h2><?php if ( $s['description'] ) : ?><p><?php echo esc_html( $s['description'] ); ?></p><?php endif; ?></div><?php echo vc_module_button( $s['link'], 'vc-demo-catalog__all' ); ?></header>
  <div class="vc-demo-catalog__toolbar" hidden data-vc-catalog-tools>
   <div class="vc-demo-catalog__filters" role="group" aria-label="Filter products"><button type="button" data-vc-category="all" aria-pressed="true">All peptides</button><?php foreach ( $terms as $t ) : ?><button type="button" data-vc-category="<?php echo (int) $t->term_id; ?>" aria-pressed="false"><?php echo esc_html( $t->name ); ?></button><?php endforeach; ?></div>
-  <label class="vc-demo-catalog__search" for="<?php echo esc_attr( $uid ); ?>"><?php echo vc_icon( 'search' ); ?><input id="<?php echo esc_attr( $uid ); ?>" data-vc-catalog-search type="search" placeholder="<?php echo esc_attr( $s['demoSearchLabel'] ); ?>" aria-label="<?php echo esc_attr( $s['demoSearchLabel'] ); ?>"></label>
+  <div class="vc-demo-catalog__controls">
+   <label class="vc-demo-catalog__search" for="<?php echo esc_attr( $uid ); ?>"><?php echo vc_icon( 'search' ); ?><input id="<?php echo esc_attr( $uid ); ?>" data-vc-catalog-search type="search" placeholder="<?php echo esc_attr( $s['demoSearchLabel'] ); ?>" aria-label="<?php echo esc_attr( $s['demoSearchLabel'] ); ?>"></label>
+   <select class="vc-demo-catalog__sort" data-vc-catalog-sort aria-label="Sort products">
+    <option value="featured">Sort: Featured</option>
+    <option value="price_asc">Price: Low to High</option>
+    <option value="price_desc">Price: High to Low</option>
+    <option value="name_asc">Name: A – Z</option>
+   </select>
+  </div>
  </div>
  <p class="vc-demo-catalog__status" role="status" data-vc-catalog-status hidden></p>
- <div class="vc-demo-catalog__grid" style="<?php echo esc_attr( '--vc-demo-cols:' . (int) $s['columns']['desktop'] . ';--vc-demo-cols-mobile:' . (int) ( $s['columns']['mobile'] ?? 2 ) ); ?>">
- <?php foreach ( $rows as [ $p, $ids, $search ] ) : ?>
-  <div class="vc-demo-catalog__item" data-vc-catalog-item<?php echo $index++ >= $page_size ? ' hidden' : ''; ?> data-categories="<?php echo esc_attr( implode( ',', $ids ) ); ?>" data-search="<?php echo esc_attr( $search ); ?>">
+ <div class="vc-demo-catalog__grid" data-vc-catalog-grid style="<?php echo esc_attr( '--vc-demo-cols:' . (int) $s['columns']['desktop'] . ';--vc-demo-cols-mobile:' . (int) ( $s['columns']['mobile'] ?? 2 ) ); ?>">
+ <?php foreach ( $rows as [ $p, $ids, $search, $price_val ] ) : ?>
+  <div class="vc-demo-catalog__item" data-vc-catalog-item<?php echo $index >= $page_size ? ' hidden' : ''; ?> data-order="<?php echo (int) $index++; ?>" data-price="<?php echo esc_attr( (string) $price_val ); ?>" data-title="<?php echo esc_attr( strtolower( $p->get_name() ) ); ?>" data-categories="<?php echo esc_attr( implode( ',', $ids ) ); ?>" data-search="<?php echo esc_attr( $search ); ?>">
    <?php
    ob_start(); vc_product_card( $p, false, null, '(max-width:767px) 46vw, 24vw', true, (bool) ( $s['catalogQuickAdd'] ?? true ) ); $card = ob_get_clean();
    $tags = new WP_HTML_Tag_Processor( $card );
@@ -38,7 +44,6 @@ $page_size = max( 1, (int) $s['demoPageSize'] ); $index = 0;
        if ( \PeptideCore\Modules\Showcase_Quick_View::supports( $p ) ) { $tags->set_attribute( 'data-vc-quick-open', (string) $p->get_id() ); }
    }
    echo $tags->get_updated_html();
-   // Native quick-view forms load on demand; each card retains its full product URL.
    ?>
   </div>
  <?php endforeach; ?>

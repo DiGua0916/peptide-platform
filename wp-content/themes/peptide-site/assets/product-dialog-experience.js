@@ -19,11 +19,23 @@
     const parsed = new Date(value + 'T00:00:00Z');
     return Number.isFinite(parsed.getTime()) && parsed.toISOString().slice(0, 10) === value ? value : '';
   };
+  const isFreedom = item => /\bfreedom\b/i.test(String(item?.issuer_name || ''));
+  const byNewest = (a, b) => date(b.issued_on).localeCompare(date(a.issued_on)) || Number(b.id) - Number(a.id);
   function latestReport(items, productId, specification) {
     const key = spec(specification);
-    if (!key) return null;
-    return items.filter(item => Number(item?.product?.id) === productId && spec(item.specification) === key && item.file?.mime === 'application/pdf' && safeURL(item.view_url))
-      .sort((a, b) => date(b.issued_on).localeCompare(date(a.issued_on)) || Number(b.id) - Number(a.id))[0] || null;
+    const valid = items.filter(item => Number(item?.product?.id) === productId && item.file?.mime === 'application/pdf' && safeURL(item.view_url));
+    if (!valid.length) return null;
+    if (key) {
+      const exactFreedom = valid.filter(item => spec(item.specification) === key && isFreedom(item)).sort(byNewest);
+      if (exactFreedom.length) return exactFreedom[0];
+    }
+    const anyFreedom = valid.filter(isFreedom).sort(byNewest);
+    if (anyFreedom.length) return anyFreedom[0];
+    if (key) {
+      const exactOther = valid.filter(item => spec(item.specification) === key).sort(byNewest);
+      if (exactOther.length) return exactOther[0];
+    }
+    return [...valid].sort(byNewest)[0] || null;
   }
   // A queued native close belongs to its own dialog, never a later PDF viewer.
   function createChildDialogs(productId) {

@@ -272,8 +272,12 @@ function vc_product_card( $product, bool $report_preview = true, ?array $card_im
     <?php
 }
 
-function vc_render_batches( array $batches ): void {
-    if ( ! $batches ) { echo '<p class="empty-note">No public batches have been published for this product.</p>'; return; }
+function vc_render_batches( array $batches, ?WC_Product $product = null ): void {
+    if ( ! $batches ) {
+        $coa_url = add_query_arg( 'coa_q', rawurlencode( $product ? $product->get_name() : '' ), home_url( '/coa-library/' ) );
+        echo '<p class="muted">Verified reference COA documentation for ' . esc_html( $product ? $product->get_name() : 'this product' ) . ' is available above and in our <a class="text-link" href="' . esc_url( $coa_url ) . '">COA Library &rarr;</a></p>';
+        return;
+    }
     foreach ( $batches as $batch ) {
         ?>
         <section class="batch-card"><div class="batch-heading"><div><span class="eyebrow">Batch<?php echo ! empty( $batch['is_demo'] ) ? ' · Demo record' : ''; ?></span><h3><?php echo esc_html( $batch['batch_no'] ); ?></h3></div><span class="status-pill"><?php echo esc_html( vc_report_label( $batch['report_state'] ) ); ?></span></div>
@@ -311,7 +315,7 @@ function vc_product_details(): void {
     if ( function_exists( 'peptide_core_get_product_batches' ) ) {
         $result = peptide_core_get_product_batches( $product->get_slug() );
         if ( is_wp_error( $result ) ) { echo '<p class="empty-note">Batch information could not be loaded. Please try again later.</p>'; }
-        else { vc_render_batches( $result['batches'] ); }
+        else { vc_render_batches( $result['batches'], $product ); }
     } else { echo '<p class="empty-note">Batch data is currently unavailable.</p>'; }
     echo '</div>';
 }

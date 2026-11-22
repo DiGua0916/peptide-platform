@@ -47,10 +47,12 @@ final class Activity_Listener_Controller {
 		$input = Recommendations::validate( $request->get_json_params() ); if ( is_wp_error( $input ) ) { return $input; }
 		try {
 			$current = Cart_Reader::read( $request ); if ( is_wp_error( $current ) ) { return $current; }
-			// Security-only expiring state; no customer/cart/session/analytics record is written.
-			$key = 'pc-recommendation-' . $current['rateKey'];
-			if ( \WC_Rate_Limiter::retried_too_soon( $key ) ) { return Recommendations::error( 'rate_limited', 429, array( 'retryAfter' => 3 ) ); }
-			if ( ! \WC_Rate_Limiter::set_rate_limit( $key, 2 ) ) { return Recommendations::error( 'rate_limit_unavailable', 503 ); }
+			// P0-3: Sliding 10s window (up to 30 rapid cart refreshes) so bulk/multi-SKU clicks never hit false-positive HTTP 429.
+			$key = 'pc_rec_win_' . md5( (string) $current['rateKey'] );
+			$win = get_transient( $key );
+			$cnt = is_array( $win ) && ( time() - (int) ( $win['t'] ?? 0 ) ) < 10 ? (int) ( $win['c'] ?? 0 ) : 0;
+			if ( $cnt >= 30 ) { return Recommendations::error( 'rate_limited', 429, array( 'retryAfter' => 2 ) ); }
+			set_transient( $key, array( 't' => $cnt > 0 ? (int) $win['t'] : time(), 'c' => $cnt + 1 ), 12 );
 			return self::respond( Recommendations::quote( $current['cart'], $input, null, $current['persistedTotals'], $current['rateKey'] ) );
 		} catch ( \Throwable $error ) { return Recommendations::error( 'cart_unavailable', 503 ); }
 	}

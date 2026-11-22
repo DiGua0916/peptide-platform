@@ -5,11 +5,11 @@
   const settings = () => window.vcProductReports || window.vcHomeQuickView || {};
   async function library() {
     const base = new URL('product-dialog-pdf/', settings().assetBase);
-    if (!modulePromise) modulePromise = (typeof Promise.withResolvers === 'function' ? Promise.resolve() : import(new URL('../product-report-pdf-compat.mjs',base).href))
-    .then(() => import(new URL('pdf.mjs', base).href)).then(pdf => {
+    if (!modulePromise) modulePromise = (typeof Promise.withResolvers === 'function' ? Promise.resolve() : import(new URL('../product-report-pdf-compat.mjs?v=2',base).href))
+    .then(() => import(new URL('pdf.mjs?v=2', base).href)).then(pdf => {
       // Workers have a separate global. Their bootstrap installs the same
       // feature shim before evaluating the unchanged upstream worker module.
-      pdf.GlobalWorkerOptions.workerSrc = new URL('../product-report-pdf-worker.mjs', base).href;
+      pdf.GlobalWorkerOptions.workerSrc = new URL('../product-report-pdf-worker.mjs?v=2', base).href;
       return pdf;
     }).catch(error => { modulePromise = null; throw error; });
     return modulePromise;
@@ -79,7 +79,23 @@
     function releaseCanvas(canvas) { if (canvas) { canvas.width = 0; canvas.height = 0; } }
     function clearPages() { pages.querySelectorAll('canvas').forEach(releaseCanvas); pages.replaceChildren(); figures.length = 0; }
     function fail() {
-      clearTimer(); element.dataset.state = 'error'; element.removeAttribute('aria-busy');
+      clearTimer();
+      if (!pages.querySelector('canvas') && current?.pdf) {
+        try {
+          const fallbackUrl = sourceURL(current.pdf);
+          const frameEl = document.createElement('iframe');
+          frameEl.src = fallbackUrl.href;
+          frameEl.title = 'Reference COA Document';
+          frameEl.style.cssText = 'display:block;width:100%;min-height:68vh;border:0;border-radius:8px;background:#fff';
+          pages.replaceChildren(frameEl);
+          element.dataset.state = 'ready';
+          element.removeAttribute('aria-busy');
+          status.textContent = '';
+          retry.hidden = true;
+          return;
+        } catch (_) {}
+      }
+      element.dataset.state = 'error'; element.removeAttribute('aria-busy');
       status.textContent = pages.querySelector('canvas') ? 'Some pages could not be loaded. Try again or download the full PDF below.' : 'The document could not be loaded. Try again or download the PDF below.';
       retry.hidden = false;
     }

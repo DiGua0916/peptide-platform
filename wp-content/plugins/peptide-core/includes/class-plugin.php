@@ -67,6 +67,7 @@ final class Plugin {
 		First_Order_Offer::register_hooks();
 		Postal_Assist::register_hooks();
 		Checkout_Assist::register_hooks();
+		Checkout_Resume::register_hooks();
 		Commerce_Speed::register_hooks();
 		US_Territories::register_hooks();
 		Exit_Intent::register_hooks();

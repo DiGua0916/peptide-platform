@@ -1,9 +1,41 @@
-/* Checkout assist (site 1 P1-1 / P1-6). */
-.pc-assist-note { margin: 0 0 12px; padding: 8px 12px; border-radius: 8px; background: #e8f6ea; color: #24603e; font-size: 14px; font-weight: 600; }
+/* Checkout assist: 30-day draft, ZIP->City+State, mobile sticky pay bar, & emergency WhatsApp rescue. */
+.pc-assist-note { margin: 0 0 12px; padding: 10px 14px; border-radius: 10px; background: #e8f6ea; border: 1px solid #b8e2c0; color: #1e5635; font-size: 14px; font-weight: 600; }
 .pc-phone-note { margin: 4px 0 0; font-size: 13px; color: #415e68; }
 .pc-phone-note.is-error { color: #b3261e; font-weight: 600; }
 .pc-pay-save { margin: 6px 0 0; text-align: center; font-size: 14px; font-weight: 700; color: #2e7d4f; }
-.pc-pay-help { margin: 6px 0 0; font-weight: 600; }
+.pc-pay-help { margin: 8px 0 0; font-weight: 600; }
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label] { font-size: 0; }
 .wc-block-components-checkout-place-order-button .wc-block-components-button__text[data-pc-label]::after { content: attr(data-pc-label); font-size: 1rem; }
 .wc-block-checkout .wc-block-components-totals-item__value[data-pc-ref]::before { content: attr(data-pc-ref); margin-right: 6px; color: #7b8d93; font-weight: 400; text-decoration: line-through; }
+
+/* P0-6 & P1-1: Emergency payment-failure WhatsApp & Safari rescue box inside error notices */
+.pc-pay-rescue { margin-top: 10px; padding: 12px; border-radius: 10px; background: #ffffff; border: 1.5px solid #16a34a; color: #102a32; display: grid; gap: 8px; }
+.pc-pay-rescue__lead { margin: 0; font-size: 13.5px; line-height: 1.45; font-weight: 500; color: #2b4852; }
+.pc-pay-rescue__actions { display: flex; flex-wrap: wrap; gap: 8px; }
+.pc-pay-rescue__wa { flex: 1 1 220px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 16px; border-radius: 8px; background: #16a34a; color: #ffffff !important; font-size: 14px; font-weight: 700; text-decoration: none !important; text-align: center; cursor: pointer; border: 0; }
+.pc-pay-rescue__wa:hover { background: #15803d; }
+.pc-pay-rescue__ext { flex: 1 1 180px; display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 44px; padding: 10px 14px; border-radius: 8px; background: #0e7484; color: #ffffff !important; font-size: 13.5px; font-weight: 650; text-decoration: none !important; cursor: pointer; border: 0; }
+
+/* P0-1: Mobile sticky bottom Pay bar (< 783px) when inline Pay button is scrolled out of view */
+.pc-mobile-paybar { display: none; }
+@media (max-width: 782px) {
+    .vc-checkout-page.has-pc-mobile-paybar { padding-bottom: 92px; }
+    body:has(.pc-mobile-paybar:not([hidden])) > div[style*="z-index:999999"] { bottom: 74px !important; }
+    .pc-mobile-paybar {
+        position: fixed; left: 0; right: 0; bottom: 0; z-index: 9990;
+        display: flex; align-items: center; justify-content: space-between; gap: 12px;
+        padding: 10px 16px max(10px, env(safe-area-inset-bottom));
+        background: rgba(255, 255, 255, 0.98); backdrop-filter: blur(8px);
+        border-top: 1px solid #d5e2e5; box-shadow: 0 -6px 24px rgba(15, 40, 50, 0.10);
+    }
+    .pc-mobile-paybar[hidden] { display: none !important; }
+    .pc-mobile-paybar__meta { display: grid; gap: 1px; min-width: 0; }
+    .pc-mobile-paybar__total { font-size: 18px; line-height: 22px; font-weight: 750; color: #102a32; font-variant-numeric: tabular-nums; }
+    .pc-mobile-paybar__save { font-size: 12px; line-height: 16px; font-weight: 650; color: #16803c; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .pc-mobile-paybar__btn {
+        flex: 0 0 auto; min-height: 46px; padding: 0 20px; border: 0; border-radius: 10px;
+        background: #117e97; color: #ffffff; font-size: 15px; font-weight: 700; cursor: pointer;
+        font-variant-numeric: tabular-nums; touch-action: manipulation;
+    }
+    .pc-mobile-paybar__btn:disabled { opacity: 0.55; cursor: default; }
+}

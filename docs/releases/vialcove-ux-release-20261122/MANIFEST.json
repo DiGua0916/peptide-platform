@@ -1,0 +1,483 @@
+{
+  "release_id": "vialcove-ux-release-20261122",
+  "baseline": "2026.11.21-1649",
+  "summary": {
+    "modified_count": 31,
+    "added_count": 11,
+    "total_overlay_files": 42,
+    "core_overlay_files": 40,
+    "email_overlay_files": 2,
+    "sandbox_files_included": 0
+  },
+  "files": [
+    {
+      "path": "wp-content/plugins/peptide-core/assets/checkout-assist.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-1",
+        "P0-6",
+        "P1-1"
+      ],
+      "before_sha256": "0096d8f7c56ab7fff83e289bf337115d66ad00fcfbde3c28dcc9db9af9f14b41",
+      "after_sha256": "d9c77471c258d3c0d6e64ecac5fd43b77158be26c2dbcdfa9051ae5c4eb00620",
+      "size_bytes": 3753
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/checkout-assist.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-1",
+        "P0-6",
+        "P1-1",
+        "P1-4"
+      ],
+      "before_sha256": "c3288a9f0b4f9efc2a2ff52de6e0f02c5b90884b521cac946edc77f9a3847652",
+      "after_sha256": "d6759524040a307d43e9695f1e4f8bfe980b7fab1eb84a33338f9d1cddc478cf",
+      "size_bytes": 25857
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/shipping-protection.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-5"
+      ],
+      "before_sha256": "a3d903f7189be88ab3f99a4fade3e359165ad5e4762157e12d641e1b6720ac34",
+      "after_sha256": "a80ee12fc06889da6e318468052bc9ad25721c3d3fc32a7ff9abac2880c8ae59",
+      "size_bytes": 5108
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/0.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "f8970953400942767fdd0cd364fab6ee6f67d144be37b786b586b237089b91cb",
+      "size_bytes": 82060
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/1.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "49d12fe2e639b94e040d1cf5eae25f5d0468accd075cf715adf98d59228df772",
+      "size_bytes": 120720
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/2.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "b806cd447a4efc52b237ad261115f1369494454e224f4835c4cbea901c66062c",
+      "size_bytes": 122763
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/3.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "5cf243a6fbbe81ae4062864baf66e6b288a21c71d3234f66ee19e7c07191317c",
+      "size_bytes": 121560
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/4.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "ee425aebcfb1691f3c8430f3ece4b987d7b325c813c4e9d4f5c4980afdec7928",
+      "size_bytes": 119493
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/5.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "b715b188706e493f13237bb1deed5524573f248024421646a1a59a6bb015d918",
+      "size_bytes": 108138
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/6.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "30cbfe5f97ccee43eb6ef6ea2547e5985badfb59f8d2fe895597782feb60f566",
+      "size_bytes": 107224
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/7.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "5cb580bb851c8d6ab619f56830959fc1d29fcd943192f1a58850c9a51da13688",
+      "size_bytes": 122516
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/8.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "40c19a1de27209fcb7d6813a48988ae20a857da82c4220818e288e02205b0758",
+      "size_bytes": 73172
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/assets/zip-us/9.json",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": null,
+      "after_sha256": "36da510d7d7e9771b16b3fcebf5b3614c0387308c10589818ce631228286959f",
+      "size_bytes": 112477
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/api/class-activity-listener-controller.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-3"
+      ],
+      "before_sha256": "0cd5795a12ca1b89c362d5c8b4f49bde6bd702b843694570ae2c354dc5b34ad5",
+      "after_sha256": "f4aed32ba5d5852af7855df0d31102a50415c5e17e7dc950d8585923b8bde87e",
+      "size_bytes": 9168
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-accounts.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-2"
+      ],
+      "before_sha256": "1ac3fb81db29323dd21a576468b51d7b03b524709b2bb5ff176828154809a266",
+      "after_sha256": "1b2bed314e091e1c7de550a327cbeef4c1d10abefa87d8a5e80bf6de3c43554b",
+      "size_bytes": 37540
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-checkout-assist.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": "80aadf705aff7698550b521192714a7880b87261065b70c36376da91c4236f6f",
+      "after_sha256": "fe98d84a46bc4cfa8b76cacddff62dbfd0726f69acf041c1bebacaa31e94fe64",
+      "size_bytes": 4429
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-checkout-resume.php",
+      "change": "added",
+      "layer": "core",
+      "requirements": [
+        "P1-1"
+      ],
+      "before_sha256": null,
+      "after_sha256": "062ffd4a883aab4454f29644ec75e2e40699ab5fcd0fb1edc6eb0d5b6a7ce2fb",
+      "size_bytes": 8494
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-plugin.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-1"
+      ],
+      "before_sha256": "d71b00f269bc1190d824f7325483f2d97508ca1484f23d54202a9c7b817bbbe3",
+      "after_sha256": "d58bb799054e8f1b3d423548ac96c8672aee88ae14e0c2999692e3ea7cfef067",
+      "size_bytes": 10971,
+      "note": "Merged with 2026.11.21-1649 Domain_Mail_Sync + Mail_Domain_Command"
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-promotions.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-5"
+      ],
+      "before_sha256": "53de192d1e0d04b51fd54d6c517d49565d78830a9be5e09ae039a9c3e3586f78",
+      "after_sha256": "2f516ecdc9308c8a501c306bcd163a8cd96966721f8cbfcf7c272c310a1b21bf",
+      "size_bytes": 47437
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/class-report-archive.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-4"
+      ],
+      "before_sha256": "c66259973c4e5f249abd74427b222f2f5e5f44146729a2174a0b90fc281ff94d",
+      "after_sha256": "75f55cbc077649b8ffde855bfb1cb2bec55cd62b59b7bf1e7815056e733ed264",
+      "size_bytes": 20174
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/includes/emails/class-chase-copy.php",
+      "change": "modified",
+      "layer": "email",
+      "requirements": [
+        "P1-3"
+      ],
+      "before_sha256": "88db5d6861ac190993342a07741e880cc8cf4d662aede5c79bd55a5402828334",
+      "after_sha256": "a7b2594b0f883e4ff7681274cba60ecc80ac409edc772d298d47909db282d823",
+      "size_bytes": 13772
+    },
+    {
+      "path": "wp-content/plugins/peptide-core/templates/emails/customer-processing-order.php",
+      "change": "modified",
+      "layer": "email",
+      "requirements": [
+        "P1-3"
+      ],
+      "before_sha256": "9a024dfe8fdacbd26a4fb2c641a7edabc0b2853adbec6629f2039c8287946b0c",
+      "after_sha256": "813392cac0f350b60143802cf616eb9570565d3fb1e359c716e453640d1c032e",
+      "size_bytes": 4281
+    },
+    {
+      "path": "wp-content/plugins/peptide-panapay/includes/class-callbacks.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-6"
+      ],
+      "before_sha256": "9cb51875b425aaea74d8d88ace72385164dbf131ca7e45d792ec3e296cbfbcb5",
+      "after_sha256": "a0a2adc08080aa7e35326c8fa875c8eb230f06ab090eeb6208810bad4dc31eb3",
+      "size_bytes": 15016
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/cart-pricing.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-2"
+      ],
+      "before_sha256": "f60a06577023a6185862d3a816f64efee16667d457d7ed91b18da1f9f7796a30",
+      "after_sha256": "96f56599371186803d2ad907f3233adb83fc6efd2a174be446b1674444a8731c",
+      "size_bytes": 13898
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/checkout-polish.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-1"
+      ],
+      "before_sha256": "6268a75f3ee828820012c57bdf7863df5abf04895ce6de9afda40c833b01937b",
+      "after_sha256": "362fb9fcbb60b87e213d91eff1c628b2fa3c94a0d1d03e19bfb898430284b663",
+      "size_bytes": 8078
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/checkout-polish.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-1"
+      ],
+      "before_sha256": "c934bc34256cfdcdf6ea10528ea183daec68652f2dd15b0fe538caa275681e88",
+      "after_sha256": "0267fa625f5e857f5a665cc25d448470d2f8c733d25bfef8b9ee83e1472cf8ae",
+      "size_bytes": 7123
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/checkout.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-4"
+      ],
+      "before_sha256": "8bd47583302d6f6864942c2d71c7a9d3ecafda676aa46184059e2d0d15ee0422",
+      "after_sha256": "35547d6665a79716b3b8d81d8e0751fb534ea3a49b36dd7c7fa2b3a9b02c771b",
+      "size_bytes": 15731
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/demo-catalog.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P2-1"
+      ],
+      "before_sha256": "67be8d395a408fe2ab25478535432f987000d30368ecedb288d57074ffb847bc",
+      "after_sha256": "37caffab2c5e150f96a0c5d11d04a2fbeeb400f82a92f13f812d08cee1204c85",
+      "size_bytes": 8720
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/demo-catalog.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P2-1"
+      ],
+      "before_sha256": "0536e0bcf27b7c970fa6cec171e6bcad2ab6f779fa720fc9b44c592515d4ccee",
+      "after_sha256": "ae3866d4c3d0799d7abdb9798db5204ad728e488679b98849e509eb88a513b4d",
+      "size_bytes": 7553
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/home-quick-view.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-4"
+      ],
+      "before_sha256": "6fb415a20165fbb516d23a17cb5d147c50d467beebfb4026b26cac2074fb232b",
+      "after_sha256": "0b8b7699a5bbcef1440778c0e792e2d848405e8427d494c1fff21aaacfe959ac",
+      "size_bytes": 32798
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/live-cart-experience.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-3"
+      ],
+      "before_sha256": "2d598010c0d94ea1c7675fb00142d53a09eb93d3c9f8dce4b9e9d7499da8714d",
+      "after_sha256": "56a0277de9020ae8a5f515aeef3de42422db3cf64fb0138db9dd903ab66adb02",
+      "size_bytes": 19494
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/live-cart-experience.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-3"
+      ],
+      "before_sha256": "76b089f20091457071a5bb2283234da3f73a02eaed15d02d3e36db06449af39b",
+      "after_sha256": "1414cfaca0b7f2f4ae5b19f57b0755cfad1099841379c9498dc5c82960bedc61",
+      "size_bytes": 81461
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/product-dialog-experience.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-4"
+      ],
+      "before_sha256": "b268c2f561396942d353f7225ac74bfe6d7c85159b3c0f286351d545c8e9dbb6",
+      "after_sha256": "76ca6d2dfdcd0e7a3fe61103cd1b9969aa5f56a3a07523574fe2be23a97fd164",
+      "size_bytes": 60178
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/product-dialog-report-viewer.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-4"
+      ],
+      "before_sha256": "735f7c06a979f644b14c4a06a1755748d891d642ab5b9f2f1cfb3ef9714686aa",
+      "after_sha256": "777dc65f98a1313ae98638035ae2f513f6806becdb79d664a49193e1242be4b7",
+      "size_bytes": 17462
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/welcome-back.css",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-1"
+      ],
+      "before_sha256": "756cd39406dd0d8d39a28a17c289342bf0ec45c2d0bbf2ce19bd0817fcd982a3",
+      "after_sha256": "c11bee37ed81f7b91336a1440092c95d30146d4b7df9c91ec4c8ed21b88d807a",
+      "size_bytes": 2534
+    },
+    {
+      "path": "wp-content/themes/peptide-site/assets/welcome-back.js",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-6",
+        "P1-1"
+      ],
+      "before_sha256": "1fedeff685de6e6e81fb0b904e1c7894bd1bbe2da634437905a2e25bac454f11",
+      "after_sha256": "54f9e9adc3f4c627ea3feabe008c9b6a3b3dcfc5f3931468b48913344d2a9160",
+      "size_bytes": 7679
+    },
+    {
+      "path": "wp-content/themes/peptide-site/functions.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-4"
+      ],
+      "before_sha256": "2c34b3a04f67d51f18aaa30dca0931ea9ab1fa5ae58975a6cb68c41e8c7a4fd7",
+      "after_sha256": "e00918a4ec57b607a99516c0ad5d13cd031f071d7c045e0a6d01a9ff24d6a0e7",
+      "size_bytes": 27293
+    },
+    {
+      "path": "wp-content/themes/peptide-site/header.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-2"
+      ],
+      "before_sha256": "d5a681090bdf1402ded7e8c503f7d5fcfe7e7d994d2c954c13aa77543fbe297f",
+      "after_sha256": "d297f5d243e39186f886a2ce7779c908bd75798733e3e23b5ec16a9692dae46c",
+      "size_bytes": 2173
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/demo-site-parts.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-2"
+      ],
+      "before_sha256": "6ff07adc96aa69664ec377446169d026e86eb3d526cea4f5e536e5ade3510832",
+      "after_sha256": "99f398cefb1505df39a77dd1d66b0c59f7ac1c27c886bfdc8529726853f2cd6d",
+      "size_bytes": 18410
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/storefront-utilities.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P0-5"
+      ],
+      "before_sha256": "d8ce5893cf71f36fda72a6169469eebbe32f55b32a065065fef6f2ab2a6ce831",
+      "after_sha256": "305601c65bdf546b1012c16d7be37d16e1ad1b73955411b52dcbe4ff33ce6165",
+      "size_bytes": 5900
+    },
+    {
+      "path": "wp-content/themes/peptide-site/inc/welcome-back.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P1-1"
+      ],
+      "before_sha256": "86a7b7e4705f8470a39c0a5617445ab2d20f136e3535e1d8b7cabe9313c95f4e",
+      "after_sha256": "e6094b7c853566613e87b1c5bd589fc36d815e8547f4f20883af86c123a3bb26",
+      "size_bytes": 1945
+    },
+    {
+      "path": "wp-content/themes/peptide-site/template-parts/modules/demo-catalog.php",
+      "change": "modified",
+      "layer": "core",
+      "requirements": [
+        "P2-1"
+      ],
+      "before_sha256": "e180893d402dcedeb609e4002c5906044c63685f542a68bddb429d47aa34edf3",
+      "after_sha256": "95cba3f7ae1dcfbd159d10505668a9f6d93f1504f8198294444f1217965a5af3",
+      "size_bytes": 4672
+    }
+  ]
+}

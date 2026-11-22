@@ -24,9 +24,11 @@
 .vc-live-cart .vc-live-cart__line-actions{display:grid;justify-items:end;gap:8px;min-width:108px}
 .vc-live-cart .vc-live-cart__line-total{grid-column:auto;justify-self:end;margin:0;font-size:20px;line-height:28px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .vc-live-cart .vc-live-cart__controls{display:grid;justify-items:end;gap:0;margin:0}
-.vc-live-cart .vc-live-cart__quantity{display:grid;grid-template-columns:36px 28px 36px;align-items:center;height:44px;border-radius:8px}
-.vc-live-cart .vc-live-cart__quantity button{width:36px;height:44px;min-height:44px;padding:0;line-height:24px}
-.vc-live-cart .vc-live-cart__quantity span{min-width:0;text-align:center;font-size:14px;line-height:20px;font-variant-numeric:tabular-nums}
+.vc-live-cart .vc-live-cart__quantity{display:grid;grid-template-columns:34px 48px 34px;align-items:center;height:44px;border-radius:8px}
+.vc-live-cart .vc-live-cart__quantity button{width:34px;height:44px;min-height:44px;padding:0;line-height:24px}
+.vc-live-cart .vc-live-cart__quantity span,.vc-live-cart .vc-live-cart__qty-input{min-width:0;width:100%;height:42px;border:0;border-inline:1px solid var(--line);background:#fff;color:var(--ink);text-align:center;font-size:16px;font-weight:650;line-height:20px;padding:0 2px;font-variant-numeric:tabular-nums;-moz-appearance:textfield}
+.vc-live-cart .vc-live-cart__qty-input::-webkit-outer-spin-button,.vc-live-cart .vc-live-cart__qty-input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+.vc-live-cart .vc-live-cart__line.is-row-updating{opacity:.72;transition:opacity 150ms ease}
 .vc-live-cart .vc-live-cart__remove{min-height:44px;padding:8px 0;font-size:12px;line-height:16px}
 .vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{margin:4px 0 0;font-size:14px;line-height:20px}
 @media(max-width:767px){.vc-live-cart .vc-live-cart__line{grid-template-columns:48px minmax(0,1fr) auto;gap:8px;padding:16px 0}.vc-live-cart .vc-live-cart__image img{width:48px;height:64px}.vc-live-cart .vc-live-cart__line-actions{min-width:100px}.vc-live-cart .vc-live-cart__line-total{font-size:18px;line-height:28px}.vc-live-cart .vc-live-cart__product{font-size:16px;line-height:24px;overflow-wrap:anywhere}.vc-live-cart .vc-live-cart__pack,.vc-live-cart .vc-live-cart__unit{font-size:12px;line-height:16px}}

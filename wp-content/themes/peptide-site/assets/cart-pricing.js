@@ -156,28 +156,11 @@
         var v = Number(p.reference_minor) - Number(p.price_minor);
         return Number.isSafeInteger(v) && v > 0 ? v : 0;
     }
-    function CheckoutSavings() {
-        var storedCart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
-        var pricing = storedCart?.extensions?.peptide_core?.sale_savings;
-        // Cleared first so the "You save" line under the Pay button never shows an old amount.
-        window.VialCoveCheckoutSaving = '';
-        if (!pricing) return null;
-        var decimals = Number(pricing.currency_minor_unit);
-        if (!Number.isInteger(decimals) || decimals < 0 || decimals > 6) return null;
-        var items = pricing.savings_available === false ? 0 : Number(pricing.total_savings !== undefined ? pricing.total_savings : pricing.sale_savings);
-        var total = (Number.isFinite(items) ? items : 0) + shippingMinor(storedCart) + protectionMinor(storedCart); // same sum as the breakdown under the order summary
-        var amount = money(total, pricing.currency_code, decimals);
-        if (!amount || total <= 0) return null;
-        window.VialCoveCheckoutSaving = amount;
-        return h('section', { className: 'vc-cart-savings vc-cart-savings--compact', 'aria-label': text('Order savings', 'Ahorro del pedido') },
-            h(SavingsStamp, { amount: amount, label: text('You save', 'Ahorras') }),
-            h('p', { className: 'vc-cart-savings__headline' }, text("You're saving " + amount + ' on this order', 'Ahorras ' + amount + ' en este pedido'))
-        );
+    function couponMinor(cart) {
+        var v = Number(cart?.totals?.total_discount);
+        return Number.isSafeInteger(v) && v > 0 ? v : 0;
     }
-
-    // Owner 11-18, layout D: one line per kind of saving, then the sum, shown above the order total.
-    function FooterSavings() {
-        var cart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
+    function savingsParts(cart) {
         var pricing = cart?.extensions?.peptide_core?.sale_savings;
         if (!pricing) return null;
         var decimals = Number(pricing.currency_minor_unit);
@@ -190,17 +173,37 @@
         }
         var parts = [
             [text('Product savings', 'Ahorro en productos'), items],
+            [text('Order discount', 'Descuento del pedido'), couponMinor(cart)],
             [text('Shipping offer', 'Oferta de envío'), shippingMinor(cart)],
             [text('Protection offer', 'Oferta de protección'), protectionMinor(cart)]
         ].filter(function (part) { return part[1] > 0; });
         var sum = parts.reduce(function (total, part) { return total + part[1]; }, 0);
         var amount = money(sum, pricing.currency_code, decimals);
-        if (!parts.length || !amount) return null;
+        return parts.length && amount && sum > 0 ? { parts: parts, sum: sum, amount: amount, currency: pricing.currency_code, decimals: decimals } : null;
+    }
+    function CheckoutSavings() {
+        var storedCart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
+        // Cleared first so the "You save" line under the Pay button never shows an old amount.
+        window.VialCoveCheckoutSaving = '';
+        var breakdown = savingsParts(storedCart);
+        if (!breakdown) return null;
+        window.VialCoveCheckoutSaving = breakdown.amount;
+        return h('section', { className: 'vc-cart-savings vc-cart-savings--compact', 'aria-label': text('Order savings', 'Ahorro del pedido') },
+            h(SavingsStamp, { amount: breakdown.amount, label: text('You save', 'Ahorras') }),
+            h('p', { className: 'vc-cart-savings__headline' }, text("You're saving " + breakdown.amount + ' on this order', 'Ahorras ' + breakdown.amount + ' en este pedido'))
+        );
+    }
+
+    // Owner 11-18, layout D: one line per kind of saving, then the sum, shown above the order total.
+    function FooterSavings() {
+        var cart = wp.data.useSelect(function (select) { return select(window.wc.wcBlocksData.cartStore).getCartData(); }, []);
+        var breakdown = savingsParts(cart);
+        if (!breakdown) return null;
         return h('section', {className:'vc-order-savings vc-order-savings--list', 'aria-label':text('Order savings','Ahorro del pedido')},
-            parts.map(function (part) {
-                return h('div', {key:part[0], className:'vc-order-savings__row'}, h('span', null, part[0]), h('strong', null, '−' + money(part[1], pricing.currency_code, decimals)));
+            breakdown.parts.map(function (part) {
+                return h('div', {key:part[0], className:'vc-order-savings__row'}, h('span', null, part[0]), h('strong', null, '−' + money(part[1], breakdown.currency, breakdown.decimals)));
             }),
-            h('div', {className:'vc-order-savings__row vc-order-savings__sum'}, h('span', null, text('You save', 'Ahorras')), h('strong', null, amount))
+            h('div', {className:'vc-order-savings__row vc-order-savings__sum'}, h('span', null, text('You save', 'Ahorras')), h('strong', null, breakdown.amount))
         );
     }
     window.VialCoveSavings = Object.freeze({ Footer:FooterSavings, Stamp:SavingsStamp });

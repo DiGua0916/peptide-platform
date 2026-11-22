@@ -59,8 +59,8 @@
             setText(row.querySelector('.pc-ship-protect__name'), p.label);
             const ref = row.querySelector('.pc-ship-protect__ref');
             setText(ref, p.reference_minor > p.price_minor ? money(p.reference_minor, cart) : '');
-            // Owner 11-18: the struck price is presented as a customer appreciation offer.
-            setText(row.querySelector('.pc-ship-protect__note'), p.reference_minor > p.price_minor ? 'Customer appreciation offer' : '');
+            // P1-5: Clear fulfillment guarantee copy instead of vague fee wording.
+            setText(row.querySelector('.pc-ship-protect__note'), 'Free reshipment if lost or damaged in transit');
             setText(row.querySelector('.pc-ship-protect__now'), money(p.price_minor, cart));
             row.classList.toggle('is-off', p.chosen !== true);
             hideNativeFee(root, p.label);
