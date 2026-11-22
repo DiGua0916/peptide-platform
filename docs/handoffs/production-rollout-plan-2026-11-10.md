@@ -1040,3 +1040,9 @@
 - 备份：web01 `/root/vialcove-backups/catalog-onerow-remove-20261122/`（6 家店删前的额外 CSS + `remove.php`）。回滚：把对应店的备份写回 `wp_update_custom_css_post()`。
 - 实测（375×812，真实浏览器，6 家店公网域名）：分类 1 行 44px、`flex-wrap:nowrap`、`overflow-x:auto`；页面里已经没有临时规则；老毛首页从分类栏顶到第一个商品 164px。没点年龄弹窗，没下单。
 - 这条临时规则到此收尾。
+
+### 2026-11-22 ~17:05 UTC 数据：s0006–s0010 的 WP Regional Layout & CDN Optimizer“免拦截路径”加 `/wp-json/peptide/v1/adbrain/`（未发版）
+- 原因：这个插件（不在源码仓）把外部 /wp-json/ 请求一律回空 404，Ad Brain 接口从外网调不通；所有者在 F1 会话确认放行。
+- 改法：各店选项 `wprlo_options['exempt_callback_paths']` 由默认 `/wc-api/,/healthz,/ping` 追加 `,/wp-json/peptide/v1/adbrain/`（WP-CLI，以 vcs000X 身份）。撤回：改回原值。
+- 外网核对：5 家子店 adbrain/options 都回 503 bridge_not_configured（未开密钥，正常）；其他 REST（/wp-json/wp/v2/posts）仍是 404。s0001 本来就能通。
+- 注意：重新复制店铺或重装该插件时这项设置可能丢，要重加。
