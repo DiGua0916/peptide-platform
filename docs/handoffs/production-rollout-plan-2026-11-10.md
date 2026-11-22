@@ -1033,3 +1033,10 @@
 - 收款回写 s0001、s0006、s0007、s0008、s0009、s0010（admin）：全部 PASS（HTTP 400，探测事件按预期被拒）
 - 发布完成：2026.11.22-1627，提交 c1b1727，15 份副本全部一致，用时 1171 秒
 - 下一步：站点会话逐店核对线上 demo-catalog.css 带上新规则后，删掉 6 家店“额外 CSS”里的临时段落。
+
+### 2026-11-22 16:49 UTC 删掉 6 家店“额外 CSS”里的手机分类栏临时规则（数据，未发版）
+- 前提已核对：6 家店线上 `demo-catalog.css` 都是 9095 字节、修改时间 = 1627 发版时刻，都含新规则；主题 0.3.10；首页引用 `demo-catalog.css?ver=1795364891`。
+- 做法：每家店先导出当前额外 CSS，再用 `wp_update_custom_css_post()` 只删 `/* VialCove catalog category row (mobile): begin … end */` 这一段，然后清页面缓存（`PeptideCore\Page_Cache::flush()`）。6 家店都是 1103 → 561 字节，剩下的是原来就有的额外 CSS，没动。
+- 备份：web01 `/root/vialcove-backups/catalog-onerow-remove-20261122/`（6 家店删前的额外 CSS + `remove.php`）。回滚：把对应店的备份写回 `wp_update_custom_css_post()`。
+- 实测（375×812，真实浏览器，6 家店公网域名）：分类 1 行 44px、`flex-wrap:nowrap`、`overflow-x:auto`；页面里已经没有临时规则；老毛首页从分类栏顶到第一个商品 164px。没点年龄弹窗，没下单。
+- 这条临时规则到此收尾。
