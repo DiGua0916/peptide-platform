@@ -32,3 +32,8 @@
  .vc-demo-catalog--product-first .vc-demo-catalog__search{order:-1}
  .vc-demo-catalog--product-first .vc-demo-catalog__filters button{font-size:12px;line-height:20px;padding:10px 12px}
 }
+/* Mobile: category chips stay on one row and scroll sideways, so products are visible above the fold. */
+@media(max-width:767px){
+ .vc-demo-catalog__filters{flex-wrap:nowrap;overflow-x:auto;margin-inline:-20px;padding-inline:20px;scroll-padding-inline:20px;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+ .vc-demo-catalog__filters::-webkit-scrollbar{display:none}
+}
