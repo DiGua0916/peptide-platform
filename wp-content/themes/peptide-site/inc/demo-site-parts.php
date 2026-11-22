@@ -143,7 +143,8 @@ function vc_demo_site_header( array $s ): string {
     $out .= '<a class="vc-demo-brand" href="' . esc_url( $home ) . '" aria-label="' . esc_attr( ( $s['brandName'] ?? 'VialCove' ) . ' home' ) . '">' . vc_demo_site_part_logo( $s ) . '</a>';
     $out .= '<nav class="vc-demo-desktop-nav" aria-label="Main navigation">' . vc_demo_site_part_nav( $menu ) . '</nav><div class="vc-demo-header-actions">';
     if ( ! empty( $s['showSearch'] ) ) { $out .= '<a class="vc-demo-icon-button" href="' . esc_url( $shop ) . '" data-vc-demo-search aria-label="Search products" aria-haspopup="dialog" aria-controls="' . esc_attr( $id . '-search' ) . '">' . vc_demo_site_part_icon( 'search' ) . '</a>'; }
-    if ( ! empty( $s['showAccount'] ) ) {
+    $hide_guest_signin = 'on' === get_option( 'pc_hide_header_signin', 'on' ) && ! is_user_logged_in();
+    if ( ! empty( $s['showAccount'] ) && ! $hide_guest_signin ) {
         // 1 号站定稿 P1-2：没登录时人像图标旁写 “Sign in”，点了打开登录弹窗（account-gate.js 接管；脚本没加载时照常去账户页）。
         // 登录后显示头像（姓名或邮箱首字母的圆形），手机上也显示，让客户看得出自己已登录。
         $signed_in = is_user_logged_in();
@@ -167,7 +168,8 @@ function vc_demo_site_header( array $s ): string {
     if ( $secondary ) { $out .= '<nav class="vc-demo-secondary vc-demo-part-wrap" aria-label="Secondary navigation">' . vc_demo_site_part_nav( $secondary ) . '</nav>'; }
     $out .= '<dialog id="' . esc_attr( $id . '-menu' ) . '" class="vc-demo-part-dialog vc-demo-menu-dialog" aria-labelledby="' . esc_attr( $id . '-menu-title' ) . '"><div class="vc-demo-dialog-head"><span id="' . esc_attr( $id . '-menu-title' ) . '">Menu</span><button type="button" class="vc-demo-icon-button" data-vc-demo-close aria-label="Close menu">' . vc_demo_site_part_icon( 'close' ) . '</button></div><nav aria-label="Mobile navigation">' . vc_demo_site_part_nav( $menu ) . '</nav>';
     if ( $secondary ) { $out .= '<nav class="vc-demo-menu-secondary" aria-label="Secondary mobile navigation">' . vc_demo_site_part_nav( $secondary ) . '</nav>'; }
-    if ( ! empty( $s['showAccount'] ) ) {
+    $hide_guest_signin = 'on' === get_option( 'pc_hide_header_signin', 'on' ) && ! is_user_logged_in();
+    if ( ! empty( $s['showAccount'] ) && ! $hide_guest_signin ) {
         // 1 号站定稿 P1-2：手机菜单顶部的账户入口，没登录时同样打开登录弹窗。
         $signed_in = is_user_logged_in();
         $out .= '<a class="vc-demo-menu-account" href="' . esc_url( $account ) . '"' . ( $signed_in ? '' : ' data-pc-open-signin' ) . '>' . ( $signed_in ? 'My account ' : 'Sign in or create account ' ) . vc_demo_site_part_icon( 'user' ) . '</a>';

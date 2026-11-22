@@ -117,6 +117,11 @@ final class Report_Archive {
 			$items[] = $item;
 		}
 		usort( $items, static function( array $a, array $b ) use ( $args ): int {
+			if ( 'oldest' !== $args['sort'] ) {
+				$af = false !== stripos( (string) ( $a['issuer_name'] ?? '' ), 'freedom' ) ? 1 : 0;
+				$bf = false !== stripos( (string) ( $b['issuer_name'] ?? '' ), 'freedom' ) ? 1 : 0;
+				if ( $af !== $bf ) { return $bf <=> $af; }
+			}
 			if ( null === $a['issued_on'] && null !== $b['issued_on'] ) { return 1; }
 			if ( null !== $a['issued_on'] && null === $b['issued_on'] ) { return -1; }
 			$direction = 'oldest' === $args['sort'] ? 1 : -1;

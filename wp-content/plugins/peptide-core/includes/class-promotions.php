@@ -991,7 +991,10 @@ final class Promotions {
 	}
 
 	private static function fallback_list( array $list ): void {
-		if ( ! $list ) {
+		$ship_tiers = class_exists( '\\PeptideCore\\Shipping\\Discounts' ) ? ( \PeptideCore\Shipping\Discounts::tiers_for_cart( null )['tiers'] ?? array() ) : array();
+		$coupons    = class_exists( '\\PeptideCore\\Coupons' ) ? \PeptideCore\Coupons::public_list() : array();
+
+		if ( ! $list && ! $ship_tiers && ! $coupons ) {
 			echo '<p class="pc-coupons__empty">' . esc_html__( 'There are no offers right now. Please check back later.', 'peptide-core' ) . '</p>';
 			return;
 		}
@@ -1008,6 +1011,27 @@ final class Promotions {
 				echo '<p class="pc-coupon__terms">' . esc_html( $d ) . '</p>';
 			}
 			echo '<div class="pc-coupon__actions"><a class="pc-coupon__more" href="' . esc_url( $p['url'] ) . '">' . esc_html__( 'Details', 'peptide-core' ) . '</a></div></article>';
+		}
+		if ( $ship_tiers ) {
+			echo '<article class="pc-coupon"><div class="pc-coupon__value">' . esc_html__( 'Shipping Offers (Auto-Applied at Checkout)', 'peptide-core' ) . '</div><ul class="pc-coupon__list">';
+			foreach ( $ship_tiers as $st ) {
+				$min_txt = isset( $st['min_subtotal'] ) ? html_entity_decode( wp_strip_all_tags( wc_price( (float) $st['min_subtotal'] ) ), ENT_QUOTES, 'UTF-8' ) : '';
+				$rew_txt = 'percent' === ( $st['kind'] ?? '' ) && (float) ( $st['value'] ?? 0 ) >= 100
+					? __( 'Free FedEx Shipping', 'peptide-core' )
+					: ( 'percent' === ( $st['kind'] ?? '' )
+						? sprintf( __( '%s%% off shipping', 'peptide-core' ), wc_format_localized_decimal( (float) $st['value'] ) )
+						: sprintf( __( '%s off shipping', 'peptide-core' ), html_entity_decode( wp_strip_all_tags( wc_price( (float) ( $st['value'] ?? 0 ) ) ), ENT_QUOTES, 'UTF-8' ) ) );
+				echo '<li>' . esc_html( ( '' !== $min_txt ? sprintf( __( 'Orders over %s: ', 'peptide-core' ), $min_txt ) : '' ) . $rew_txt ) . '</li>';
+			}
+			echo '</ul><div class="pc-coupon__actions"><a class="pc-coupon__more" href="' . esc_url( home_url( '/#vc-collection' ) ) . '">' . esc_html__( 'Shop eligible peptides →', 'peptide-core' ) . '</a></div></article>';
+		}
+		foreach ( $coupons as $c ) {
+			echo '<article class="pc-coupon"><div class="pc-coupon__value">' . esc_html( $c['title'] . ' · ' . $c['code'] ) . '</div>';
+			if ( ! empty( $c['text'] ) ) {
+				echo '<p class="pc-coupon__text">' . esc_html( $c['text'] ) . '</p>';
+			}
+			echo '<p class="pc-coupon__terms">' . esc_html( $c['first_order'] ? __( 'First-order offer · Applied automatically when claimed', 'peptide-core' ) : __( 'Public store offer', 'peptide-core' ) ) . '</p>';
+			echo '<div class="pc-coupon__actions"><a class="pc-coupon__more" href="' . esc_url( add_query_arg( 'pc_coupon', rawurlencode( $c['code'] ), home_url( '/#vc-collection' ) ) ) . '">' . esc_html( sprintf( __( 'Apply %s & Shop →', 'peptide-core' ), $c['code'] ) ) . '</a></div></article>';
 		}
 		echo '</div>';
 	}

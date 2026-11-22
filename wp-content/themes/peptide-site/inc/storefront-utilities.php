@@ -62,8 +62,8 @@ function vc_storefront_utilities_assets(): void {
 add_action( 'wp_enqueue_scripts', 'vc_storefront_utilities_assets', 95 );
 
 add_action( 'wp_footer', function (): void {
-    // Checkout has its own support and payment surface. Keep that surface clear.
-    if ( is_admin() || ( function_exists( 'is_checkout' ) && is_checkout() ) || ! function_exists( 'peptide_core_get_support_contacts' ) ) { return; }
+    // P0-5: Keep both /cart/ and /checkout/ completely unobstructed by the floating WhatsApp pill.
+    if ( is_admin() || ( function_exists( 'is_cart' ) && is_cart() ) || ( function_exists( 'is_checkout' ) && is_checkout() ) || ! function_exists( 'peptide_core_get_support_contacts' ) ) { return; }
     $support = peptide_core_get_support_contacts();
     $url = is_array( $support ) ? vc_storefront_whatsapp_url( $support ) : '';
     if ( '' === $url ) { return; }

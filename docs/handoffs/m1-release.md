@@ -722,3 +722,13 @@ F1 的发布是整目录替换。新的包基于 fd0c316，所以：
 - 线上只读核对（11-21）：s0008/9/10 店铺三处邮箱 11-17 已人工改好；但总后台 FluentSMTP 没有 orders@lumornea.com / korgavex.com / dalhoben.com，CDN 行没有 zone 编号，定时补齐一直跳过 → 这三家的邮件现在用 `orders@vialcovepeptides.com` 发出、显示名是新品牌。这个分支发上去后定时任务会自动补（需要那几个域名所在的 Cloudflare 账号令牌有 Email Sending + DNS 编辑权限）。
 - 测试：`peptide-core/tests/domain-mail-sync-pure.php` 36 项、`peptide-hq/tests/mail-domains-sync-pure.php` 22 项通过；`tests/run-data-observations.cjs` 112 过 0 失败；`domain-verify-pure` 29、`cdn-multi-account-pure` 35 通过。本机 WordPress 副本（SQLite）实跑：占位邮箱接上域名、`wp option update home` 换域名、直接改库后进后台补做、再跑幂等、外部邮箱不动，全部符合。总后台部分只有纯测试，没有在真实总后台或沙盒跑过；`management-addresses-pure`、`provision-customer-domain-pure` 在主线上本来就跑不起来（缺替身类），不是这次引入的。
 - 11-21 所有者在 F1 会话说“发布吧”：已合主线并发布（vc-release 2026.11.21-1649，主线 51f4d4bb，连同 lp_ver 和 LC120），见上线记录。三个新域名的发件地址被 Cloudflare 令牌的来源 IP 限制挡住，等令牌放行总后台服务器 IP。
+
+## 2026-11-22 归档 11-22 线上包，Cloudflare 发信排查
+
+- **11-22 线上包已归档进主线**：所有者交来 `vialcove-ux-release-20261122.tar.gz`（42 个文件：31 改、11 新，含结账辅助、checkout-resume、美国邮编表 zip-us、满 $600 付款确认邮件等）。这些文件 11-22 已直接上线，没走 vc-release。
+  - 包内 SHA256SUMS 自检通过；MANIFEST 中 31 个修改文件的改前哈希与主线 `0b25dbf3` 完全相同，没有冲掉主线别的改动。
+  - 线上 web01 s0001、tenants s0006–s0010、store-admin、tenant-admin s0006–s0010 逐文件比对，全部等于包的改后哈希。
+  - 原样提交为 `a112b57d`（分支 `claude/m1-archive-ux1122`），已快进到主线。php -l 全过，本机测试 112/0/2。清单留在 `docs/releases/vialcove-ux-release-20261122/`。
+  - 还没做：6 店「额外 CSS」里的手机分类栏规则要并进 `demo-catalog.css` 并删掉额外 CSS（站点会话负责，随下次发布）。
+- **换域名**：s0006 → sarnovea.com（军），s0007 → rovkazar.com（阳），站点会话 11-22 改的。店铺侧 Domain_Mail_Sync 已自动把发件地址改为 `orders@新域名`。s0006 发件人名称仍是 `VialCovePeptides`（不是旧品牌名，按规则没动），要换品牌名需人工改。
+- **Cloudflare 发信结论**：光辉、老毛、芒果的令牌已加总后台 IPv6 `2600:1f18:c52:ac00:af6:a354:2a53:5e13` 和缺的权限，令牌验证、查域名都正常。但 Email Sending 接口仍 401（2036）。阳的号后台页面写明「电子邮件发送功能目前仅在 Workers Paid 计划中可用」，订阅列表为空，所以每个买手号都要开 Workers Paid 并点「启用邮件发送」，总后台才能建 `orders@新域名`。军、阳的号已建令牌 vialcove-hq，等所有者填进总后台 CDN 页。

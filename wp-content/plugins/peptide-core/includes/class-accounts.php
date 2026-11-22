@@ -543,14 +543,13 @@ final class Accounts {
 			<button type="button" class="pc-acc__inline" data-pc-doc="privacy" aria-expanded="false">Privacy Policy</button>, including the use of cookies.</p>
 		<div class="pc-acc__doc" data-pc-doc-body="terms" hidden><h3>Terms of Use</h3><?php echo self::policy_html( $p['terms'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 逐段转义。 ?></div>
 		<div class="pc-acc__doc" data-pc-doc-body="privacy" hidden><h3>Privacy Policy</h3><?php echo self::policy_html( $p['privacy'] ); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 逐段转义。 ?></div>
-		<?php /* 1 号站定稿 P1-9：保留原版式，加一个“仅供研究使用”勾选框，勾上才能进入（措辞待法务审核）。 */ ?>
-		<label class="pc-acc__ruo"><input type="checkbox" data-pc-gate-ruo> <span>I understand these products are for laboratory research use only.</span></label>
+		<?php /* P1-2: Single-step 1-tap laboratory research confirmation (no blocking pre-checkbox; Sign in hidden when guest-only ad mode is active). */ ?>
+		<p class="pc-acc__ruo" style="margin:12px 0 4px;font-weight:600;">By tapping Enter below, you confirm these products are strictly for laboratory research use only.</p>
 		<div class="pc-acc__actions">
-			<button type="button" class="pc-acc__btn pc-acc__btn--primary" data-pc-gate-yes disabled aria-disabled="true">I'm <?php echo (int) $age; ?> or older, enter</button>
+			<button type="button" class="pc-acc__btn pc-acc__btn--primary" data-pc-gate-yes>I'm <?php echo (int) $age; ?>+ &amp; Confirm Research Use — Enter</button>
 			<button type="button" class="pc-acc__btn pc-acc__btn--ghost" data-pc-gate-no>I'm under <?php echo (int) $age; ?>, leave</button>
 		</div>
-		<?php if ( $s['signup'] ) : ?>
-		<?php /* 1 号站定稿 P0-2：老客户从这里直接登录（打开同一个登录 / 注册弹窗）。 */ ?>
+		<?php if ( $s['signup'] && 'on' !== get_option( 'pc_hide_header_signin', 'on' ) ) : ?>
 		<p class="pc-acc__small pc-acc__returning">Returning customer? <button type="button" class="pc-acc__inline" data-pc-gate-signin>Sign in</button></p>
 		<?php endif; ?>
 	</div>

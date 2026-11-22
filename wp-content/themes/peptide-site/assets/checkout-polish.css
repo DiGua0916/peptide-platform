@@ -18,6 +18,19 @@
 .vc-stamp-dust { position:absolute; left:50%; top:60%; pointer-events:none; }
 .vc-stamp-dust i { position:absolute; width:9px; height:4px; border-radius:50%; background:#a1948b; opacity:0; filter:blur(1px); }
 .vc-checkout-page.vc-checkout-summary-ready .checkout-order-summary-block-fill-wrapper { display:none !important; }
+@media (max-width:782px) {
+    .vc-checkout-page .wc-block-checkout__sidebar { width:100%; flex:1 1 100%; margin:0 0 8px !important; border:1px solid #d5e2e6 !important; border-radius:14px !important; background:#fff !important; overflow:hidden; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wp-block-woocommerce-checkout-order-summary-block { display:block !important; margin:0 !important; border:0 !important; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__title {
+        display:flex !important; align-items:center !important; justify-content:space-between !important; gap:10px;
+        margin:0 !important; padding:14px 16px !important; border:0 !important; background:#fff !important; cursor:pointer;
+    }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__title-text { flex:1 1 auto; margin:0 !important; font-size:16px !important; line-height:22px !important; font-weight:650 !important; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__title-price { display:inline-block !important; font-size:17px !important; line-height:22px !important; font-weight:750 !important; color:var(--ink); font-variant-numeric:tabular-nums; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__title-icon { display:inline-flex !important; align-items:center; flex:none; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content:not(.is-open) { display:none !important; }
+    .vc-checkout-page .wc-block-checkout__sidebar .wc-block-components-checkout-order-summary__content.is-open { border-top:1px solid #e6eff2; padding-bottom:8px; }
+}
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__content { display:block !important; height:auto !important; visibility:visible !important; }
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__title {
     display:grid !important; grid-template-columns:minmax(0,1fr) auto; grid-template-rows:auto auto;
@@ -30,8 +43,10 @@
 .vc-checkout-page .vc-order-summary-permanent .wc-block-components-totals-footer-item { display:block; padding:0 16px; min-height:0; }
 .vc-checkout-page.vc-checkout-summary-ready .vc-order-summary-permanent .wc-block-components-totals-footer-item > .wc-block-components-totals-item__label,
 .vc-checkout-page.vc-checkout-summary-ready .vc-order-summary-permanent .wc-block-components-totals-footer-item > .wc-block-components-totals-item__value { display:none !important; }
-/* Owner 11-18, layout D: savings list sits above the order total (flex order; the React tree is not moved). */
-.vc-checkout-page .wc-block-components-checkout-order-summary__content:has([data-vc-footer-savings]) { display:flex; flex-direction:column; }
+/* Owner 11-18, layout D: savings list sits above the order total (flex order; the React tree is not moved).
+   Only apply display:flex when permanently open (desktop) or explicitly expanded (.is-open) on mobile! */
+.vc-checkout-page .vc-order-summary-permanent .wc-block-components-checkout-order-summary__content:has([data-vc-footer-savings]),
+.vc-checkout-page .wc-block-components-checkout-order-summary__content.is-open:has([data-vc-footer-savings]) { display:flex !important; flex-direction:column; }
 .vc-checkout-page .wc-block-components-checkout-order-summary__content > [data-vc-footer-savings] { order:1; }
 .vc-checkout-page .wc-block-components-checkout-order-summary__content > .wc-block-components-totals-wrapper:has(.wc-block-components-totals-footer-item) { order:2; }
 .vc-checkout-page .vc-order-savings--list { margin:8px 16px 4px; padding:8px 12px; border:1px dashed #e7b3bd; border-radius:10px; background:#fff8f9; color:var(--muted); font-size:13px; line-height:20px; }

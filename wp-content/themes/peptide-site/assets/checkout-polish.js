@@ -76,11 +76,14 @@
             title.querySelector('.vc-order-total-caption')?.remove();
         }
         page.classList.add('vc-checkout-summary-ready');
-        let host = content.querySelector('[data-vc-footer-savings]');
-        if (!host) {
-            host=document.createElement('div'); host.dataset.vcFooterSavings=''; content.append(host);
-            const root=wp.element.createRoot(host); root.render(wp.element.createElement(window.VialCoveSavings.Footer)); mounted.set(host,root);
-        }
+        // Mount footer savings inside whichever summary content is currently rendered/visible (desktop sidebar or mobile collapsible bar).
+        page.querySelectorAll('.wc-block-components-checkout-order-summary__content').forEach(nodeContent => {
+            let host = nodeContent.querySelector('[data-vc-footer-savings]');
+            if (!host) {
+                host = document.createElement('div'); host.dataset.vcFooterSavings = ''; nodeContent.append(host);
+                const root = wp.element.createRoot(host); root.render(wp.element.createElement(window.VialCoveSavings.Footer)); mounted.set(host, root);
+            }
+        });
     }
     const schedule = () => { if (!frame) frame=requestAnimationFrame(reconcile); };
     wide.addEventListener?.('change', schedule);

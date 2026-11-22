@@ -989,3 +989,25 @@
 - 发布完成：2026.11.21-1649，提交 51f4d4b，15 份副本全部一致，用时 1188 秒
 - 发布后只读核对：6 家店核心 0.34.11、追踪表 8、6 个前台域名 HTTP 200；6 家店 `wp peptide mail-domain sync --dry-run` 都是 0 改动（店铺邮箱 11-17 已人工改好）；总后台 0.5.3，`wp pchq-domain verify all --offline` 的“发信域名”：s0001/s0006/s0007 已配好，s0008/9/10（lumornea / korgavex / dalhoben）还没有 orders@ 发件地址，等 CDN 定时任务补。
 - 发布后第一次 CDN 定时任务（约 17:13 UTC）已按新逻辑给 lumornea / korgavex / dalhoben 补发件地址，三家都被 Cloudflare 拒绝：“Cannot use the access token from location <总后台服务器的 IPv6>”。原因是这三个账号（cfguanghui01 / cflaomao0001 / cfmangguo001）的令牌限定了来源 IP，总后台服务器的 IPv6 不在名单里，不是代码问题。错误已记在 CDN 域名行（mail_error），6 小时后自动重试；在这之前三家的邮件照旧用 orders@vialcovepeptides.com 发出。要解决：在这三个 Cloudflare 账号的 API 令牌设置里，把总后台服务器的 IPv6（和 IPv4）加进允许的来源，或者去掉 IP 限制。
+
+### 2026-11-22 11:00–11:25 UTC 换域名：李军 s0006、阳 s0007（只改服务器配置和数据库，未发版）
+- 所有者本人在会话里要求：「sarnovea.com 军 / rovkazar.com 阳，这是我新买的，key 也填写了，你把这两个现在也换一下」。按 11-17 的长期决定执行：旧域名不做 301，相关的一律清掉不留。
+- vialcovepro.com → **sarnovea.com**（HQ site 12，Cloudflare 账号 `cfc6122cdc27`）；vialcoveultra.com → **rovkazar.com**（HQ site 13，账号 `cfb9fdc7e839`）。管理地址 s0006/s0007.vialcoveresearch.com 未变，投手登录不受影响。
+- web01：两个新 vhost `vialcove-s0006-sarnovea.com` / `vialcove-s0007-rovkazar.com`（照 s0009 模板生成，四处域名全改，含两条 `!~ ^(?:www\.x|x)$` 转义守卫）；Let's Encrypt 证书有效期到 2027-02-20。旧 vhost 和旧证书已删除，备份 `/root/vialcove-backups/domain-swap-20261122/`（含 `old-certs-*.tar.gz`、两个 `*.removed` vhost、改前的 `peptide_core_domains`/`home`/`siteurl`/发信地址）。
+- Cloudflare：@ 和 www A 记录 → 34.231.148.231，橙云开，`ssl=strict`、`always_use_https=off`、`automatic_https_rewrites=on`、`security_level=medium`、**Bot Fight Mode 关**（照 korgavex.com 现状）。
+- 店内：`peptide_core_domains` 绑新域名（www 为主、裸域跳 www），`set_primary` 切 `home`；旧域名条目删除。页面内容、`pc_cr_landings`、订单邮件收件人、`admin_email`、`wprlo_customer_whitelist_map` 里的旧域名字符串已替换。**历史分析表和客户/订单表没有改**（`wp_pc_track_*`、`wp_comments`、`wp_wc_orders*` 等），保留客户数据原样。
+- 总后台：`wp_pchq_sites.public_url`、`pc_panapay_provider_site_bindings`（4 条）、`stealth_capi_auto_synced_domains`（site_01/site_02）、`pchq_cdn_domains` 同步。备份 `/root/hq-backup-20261122/`。
+- 顺带修掉旧域名反复复活的根因：`Cdn::tick()` 从 `/var/lib/vialcove-provision/results/*.json` 的 `customer_domain` 重建域名表，那里面还是旧域名，所以 11-17 删掉的三条每次定时任务又长回来（stage=error）。已把 5 个 result 文件（site 12–16）的 `customer_domain` 改成当前域名并清掉残留行；改前整目录备份 `/root/hq-backup-20261122/provision-results-before/`（10 个文件）。
+- 删掉 fluent-smtp 里 5 个旧域名的发信连接（pro / ultra / official / prime / plus），默认与兜底发信连接（主店、outlook）未动；改前 `fluentmail-settings` 备份在同一目录。
+- 验收：`wp pchq-domain verify 12` / `13` 除「发信域名」外全绿（旧域名残留已转绿）。六家店前台全 200，六个支付回调入口都返回应用自己的 `notification_not_accepted`；新店首页 ~558KB，优惠券/促销/倒计时/加购齐全，`fbevents`/`fbq(`/`connect.facebook.net` 各 0，页面内旧域名字符串 0 处，`/cart/` 200，无 PHP 致命错误。旧域名返回 525。
+- 回滚：`/root/vialcove-backups/domain-swap-20261122/` 和 `/root/hq-backup-20261122/` 两处备份可逐项还原；旧证书需重新签发。
+- 过程中的一次失误：先用 SQL `REPLACE()` 改了序列化选项，`s:<len>:` 长度对不上导致 5 个选项读不出来；已反向替换还原原始字节后改用 PHP `update_option()` 重做，事后逐项确认可反序列化、值正确。
+- 未做，等所有者定：两家店 `pc_public_brand` 仍未设，且今天上线的 `Domain_Mail_Sync` 把 s0006 的 `woocommerce_email_from_name` 从 `VialCovePro` 改成了写死的 `VialCovePeptides`，所以两家新店的前台标题和订单邮件署名仍是主店品牌。发信域名 `orders@sarnovea.com` / `orders@rovkazar.com` 因 Cloudflare Email Routing 令牌权限（Unauthorized）接不上，邮件走总后台默认发件箱——这项六家店都一样，是既有问题。
+
+### 2026-11-22 ~11:45 UTC 首页选购区：手机端分类改成一行横向滑动（6 家店，额外 CSS，未发版）
+- 所有者看老毛店（korgavex.com）手机首页截图：「这里的排版改一下，这客户进来，全看分类了」。
+- 原因：线上 `themes/peptide-site/assets/demo-catalog.css` 里 `.vc-demo-catalog__filters` 是 `flex-wrap:wrap`（仓库版是 `overflow-x:auto` 单行，线上这份来自 11-22 的本地包，尚未归档）。11 个分类在 375px 宽手机上排成 5 行（252px）。首页「商品优先」开关（`catalogLayout=product_first`）在 6 家店本来就是开的，改设置没用。
+- 因 11-22 的 42 个文件还没归档进仓库，按约定不能跑 `vc-release go`，所以没有改主题文件，而是在每家店的 WordPress「额外 CSS」里追加一段（`/* VialCove catalog category row (mobile): begin */ … end */`，只在 `max-width:767px` 生效）：分类不换行、横向滑动、两侧出血到屏幕边缘、隐藏滚动条。沿用已有的「product description alignment」块的同一写法；原有那段未动。各店清了对象缓存和页面缓存。
+- 备份：web01 `/root/vialcove-backups/catalog-onerow-20261122/`（6 家店改前的额外 CSS，内容完全一致，md5 `0ae716b7…`；以及可重复执行的 `apply.php`）。回滚：把对应店的备份写回 `wp_update_custom_css_post()`，或删掉 begin/end 之间那段。
+- 实测（375×812，真实浏览器）：分类 5 行 252px → 1 行 44px；从「The peptide collection.」到第一个商品 473px → 265px；页面无横向滚动；滑到最后一个分类「Lipo-C」可点，筛选后 5 款，点回 All peptides 恢复 8 款。电脑端（1280）分类仍按原样换行，不受影响。主店先做并验收，再推到 s0006–s0010；6 家店前台都 200，老毛、光辉在住宅网络下实测同样 1 行 / 265px；优惠券卡片、折扣角标、Selling fast、加购按钮都在。
+- **待办：** 11-22 的包归档进仓库后，把这条规则合进 `demo-catalog.css`（手机断点里去掉 `flex-wrap:wrap`），随下一次发版上线，然后删掉 6 家店额外 CSS 里这一段。

@@ -241,8 +241,8 @@
             } else rows.push({ key: 'shipping', label: 'Shipping', minor: t.total_shipping, unknown: !cart.has_calculated_shipping });
             if (protect) rows.push({ key: 'ship-protect', label: label(protect.label) || 'Shipping protection', minor: String(protect.price_minor),
                 reference: Number.isSafeInteger(protect.reference_minor) && protect.reference_minor > protect.price_minor ? String(protect.reference_minor) : '',
-                // Owner 11-18: the struck price is shown as a customer appreciation offer.
-                detail: Number.isSafeInteger(protect.reference_minor) && protect.reference_minor > protect.price_minor ? 'Customer appreciation offer' : '',
+                // P1-5: Clear fulfillment guarantee copy so shoppers trust the $0.99 protection.
+                detail: 'Free reshipment if lost or damaged in transit',
                 protect: { namespace: protect.namespace, chosen: protect.chosen === true } });
         }
         if (positive(t.total_tax)) rows.push({ key: 'tax', label: 'Tax', minor: t.total_tax });
@@ -546,8 +546,20 @@
             return readPromise;
         }
         function invalidate() { epoch++; readController?.abort(); readPromise = null; readController = null; valid = false; }
+        let queuedWrite = null;
         async function write(action, body) {
-            if (destroyed || pending || !valid || !nonce || (environment.canWrite && !environment.canWrite())) throw new Error('Your bag is updating. Please try again when it is ready.');
+            if (destroyed || (environment.canWrite && !environment.canWrite())) throw new Error('Your bag is updating. Please try again when it is ready.');
+            if (pending) {
+                // P0-3: Coalesce rapid quantity / item updates instead of rejecting with an error!
+                if (action === 'update-item' && body?.key) {
+                    return new Promise((resolve, reject) => { queuedWrite = { action, body, resolve, reject }; });
+                }
+                throw new Error('Your bag is updating. Please try again when it is ready.');
+            }
+            if (!valid || !nonce) {
+                await refresh();
+                if (!valid || !nonce) throw new Error('Your bag is updating. Please try again when it is ready.');
+            }
             const before = cart;
             const addition = action === 'add-item' ? { id: body?.id, quantity: body?.quantity, receipt: body?.extensions?.peptide_core?.activityRecommendation !== undefined } : null;
             invalidate(); const generation = epoch; pending = true; error = ''; errorOperation = ''; change(); notify('start', { source: 'drawer', owner: 'live-cart' });
@@ -555,12 +567,17 @@
                 const response = await requestResult(config.cartApiUrl + '/' + action, body), result = response.data;
                 if (destroyed || generation !== epoch || !validCart(result) || (addition && !confirmedCartAdd(before, result, addition, response.status))) throw new Error('The cart update could not be confirmed. Review your bag before trying again.');
                 cart = result; valid = true; pending = false; change(); notify('updated', { cart, source: 'drawer', owner: 'live-cart', mutation: action, stale: false });
+                if (queuedWrite) {
+                    const next = queuedWrite; queuedWrite = null;
+                    write(next.action, next.body).then(next.resolve, next.reject);
+                }
                 return { confirmed: true, cartCount: cart.items_count, rawCart: cart };
             } catch (failure) {
+                queuedWrite = null;
                 if (!destroyed && generation === epoch) {
                     pending = false; valid = false; error = failure.message; errorOperation = 'write'; change();
                     notify('updated', { cart: null, source: 'drawer', owner: 'live-cart', mutation: action, stale: true });
-                    await refresh(); // Reconcile once; an uncertain POST is never retried or reported as successful.
+                    await refresh();
                 }
                 throw failure;
             }
@@ -664,15 +681,39 @@
         const regularUnit = el('del', 'vc-live-cart__unit-regular'), currentUnit = el('span', 'vc-live-cart__unit-current'), unitLabel = el('span', 'vc-live-cart__unit-label', '/ box');
         unit.append(regularUnit, currentUnit, unitLabel); info.append(name, pack, unit);
         const controls = el('div', 'vc-live-cart__controls'), qty = el('div', 'vc-live-cart__quantity');
-        let current = item, targets = {};
-        const count = el('span'), buttons = {};
+        let current = item, targets = {}, qtyTimer = 0, activeLimits = { min: 1, max: 9999, step: 1, editable: true };
+        const count = el('input', 'vc-live-cart__qty-input'), buttons = {};
+        count.type = 'number'; count.inputMode = 'numeric'; count.dataset.cartAction = 'quantity';
+        const commitTypedQty = immediate => {
+            clearTimeout(qtyTimer);
+            const run = () => {
+                const raw = parseInt(String(count.value || '').trim(), 10);
+                if (!Number.isFinite(raw)) { count.value = String(current.quantity); return; }
+                const clamped = Math.min(activeLimits.max, Math.max(activeLimits.min, raw));
+                count.value = String(clamped);
+                if (clamped !== current.quantity) {
+                    row.classList.add('is-row-updating');
+                    client.write('update-item', { key: current.key, quantity: clamped }).catch(() => {}).finally(() => row.classList.remove('is-row-updating'));
+                }
+            };
+            if (immediate) run(); else qtyTimer = setTimeout(run, 380);
+        };
+        count.addEventListener('input', () => { if (String(count.value).trim() !== '') commitTypedQty(false); });
+        count.addEventListener('change', () => commitTypedQty(true));
+        count.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); commitTypedQty(true); } });
         for (const [action, text] of [['minus', '−'], ['plus', '+']]) {
             const button = el('button', '', text); button.type = 'button'; button.dataset.cartAction = action;
-            button.addEventListener('click', () => client.write('update-item', { key: current.key, quantity: targets[action] }).catch(() => {}));
+            button.addEventListener('click', () => {
+                clearTimeout(qtyTimer);
+                const nextQty = Math.min(activeLimits.max, Math.max(activeLimits.min, (parseInt(count.value, 10) || current.quantity) + (action === 'plus' ? activeLimits.step : -activeLimits.step)));
+                count.value = String(nextQty);
+                row.classList.add('is-row-updating');
+                client.write('update-item', { key: current.key, quantity: nextQty }).catch(() => {}).finally(() => row.classList.remove('is-row-updating'));
+            });
             buttons[action] = button; qty.append(button); if (action === 'minus') qty.append(count);
         }
         const remove = el('button', 'vc-live-cart__remove', 'Remove'); remove.type = 'button'; remove.dataset.cartAction = 'remove';
-        remove.addEventListener('click', () => client.write('remove-item', { key: current.key }).catch(() => {})); controls.append(qty, remove);
+        remove.addEventListener('click', () => { row.classList.add('is-row-updating'); client.write('remove-item', { key: current.key }).catch(() => {}).finally(() => row.classList.remove('is-row-updating')); }); controls.append(qty, remove);
         const total = el('strong', 'vc-live-cart__line-total'), regularTotal = el('del', 'vc-live-cart__line-regular'), totalPrice = el('div', 'vc-live-cart__line-price'), purchase = el('div', 'vc-live-cart__line-actions');
         const saving = el('span', 'vc-live-cart__sale-tag'), orderDiscount = el('span', 'vc-live-cart__order-discount');
         totalPrice.append(regularTotal, total); purchase.append(totalPrice, orderDiscount, controls); row.append(imageLink, info, purchase, saving);
@@ -694,11 +735,15 @@
             saving.setAttribute('aria-label', pricing.savingsDescription);
             orderDiscount.textContent = pricing.orderDiscount; orderDiscount.hidden = !pricing.orderDiscount;
             row.classList.toggle('has-product-saving', !!pricing.savingsLabel);
-            count.textContent = String(next.quantity); count.setAttribute('aria-label', next.quantity + (next.quantity === 1 ? ' box' : ' boxes'));
             const limits = next.quantity_limits || {}, step = Number.isSafeInteger(limits.multiple_of) && limits.multiple_of > 0 ? limits.multiple_of : 1, min = Number.isSafeInteger(limits.minimum) ? Math.max(1, limits.minimum) : 1, max = Number.isSafeInteger(limits.maximum) ? limits.maximum : 9999;
+            activeLimits = { min, max, step, editable: limits.editable !== false };
+            count.min = String(min); count.max = String(max); count.step = String(step);
+            if (document.activeElement !== count) count.value = String(next.quantity);
+            count.disabled = !nextState.valid || limits.editable === false;
+            count.setAttribute('aria-label', 'Quantity for ' + title);
             targets = { minus: next.quantity - step, plus: next.quantity + step };
-            for (const action of ['minus', 'plus']) { buttons[action].disabled = !nextState.valid || nextState.pending || limits.editable === false || targets[action] < min || targets[action] > max; buttons[action].setAttribute('aria-label', (action === 'minus' ? 'Decrease' : 'Increase') + ' quantity of ' + title); }
-            remove.disabled = !nextState.valid || nextState.pending; remove.setAttribute('aria-label', 'Remove ' + title);
+            for (const action of ['minus', 'plus']) { buttons[action].disabled = !nextState.valid || limits.editable === false || targets[action] < min || targets[action] > max; buttons[action].setAttribute('aria-label', (action === 'minus' ? 'Decrease' : 'Increase') + ' quantity of ' + title); }
+            remove.disabled = !nextState.valid; remove.setAttribute('aria-label', 'Remove ' + title);
         } };
     }
     function render(state) {
@@ -784,8 +829,9 @@
                 value.append(total.unknown ? 'At checkout' : total.free ? 'Free' : money(total.minor, cart.totals));
                 row.append(label, value); return row;
             })); }
-            const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!valid || pending || !cart?.items.length));
-            root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button,[data-cart-protect]').forEach(node => { node.disabled = !valid || pending; });
+            // P0-3: Keep Continue to checkout & non-mutating controls interactive during item updates!
+            const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!cart?.items?.length));
+            root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button,[data-cart-protect]').forEach(node => { node.disabled = !valid && !cart; });
             const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));
             if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon), button = el('button', '', display.label + ' ×'); button.type = 'button'; button.setAttribute('aria-label', display.removeLabel); button.addEventListener('click', () => client.write('remove-coupon', { code: display.code }).catch(() => {})); return button; })); }
             coupons.querySelectorAll('button').forEach(button => { button.disabled = !valid || pending; });

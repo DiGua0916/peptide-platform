@@ -166,6 +166,10 @@ final class Chase_Copy {
 	}
 
 	public static function subject_processing( $subject, $order ) {
+		$threshold = (float) get_option( 'pc_vip_order_threshold', 600 );
+		if ( $order instanceof \WC_Order && $threshold > 0 && (float) $order->get_total() >= $threshold ) {
+			return self::brand() . ' | Order #' . $order->get_order_number() . ' Confirmed — Priority Account Access';
+		}
 		return self::brand() . ' | Thank You for Your Order';
 	}
 
