@@ -761,6 +761,15 @@
       "module": "M1"
     },
     {
+      "name": "m2-adbrain-keys-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-hq/tests/m2-adbrain-keys-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M2"
+    },
+    {
       "name": "m1-monitor-checks-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-hq/tests/m1-monitor-checks-pure.php",

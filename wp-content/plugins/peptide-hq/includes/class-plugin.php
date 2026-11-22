@@ -47,6 +47,7 @@ final class Plugin {
 			Admin\Cdn_Page::hooks();
 			Admin\Design_Page::hooks();
 			Admin\Mail_Page::hooks();
+			Admin\Adbrain_Page::hooks(); // Ad Brain 接口密钥（2026-11-22）
 			Admin\Clone_Page::hooks();
 			Admin\Costs_Page::hooks();
 			Admin\Ai_Page::hooks();

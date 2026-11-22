@@ -61,6 +61,8 @@ final class Hq_Connector {
 
 	public static function register_hooks(): void {
 		add_action( 'rest_api_init', array( self::class, 'routes' ) );
+		// 总后台可以下发 Ad Brain 接口密钥（2026-11-22，见 config_route 的 adbrain_secret）。
+		add_filter( 'pc_hq_capabilities', static fn( array $caps ): array => $caps + array( 'hq.adbrain_secret' => '1' ) );
 		add_action( 'init', array( self::class, 'maybe_login' ), 0 );
 		add_action( 'admin_init', array( self::class, 'allow_hq_embed' ), 0 );
 		add_action( 'admin_init', array( self::class, 'maybe_register' ) );
@@ -520,7 +522,38 @@ final class Hq_Connector {
 				'retention_days' => (int) $t['retention_days'],
 				'gpc'            => (bool) $t['gpc'],
 			),
+			'adbrain'     => self::adbrain_state(),
 		);
+	}
+
+	/**
+	 * Ad Brain 接口密钥的状态（2026-11-22）：只报有没有、来源和指纹，从不回传密钥本身。
+	 *
+	 * @return array{enabled:bool,source:string,fp:string}
+	 */
+	public static function adbrain_state(): array {
+		if ( ! class_exists( Creatives\AdBrain_Bridge::class ) ) {
+			return array( 'enabled' => false, 'source' => 'missing', 'fp' => '' );
+		}
+		$secret = Creatives\AdBrain_Bridge::secret();
+		$const  = defined( 'PEPTIDE_ADBRAIN_SECRET' ) && '' !== trim( (string) constant( 'PEPTIDE_ADBRAIN_SECRET' ) );
+		return array(
+			'enabled' => '' !== $secret,
+			'source'  => '' === $secret ? 'none' : ( $const ? 'constant' : 'hq' ),
+			'fp'      => '' === $secret ? '' : self::adbrain_fp( $secret ),
+		);
+	}
+
+	/** 密钥指纹（纯函数）：sha256 前 12 位，总后台用它确认下发成功。 */
+	public static function adbrain_fp( string $secret ): string {
+		return substr( hash( 'sha256', $secret ), 0, 12 );
+	}
+
+	/**
+	 * 总后台下发的 Ad Brain 密钥是否合格（纯函数）：'' = 关闭；否则 32–256 个可见 ASCII 字符。
+	 */
+	public static function adbrain_secret_ok( string $secret ): bool {
+		return '' === $secret || 1 === preg_match( '/^[\x21-\x7E]{32,256}$/D', $secret );
 	}
 
 	/**
@@ -543,6 +576,18 @@ final class Hq_Connector {
 		// 总后台改店铺名称：同步到店铺自己的名称（2026-11-08）。
 		if ( isset( $p['name'] ) && is_string( $p['name'] ) && '' !== trim( sanitize_text_field( $p['name'] ) ) ) {
 			update_option( 'blogname', mb_substr( trim( sanitize_text_field( $p['name'] ) ), 0, 190 ) );
+		}
+		// Ad Brain 接口密钥（2026-11-22）：总后台统一生成下发，'' = 关闭。投手后台不显示。
+		if ( array_key_exists( 'adbrain_secret', $p ) ) {
+			$secret = is_string( $p['adbrain_secret'] ) ? trim( $p['adbrain_secret'] ) : null;
+			if ( null === $secret || ! self::adbrain_secret_ok( $secret ) ) {
+				return new \WP_Error( 'pc_adbrain_secret', 'The Ad Brain key must be 32-256 printable ASCII characters.', array( 'status' => 400 ) );
+			}
+			if ( '' === $secret ) {
+				delete_option( 'pc_adbrain_bridge_secret' );
+			} else {
+				update_option( 'pc_adbrain_bridge_secret', $secret, false );
+			}
 		}
 		if ( isset( $p['tracking'] ) && is_array( $p['tracking'] ) ) {
 			$t   = $p['tracking'];

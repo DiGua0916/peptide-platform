@@ -732,3 +732,11 @@ F1 的发布是整目录替换。新的包基于 fd0c316，所以：
   - 还没做：6 店「额外 CSS」里的手机分类栏规则要并进 `demo-catalog.css` 并删掉额外 CSS（站点会话负责，随下次发布）。
 - **换域名**：s0006 → sarnovea.com（军），s0007 → rovkazar.com（阳），站点会话 11-22 改的。店铺侧 Domain_Mail_Sync 已自动把发件地址改为 `orders@新域名`。s0006 发件人名称仍是 `VialCovePeptides`（不是旧品牌名，按规则没动），要换品牌名需人工改。
 - **Cloudflare 发信结论**：光辉、老毛、芒果的令牌已加总后台 IPv6 `2600:1f18:c52:ac00:af6:a354:2a53:5e13` 和缺的权限，令牌验证、查域名都正常。但 Email Sending 接口仍 401（2036）。阳的号后台页面写明「电子邮件发送功能目前仅在 Workers Paid 计划中可用」，订阅列表为空，所以每个买手号都要开 Workers Paid 并点「启用邮件发送」，总后台才能建 `orders@新域名`。军、阳的号已建令牌 vialcove-hq，等所有者填进总后台 CDN 页。
+
+## 2026-11-22 总后台「Ad Brain 接口」页（分支 claude/m1-adbrain-keys，未发布）
+
+所有者要求：Ad Brain 接口密钥放在总后台统一配置，投手不用操作。
+- 店铺（peptide-core 0.34.13，`Hq_Connector`）：`/peptide/v1/hq/config` 多收一个 `adbrain_secret`（'' = 关闭；否则 32–256 个可见字符，写入选项 `pc_adbrain_bridge_secret`），返回里多一项 `adbrain: {enabled, source(none|hq|constant|missing), fp}`，**从不回传密钥本身**。功能声明 `hq.adbrain_secret`（过滤器里加，不改 base）。
+- 总后台（peptide-hq 0.5.4）：`Adbrain_Keys` 生成 64 位十六进制密钥 → 经店铺连接下发 → 店铺回报的指纹对上才加密保存（`pchq_adbrain_keys`，Crypto）；关闭 = 下发 '' 并删记录。页面 `admin.php?page=pchq-adbrain`：每店状态（和店铺实时比对）、开启 / 重新生成 / 关闭、一键给所有店开启（已开的不动）、复制给 Ad Brain 的整份配置（store、site=公开域名、base_url、secret）。
+- 测试：`peptide-hq/tests/m2-adbrain-keys-pure.php` 34 项；全套本机测试 114/0/2。还没在真实 WordPress 上点过：发布时先发沙盒，在沙盒总后台实点开启 / 关闭，再发生产。
+- 发布顺序无所谓：总后台只对声明了 `hq.adbrain_secret` 的店操作，旧店显示“先发布最新版本”。店铺声明在下一次总后台轮询后生效。
