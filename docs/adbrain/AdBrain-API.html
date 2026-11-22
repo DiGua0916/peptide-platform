@@ -1,0 +1,320 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Ad Brain 店铺接口文档</title>
+<style>
+:root{--bg:#fff;--fg:#1d1f23;--muted:#5b6170;--line:#e3e5ea;--code:#f4f5f7;--accent:#1f5fbf;--warn:#9a5b00;--warnbg:#fff6e5}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#16181c;--fg:#e7e9ee;--muted:#a3a9b6;--line:#2c3038;--code:#22252b;--accent:#7fb0ff;--warn:#f0b35a;--warnbg:#2a2214}}
+:root[data-theme="dark"]{--bg:#16181c;--fg:#e7e9ee;--muted:#a3a9b6;--line:#2c3038;--code:#22252b;--accent:#7fb0ff;--warn:#f0b35a;--warnbg:#2a2214}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.65 -apple-system,BlinkMacSystemFont,"PingFang SC","Microsoft YaHei",Segoe UI,sans-serif}
+main{max-width:920px;margin:0 auto;padding:32px 16px 80px}
+h1{font-size:28px;margin:0 0 4px}h2{font-size:21px;margin:40px 0 10px;padding-top:12px;border-top:1px solid var(--line)}h3{font-size:16px;margin:24px 0 8px}
+p,li{color:var(--fg)}.muted{color:var(--muted)}
+code{background:var(--code);padding:1px 5px;border-radius:4px;font:13px/1.5 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;word-break:break-word}
+pre{background:var(--code);padding:12px 14px;border-radius:8px;overflow-x:auto;font:13px/1.55 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+pre code{background:none;padding:0}
+table{width:100%;border-collapse:collapse;margin:8px 0 16px;font-size:14px;display:block;overflow-x:auto}
+th,td{border:1px solid var(--line);padding:6px 9px;text-align:left;vertical-align:top}th{background:var(--code);white-space:nowrap}
+.note{background:var(--warnbg);border-left:4px solid var(--warn);padding:10px 14px;border-radius:6px;margin:12px 0}
+nav ol{padding-left:20px;columns:2;column-gap:32px}@media(max-width:600px){nav ol{columns:1}}
+a{color:var(--accent)}
+.tag{display:inline-block;font:12px ui-monospace,Menlo,monospace;padding:1px 7px;border-radius:4px;background:var(--accent);color:var(--bg);margin-right:6px}
+</style>
+</head>
+<body>
+<main>
+<h1>Ad Brain 店铺接口文档</h1>
+<p class="muted">版本：peptide-core 0.34.13 起 · 2026-11-22 · 适用于 VialCove 全部店铺</p>
+
+<p>Ad Brain 的服务器通过这组接口直接和每家店对接：读取素材选项、给新素材发编号和投放链接、改落地页、把没登记的广告归到素材，以及按日期区间拉取素材效果、人群画像和脱敏订单。</p>
+<p><strong>每家店是独立的接口</strong>：地址、密钥都按店分开。要接哪家店，就用哪家店的配置。</p>
+
+<nav><h3>目录</h3><ol>
+<li><a href="#setup">拿到配置</a></li><li><a href="#auth">签名规则</a></li><li><a href="#errors">错误格式</a></li><li><a href="#options">GET options</a></li>
+<li><a href="#issue">POST creatives/issue</a></li><li><a href="#landing">POST creatives/update-landing</a></li><li><a href="#relink">POST creatives/relink-ad</a></li><li><a href="#pull">GET pull</a></li>
+<li><a href="#example">签名示例代码</a></li><li><a href="#faq">常见问题</a></li>
+</ol></nav>
+
+<h2 id="setup">1. 拿到配置</h2>
+<p>平台所有者在<strong>总后台 → Ad Brain 接口</strong>页面给店铺开启后，点「复制整份配置」，得到下面这样的 JSON：</p>
+<pre><code>{
+  "stores": [
+    {
+      "store": "老毛",
+      "site": "korgavex.com",
+      "base_url": "https://www.korgavex.com/wp-json/peptide/v1/adbrain/",
+      "secret": "（64 位十六进制密钥）"
+    }
+  ]
+}</code></pre>
+<table><tr><th>字段</th><th>含义</th></tr>
+<tr><td><code>store</code></td><td>店铺名，只用于显示</td></tr>
+<tr><td><code>site</code></td><td>请求头 <code>X-AdBrain-Site</code> 填它</td></tr>
+<tr><td><code>base_url</code></td><td>接口根地址，后面接 <code>options</code>、<code>creatives/issue</code> 等</td></tr>
+<tr><td><code>secret</code></td><td>这家店的签名密钥，只放在 Ad Brain 服务器上，<strong>不要放进浏览器或前端代码</strong></td></tr>
+</table>
+<div class="note">密钥在总后台点「重新生成」后，旧密钥立刻失效，要换成新配置。店铺被「关闭」后，所有接口返回 503。</div>
+<p>如果服务器访问 <code>/wp-json/</code> 不方便，可以用等价写法：<code>https://www.店铺域名/?rest_route=/peptide/v1/adbrain/options</code>，签名不变。</p>
+
+<h2 id="auth">2. 签名规则（所有接口都要）</h2>
+<p>每个请求带 4 个请求头：</p>
+<table><tr><th>请求头</th><th>内容</th></tr>
+<tr><td><code>X-AdBrain-Site</code></td><td>配置里的 <code>site</code>（不能为空，最长 128）</td></tr>
+<tr><td><code>X-AdBrain-Time</code></td><td>当前 Unix 时间戳（秒）。和店铺时钟相差超过 <strong>±300 秒</strong>会被拒</td></tr>
+<tr><td><code>X-AdBrain-Nonce</code></td><td>每次请求新生成的随机串，16–64 位，只能用 <code>A-Z a-z 0-9 _ -</code>。<strong>600 秒内不能重复</strong></td></tr>
+<tr><td><code>X-AdBrain-Sign</code></td><td>签名：64 位小写十六进制</td></tr>
+</table>
+<p>签名 = <code>HMAC-SHA256(secret, 签名原文)</code>，十六进制小写。签名原文是 5 行，用 <code>\n</code> 连接：</p>
+<pre><code>请求方法大写            例：GET
+路由                    例：/peptide/v1/adbrain/options
+X-AdBrain-Time 的值     例：1795370000
+X-AdBrain-Nonce 的值    例：k3J9xQ2mP0aZ7wLr
+sha256(原始请求体) 的小写十六进制</code></pre>
+<ul>
+<li><strong>路由固定写 <code>/peptide/v1/adbrain/...</code></strong>，不带域名、不带 <code>/wp-json</code>、不带查询参数。</li>
+<li><strong>查询参数不参与签名</strong>（例如 pull 的 <code>from</code>/<code>to</code>），靠 Nonce 防重放。</li>
+<li>GET 请求体为空，空串的 sha256 是 <code>e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855</code>。</li>
+<li>POST 用 <code>Content-Type: application/json</code>，签名用的必须是<strong>实际发送的那串字节</strong>（先序列化，再签名，再原样发送）。</li>
+</ul>
+
+<h2 id="errors">3. 错误格式</h2>
+<p>出错时统一返回：</p>
+<pre><code>{"ok": false, "code": "bad_sign", "message": "The signature is not valid."}</code></pre>
+<table><tr><th>HTTP</th><th>code</th><th>原因</th></tr>
+<tr><td>503</td><td><code>bridge_not_configured</code></td><td>这家店没开启（总后台没生成密钥，或已关闭）</td></tr>
+<tr><td>401</td><td><code>bad_site</code></td><td>缺 <code>X-AdBrain-Site</code></td></tr>
+<tr><td>401</td><td><code>bad_time</code></td><td>时间戳缺失或偏差超过 300 秒</td></tr>
+<tr><td>401</td><td><code>bad_nonce</code></td><td>Nonce 格式不对</td></tr>
+<tr><td>401</td><td><code>bad_sign</code></td><td>签名不对（密钥、路由、请求体任一不一致）</td></tr>
+<tr><td>401</td><td><code>replay</code></td><td>Nonce 600 秒内用过</td></tr>
+<tr><td>400</td><td>见各接口</td><td>参数不对</td></tr>
+<tr><td>404</td><td><code>creative_not_found</code></td><td>素材编号不存在</td></tr>
+<tr><td>409</td><td><code>in_progress</code></td><td>同一个幂等键的请求还在处理中，稍后重试</td></tr>
+<tr><td>500</td><td><code>issue_failed</code> / <code>relink_failed</code></td><td>店铺内部错误，可重试</td></tr>
+</table>
+
+<h2 id="options">4. <span class="tag">GET</span>options — 读取素材选项</h2>
+<p>读取这家店的素材属性词表、可选落地页、时区和链接模板。建议在发号前先调一次。</p>
+<pre><code>GET {base_url}options</code></pre>
+<h3>返回</h3>
+<pre><code>{
+  "ok": true,
+  "store_timezone": "America/New_York",
+  "home_url": "https://www.korgavex.com/",
+  "url_template": "utm_source={{site_source_name}}&amp;utm_medium=paid&amp;utm_campaign={{campaign.id}}&amp;utm_term={{adset.id}}&amp;utm_content={{ad.id}}&amp;placement={{placement}}&amp;ad_name={{ad.name}}",
+  "vocab": [
+    {"attr": "hook", "value": "lab", "label": "检测报告", "required": true},
+    {"attr": "fmt",  "value": "...", "label": "...", "required": true}
+  ],
+  "landing_pages": [
+    {"url": "https://www.korgavex.com/", "label": "首页", "group": "..."}
+  ]
+}</code></pre>
+<table><tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>vocab</code></td><td>素材属性可选值。必填属性：<code>hook</code>（卖点）、<code>fmt</code>（形式）、<code>angle</code>（角度）；可选：<code>lang</code>（语言）</td></tr>
+<tr><td><code>landing_pages</code></td><td>这家店允许的落地页。发号 / 换落地页只能用这里面的地址</td></tr>
+<tr><td><code>url_template</code></td><td>Meta 广告「网址参数」的固定模板（发号返回的 <code>tracking_url</code> 已经带好）</td></tr>
+</table>
+
+<h2 id="issue">5. <span class="tag">POST</span>creatives/issue — 新素材发编号</h2>
+<p>登记一个新素材，返回素材编号（如 <code>C0123</code>）、专属投放链接和建议的广告名。<strong>幂等</strong>：同一个 <code>idempotency_key</code> 重复提交，返回第一次的结果，不会重复发号（记住最近 500 条）。</p>
+<pre><code>POST {base_url}creatives/issue
+Content-Type: application/json
+
+{
+  "idempotency_key": "adbrain-job-8812",
+  "attrs": {"hook": "lab", "fmt": "video", "angle": "trust", "lang": "en"},
+  "landing_url": "https://www.korgavex.com/",
+  "lp_ver": "v2",
+  "note": "Ad Brain 生成，批次 8812",
+  "want_code": "C0500",
+  "from_ad_id": "120211234567890123",
+  "image_base64": "data:image/jpeg;base64,/9j/4AAQ...",
+  "image_filename": "creative-8812.jpg"
+}</code></pre>
+<table><tr><th>参数</th><th>必填</th><th>说明</th></tr>
+<tr><td><code>idempotency_key</code></td><td>是</td><td>1–128 个可见 ASCII 字符，Ad Brain 自己的任务号即可</td></tr>
+<tr><td><code>attrs</code></td><td>是</td><td>对象。值按词表 <code>value</code> 匹配，也接受中文 <code>label</code>；都对不上或必填没给时，<strong>自动用词表里第一个值</strong>，并在 <code>attr_notes</code> 里注明</td></tr>
+<tr><td><code>landing_url</code></td><td>否</td><td>必须是 <code>landing_pages</code> 里的地址；不在列表里会改用首页，<code>warnings</code> 里有 <code>landing_url_not_allowed</code></td></tr>
+<tr><td><code>lp_ver</code></td><td>否</td><td>落地页版本名，1–32 位，字母数字和 <code>_ . -</code>；会加进链接 <code>&amp;lp_ver=</code></td></tr>
+<tr><td><code>note</code></td><td>否</td><td>备注</td></tr>
+<tr><td><code>want_code</code></td><td>否</td><td>想要的编号（<code>C</code> + 4–9 位数字）；被占用会另发一个，<code>warnings</code> 里有 <code>want_code_taken</code></td></tr>
+<tr><td><code>from_ad_id</code></td><td>否</td><td>已经在跑的 Meta 广告编号（6–25 位数字），顺便归到这个新素材</td></tr>
+<tr><td><code>image_base64</code></td><td>否</td><td>素材图片，jpg / png / gif / webp，解码后 ≤ 10 MB；可带 <code>data:image/...;base64,</code> 前缀。存不进去不影响发号</td></tr>
+<tr><td><code>image_filename</code></td><td>否</td><td>图片文件名</td></tr>
+</table>
+<h3>返回</h3>
+<pre><code>{
+  "idempotent_replay": false,
+  "ok": true,
+  "code": "C0123",
+  "tracking_url": "https://www.korgavex.com/?cr=C0123&amp;utm_source={{site_source_name}}&amp;...&amp;lp_ver=v2",
+  "suggested_ad_name": "C0123_hook-lab_fmt-video_angle-trust_lang-en",
+  "landing_url": "https://www.korgavex.com/",
+  "landing_label": "首页",
+  "lp_ver": "v2",
+  "attrs": {"hook": "lab", "fmt": "video", "angle": "trust", "lang": "en"},
+  "attr_notes": [{"attr": "fmt", "given": "视频", "used": "video", "how": "label"}],
+  "thumb_url": "https://www.korgavex.com/wp-content/uploads/...-150x150.jpg",
+  "from_ad_id": "120211234567890123",
+  "relinked": true,
+  "warnings": []
+}</code></pre>
+<ul>
+<li><code>tracking_url</code>：整条复制到 Meta 广告的网址里即可。一个素材一条链接，投到多少广告都用同一条。</li>
+<li><code>idempotent_replay: true</code> 表示这是重复提交，返回的是第一次的结果。</li>
+<li><code>attr_notes[].how</code>：<code>label</code> = 按中文名匹配上；<code>fallback</code> = 没匹配上，用了第一个值。</li>
+<li><code>warnings</code> 可能有：<code>landing_url_not_allowed</code>、<code>lp_ver_invalid</code>、<code>want_code_invalid</code>、<code>want_code_taken</code>、<code>from_ad_id_invalid</code>、<code>from_ad_relink_failed</code>、<code>image_not_saved</code>。有警告也算发号成功。</li>
+<li>错误：<code>bad_idempotency_key</code>（400）、<code>bad_attrs</code>（400）、<code>in_progress</code>（409）、<code>issue_failed</code>（500）。</li>
+</ul>
+
+<h2 id="landing">6. <span class="tag">POST</span>creatives/update-landing — 换落地页</h2>
+<p>修改某个素材的落地页和 / 或落地页版本。只改传了的字段。<strong>改完要把新的 <code>tracking_url</code> 重新填到 Meta 广告里。</strong></p>
+<pre><code>POST {base_url}creatives/update-landing
+{"code": "C0123", "landing_url": "https://www.korgavex.com/shop/", "lp_ver": "v3"}</code></pre>
+<table><tr><th>参数</th><th>说明</th></tr>
+<tr><td><code>code</code></td><td>必填，素材编号</td></tr>
+<tr><td><code>landing_url</code></td><td>可选；空串 = 改回首页；不在 <code>landing_pages</code> 里报 <code>landing_url_not_allowed</code>（400）</td></tr>
+<tr><td><code>lp_ver</code></td><td>可选；空串 = 去掉版本；格式不对报 <code>lp_ver_invalid</code>（400）</td></tr>
+</table>
+<pre><code>{"ok": true, "code": "C0123", "landing_url": "...", "landing_label": "...", "lp_ver": "v3", "tracking_url": "..."}</code></pre>
+
+<h2 id="relink">7. <span class="tag">POST</span>creatives/relink-ad — 广告归位</h2>
+<p>把一个 Meta 广告（通常是 <code>pull</code> 返回的 <code>unregistered_ads</code> 里的）归到某个素材，之后它的数据算在这个素材上。</p>
+<pre><code>POST {base_url}creatives/relink-ad
+{"ad_id": "120211234567890123", "code": "C0123"}</code></pre>
+<pre><code>{"ok": true, "ad_id": "120211234567890123", "code": "C0123"}</code></pre>
+<p>错误：<code>bad_ad_id</code>（400，必须是 6–25 位数字）、<code>creative_not_found</code>（404）、<code>relink_failed</code>（500）。</p>
+
+<h2 id="pull">8. <span class="tag">GET</span>pull — 拉区间数据</h2>
+<p>按日期区间拉这家店的素材效果、人群画像、每日明细和脱敏订单。</p>
+<pre><code>GET {base_url}pull?from=2026-11-01&amp;to=2026-11-21&amp;mode=last</code></pre>
+<table><tr><th>参数</th><th>说明</th></tr>
+<tr><td><code>from</code> / <code>to</code></td><td><code>YYYY-MM-DD</code>，<strong>按店铺时区</strong>，含首尾。默认最近 7 天（含今天），最多 62 天</td></tr>
+<tr><td><code>mode</code></td><td>归因方式：<code>last</code>（默认，下单前最后一次付费访问）或 <code>first</code>（第一次付费访问）</td></tr>
+</table>
+<p>参数不对返回 400：<code>bad_range</code>、<code>range_too_long</code>、<code>bad_mode</code>。<strong>记得查询参数不参与签名</strong>，签名路由仍是 <code>/peptide/v1/adbrain/pull</code>。</p>
+<h3>返回（顶层）</h3>
+<table><tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>store_timezone</code>、<code>from</code>、<code>to</code>、<code>mode</code></td><td>实际使用的区间</td></tr>
+<tr><td><code>partial</code></td><td><code>true</code> = 某部分数据读取失败，结果可能不全</td></tr>
+<tr><td><code>creatives_catalog</code></td><td>全部已登记素材：<code>code, status, attrs, note, thumb_url, landing_url, lp_ver, created_at</code></td></tr>
+<tr><td><code>ads_map</code></td><td>广告 → 素材：<code>ad_id, code, ad_name, adset_id, campaign_id, first_seen_ms, last_seen_ms</code></td></tr>
+<tr><td><code>unregistered_ads</code></td><td>还没归到素材的广告：<code>ad_id, code, ad_name, first_seen_ms, spend_cents</code> 等，可用 relink-ad 归位</td></tr>
+<tr><td><code>range_board</code></td><td>区间汇总，见下</td></tr>
+<tr><td><code>daily_rows</code></td><td>按天 × 素材的明细</td></tr>
+<tr><td><code>orders_ledger</code></td><td>区间内订单（脱敏），最多 5000 张</td></tr>
+<tr><td><code>orders_truncated</code></td><td><code>true</code> = 超过 5000 张被截断，请缩小区间</td></tr>
+</table>
+<h3>range_board</h3>
+<table><tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>rows[]</code></td><td>每个素材一行（见下表）</td></tr>
+<tr><td><code>total</code></td><td>全部合计，结构同一行（<code>code</code> 为 <code>*</code>）</td></tr>
+<tr><td><code>profiles</code></td><td>每个素材的人群画像（多维分布：地区、设备、来源、时段等），键是素材编号，另有 <code>total</code></td></tr>
+<tr><td><code>untagged_visitors</code></td><td>没带素材参数的访客数</td></tr>
+<tr><td><code>paid_visitors</code></td><td>付费来源访客数</td></tr>
+<tr><td><code>missing_param_ads</code></td><td>有花费有点击、但几乎没带参数访客进站的广告（可能链接参数没填对）</td></tr>
+</table>
+<p><code>rows[]</code> 每行：</p>
+<table><tr><th>字段</th><th>说明</th></tr>
+<tr><td><code>code</code></td><td>素材编号；<code>UNREG</code> = 未登记素材的合计</td></tr>
+<tr><td><code>visitors</code> / <code>valid_visitors</code></td><td>访客 / 有效访客</td></tr>
+<tr><td><code>intent</code></td><td>意向分层人数：<code>high, mid, low, invalid</code></td></tr>
+<tr><td><code>add_to_cart</code>、<code>checkout</code>、<code>cashier</code>、<code>orders</code></td><td>加购 / 进结账 / 进收银台 / 下单 人数</td></tr>
+<tr><td><code>sales_cents</code></td><td>销售额（分）</td></tr>
+<tr><td><code>spend_cents</code>、<code>impressions</code>、<code>link_clicks</code></td><td>Meta 花费（分）/ 展示 / 链接点击；没导入花费时为 <code>null</code></td></tr>
+<tr><td><code>behavior</code></td><td><code>avg_dwell_s</code> 平均停留秒数、<code>avg_pv</code> 平均浏览页数、<code>scroll_75_share</code> 滚动过 75% 的比例</td></tr>
+</table>
+<h3>daily_rows[]</h3>
+<p>每行 = 一天（<code>day</code>，店铺时区）× 一个素材：<code>day, code, attrs, custom, thumb, intent{high,mid,low,invalid}, visitors, valid_visitors, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks</code>（计数缺失为 0）。</p>
+<h3>orders_ledger[]</h3>
+<pre><code>{
+  "order_id": 11902,
+  "created_at_gmt": "2026-11-22T16:29:00Z",
+  "day_store_tz": "2026-11-22",
+  "status": "processing",
+  "currency": "USD",
+  "subtotal_cents": 9799, "discount_cents": 0, "shipping_cents": 0,
+  "total_cents": 9799, "refunded_cents": 0,
+  "payment_method": "...",
+  "country_code": "US", "state_code": "TX", "postcode_prefix": "750",
+  "customer_hash": "3f1c0a9b7e2d4c6a8b0e1f23",
+  "is_test_hint": false,
+  "attributed_cr_code": "C0123",
+  "attributed_ad_id": "120211234567890123",
+  "items": [{"sku": "...", "product_id": 123, "name": "...", "qty": 1, "line_total_cents": 9799}]
+}</code></pre>
+<ul>
+<li>订单状态包括：<code>processing</code>、<code>completed</code>（已付）、<code>pending</code>、<code>on-hold</code>、<code>failed</code>、<code>refunded</code>。</li>
+<li><strong>不返回</strong>姓名、邮箱、电话、详细地址、IP。<code>customer_hash</code> = 邮箱去空格转小写后 sha256 的前 24 位；没有邮箱时用电话最后 10 位数字算。同一个顾客在同一家店的哈希相同，可用来算复购。</li>
+<li><code>is_test_hint</code>：邮箱或姓名含 test，或被标记为测试单。统计时建议排除。</li>
+<li><code>attributed_*</code>：按 <code>mode</code> 归因到的素材和广告；没有付费访问为空串。</li>
+<li>金额全部是<strong>分</strong>（整数）。</li>
+</ul>
+
+<h2 id="example">9. 签名示例代码</h2>
+<h3>Python 3</h3>
+<pre><code>import hashlib, hmac, json, secrets, time, urllib.request
+
+def call(store, method, path, body=None, query=""):
+    # store = 配置里的一项：{"site", "base_url", "secret"}；path 如 "options"、"creatives/issue"
+    route = "/peptide/v1/adbrain/" + path
+    raw = b"" if body is None else json.dumps(body, ensure_ascii=False, separators=(",", ":")).encode()
+    ts, nonce = str(int(time.time())), secrets.token_urlsafe(18)
+    canonical = "\n".join([method.upper(), route, ts, nonce, hashlib.sha256(raw).hexdigest()])
+    sign = hmac.new(store["secret"].encode(), canonical.encode(), hashlib.sha256).hexdigest()
+    req = urllib.request.Request(store["base_url"] + path + (("?" + query) if query else ""),
+                                 data=raw if body is not None else None, method=method.upper())
+    for k, v in {"X-AdBrain-Site": store["site"], "X-AdBrain-Time": ts,
+                 "X-AdBrain-Nonce": nonce, "X-AdBrain-Sign": sign}.items():
+        req.add_header(k, v)
+    if body is not None:
+        req.add_header("Content-Type", "application/json")
+    with urllib.request.urlopen(req, timeout=120) as r:
+        return json.loads(r.read())
+
+# call(store, "GET", "options")
+# call(store, "POST", "creatives/issue", {"idempotency_key": "job-1", "attrs": {"hook": "lab"}})
+# call(store, "GET", "pull", query="from=2026-11-01&amp;to=2026-11-21&amp;mode=last")</code></pre>
+<h3>Node.js 18+</h3>
+<pre><code>import crypto from "node:crypto";
+
+export async function call(store, method, path, body, query = "") {
+  const route = "/peptide/v1/adbrain/" + path;
+  const raw = body === undefined ? "" : JSON.stringify(body);
+  const ts = String(Math.floor(Date.now() / 1000));
+  const nonce = crypto.randomBytes(18).toString("base64url");
+  const canonical = [method.toUpperCase(), route, ts, nonce,
+    crypto.createHash("sha256").update(raw).digest("hex")].join("\n");
+  const sign = crypto.createHmac("sha256", store.secret).update(canonical).digest("hex");
+  const res = await fetch(store.base_url + path + (query ? "?" + query : ""), {
+    method, body: body === undefined ? undefined : raw,
+    headers: { "X-AdBrain-Site": store.site, "X-AdBrain-Time": ts, "X-AdBrain-Nonce": nonce,
+      "X-AdBrain-Sign": sign, ...(body === undefined ? {} : { "Content-Type": "application/json" }) },
+  });
+  return res.json();
+}</code></pre>
+
+<h2 id="faq">10. 常见问题</h2>
+<h3>一直返回 503 bridge_not_configured</h3>
+<p>这家店还没开启。请平台所有者在总后台「Ad Brain 接口」页点开启，再把新配置交过来。</p>
+<h3>一直返回 401 bad_sign</h3>
+<ul><li>密钥是不是这家店的、是不是最新的（重新生成过会失效）。</li>
+<li>签名用的路由是不是 <code>/peptide/v1/adbrain/...</code>（不能带域名、<code>/wp-json</code>、<code>?</code> 后面的参数）。</li>
+<li>POST 签名用的请求体和实际发送的是不是同一串字节（不要签名后再重新序列化）。</li></ul>
+<h3>401 bad_time</h3>
+<p>服务器时钟偏了，校准 NTP。</p>
+<h3>返回空白 404 或 HTML 页面</h3>
+<p>请求没到达接口（地址拼错或被网络层拦截）。确认地址是配置里的 <code>base_url</code> 加路径；仍不行请联系平台所有者。</p>
+<h3>pull 很慢或超时</h3>
+<p>区间越长越慢，订单多的店建议按周拉；客户端超时设到 120 秒。</p>
+<h3>数据口径</h3>
+<ul><li>日期全部按<strong>店铺时区</strong>（<code>store_timezone</code>）。</li>
+<li>花费只能对到素材，分不到落地页版本。</li>
+<li>访客、意向分层和店铺后台「广告数据追踪」看板同一套口径。</li></ul>
+</main>
+</body>
+</html>
