@@ -1003,3 +1003,11 @@
 - 回滚：`/root/vialcove-backups/domain-swap-20261122/` 和 `/root/hq-backup-20261122/` 两处备份可逐项还原；旧证书需重新签发。
 - 过程中的一次失误：先用 SQL `REPLACE()` 改了序列化选项，`s:<len>:` 长度对不上导致 5 个选项读不出来；已反向替换还原原始字节后改用 PHP `update_option()` 重做，事后逐项确认可反序列化、值正确。
 - 未做，等所有者定：两家店 `pc_public_brand` 仍未设，且今天上线的 `Domain_Mail_Sync` 把 s0006 的 `woocommerce_email_from_name` 从 `VialCovePro` 改成了写死的 `VialCovePeptides`，所以两家新店的前台标题和订单邮件署名仍是主店品牌。发信域名 `orders@sarnovea.com` / `orders@rovkazar.com` 因 Cloudflare Email Routing 令牌权限（Unauthorized）接不上，邮件走总后台默认发件箱——这项六家店都一样，是既有问题。
+
+### 2026-11-22 ~11:45 UTC 首页选购区：手机端分类改成一行横向滑动（6 家店，额外 CSS，未发版）
+- 所有者看老毛店（korgavex.com）手机首页截图：「这里的排版改一下，这客户进来，全看分类了」。
+- 原因：线上 `themes/peptide-site/assets/demo-catalog.css` 里 `.vc-demo-catalog__filters` 是 `flex-wrap:wrap`（仓库版是 `overflow-x:auto` 单行，线上这份来自 11-22 的本地包，尚未归档）。11 个分类在 375px 宽手机上排成 5 行（252px）。首页「商品优先」开关（`catalogLayout=product_first`）在 6 家店本来就是开的，改设置没用。
+- 因 11-22 的 42 个文件还没归档进仓库，按约定不能跑 `vc-release go`，所以没有改主题文件，而是在每家店的 WordPress「额外 CSS」里追加一段（`/* VialCove catalog category row (mobile): begin */ … end */`，只在 `max-width:767px` 生效）：分类不换行、横向滑动、两侧出血到屏幕边缘、隐藏滚动条。沿用已有的「product description alignment」块的同一写法；原有那段未动。各店清了对象缓存和页面缓存。
+- 备份：web01 `/root/vialcove-backups/catalog-onerow-20261122/`（6 家店改前的额外 CSS，内容完全一致，md5 `0ae716b7…`；以及可重复执行的 `apply.php`）。回滚：把对应店的备份写回 `wp_update_custom_css_post()`，或删掉 begin/end 之间那段。
+- 实测（375×812，真实浏览器）：分类 5 行 252px → 1 行 44px；从「The peptide collection.」到第一个商品 473px → 265px；页面无横向滚动；滑到最后一个分类「Lipo-C」可点，筛选后 5 款，点回 All peptides 恢复 8 款。电脑端（1280）分类仍按原样换行，不受影响。主店先做并验收，再推到 s0006–s0010；6 家店前台都 200，老毛、光辉在住宅网络下实测同样 1 行 / 265px；优惠券卡片、折扣角标、Selling fast、加购按钮都在。
+- **待办：** 11-22 的包归档进仓库后，把这条规则合进 `demo-catalog.css`（手机断点里去掉 `flex-wrap:wrap`），随下一次发版上线，然后删掉 6 家店额外 CSS 里这一段。
