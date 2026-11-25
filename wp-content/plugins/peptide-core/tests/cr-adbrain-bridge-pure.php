@@ -3,7 +3,7 @@
  * Ad Brain 双桥接口测试：内存 SQLite 模拟 $wpdb，假的 REST 请求 / WooCommerce 订单，不需要 WordPress、MySQL 或网络。
  * 覆盖：未配密钥 503、签名正确 / 篡改 / 过期 / Nonce 重放 401、错误格式 {ok:false}、options、issue 幂等重放不增号、
  * 属性按中文名匹配和回退、落地页不在列表时回退首页、图片写媒体库、update-landing、relink-ad 联动访问表、
- * pull 的结构（区间汇总、15 维画像、按天明细、脱敏订单不含明文个人信息）。
+ * delete（没用过的真删、编号作废；有数据的默认归档或 409；重复调用幂等）、pull 的结构（区间汇总、15 维画像、按天明细、脱敏订单不含明文个人信息）。
  * 运行：php -n cr-adbrain-bridge-pure.php（需要 pdo_sqlite）
  */
 
@@ -86,6 +86,11 @@ namespace {
 			$st  = $this->run( "UPDATE {$table} SET {$set} WHERE {$wh}", array_merge( array_values( $data ), array_values( $where ) ) );
 			return false === $st ? false : $st->rowCount();
 		}
+		public function delete( string $table, array $where ) {
+			$wh = implode( ' AND ', array_map( static fn( $c ) => "{$c} = ?", array_keys( $where ) ) );
+			$st = $this->run( "DELETE FROM {$table} WHERE {$wh}", array_values( $where ) );
+			return false === $st ? false : $st->rowCount();
+		}
 	}
 
 	// ---------- WordPress / WooCommerce 替身 ----------
@@ -156,7 +161,7 @@ namespace PeptideCore\Tracking {
 
 namespace {
 	$inc = dirname( __DIR__ ) . '/includes/';
-	foreach ( array( 'contract', 'schema', 'creatives', 'intent-tiers', 'audience', 'board', 'daily-report', 'ads-panel', 'adbrain-bridge' ) as $f ) {
+	foreach ( array( 'contract', 'schema', 'creatives', 'intent-tiers', 'audience', 'board', 'daily-report', 'ads-panel', 'audience-ai', 'adbrain-bridge' ) as $f ) {
 		require $inc . 'creatives/class-' . $f . '.php';
 	}
 	require $inc . 'admin/class-onboarding.php';
@@ -194,6 +199,7 @@ namespace {
 		'POST /peptide/v1/adbrain/creatives/issue'           => 'rest_issue',
 		'POST /peptide/v1/adbrain/creatives/update-landing'  => 'rest_update_landing',
 		'POST /peptide/v1/adbrain/creatives/relink-ad'       => 'rest_relink_ad',
+		'POST /peptide/v1/adbrain/creatives/delete'          => 'rest_delete',
 		'GET /peptide/v1/adbrain/pull'                       => 'rest_pull',
 	);
 	/** 发一个请求（先过 permission，再进接口；出错时经 format_error 改写）。 */
@@ -389,6 +395,42 @@ namespace {
 	check( 'relink: bad ad id -> 400', 400 === $st && 'bad_ad_id' === $d['code'] );
 	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/relink-ad', array( 'ad_id' => $ad_y, 'code' => 'C0999' ) );
 	check( 'relink: unknown code -> 404, ad unchanged', 404 === $st && 'C0001' === Cr::ad( $ad_y )['code'] );
+
+	// ---------- 4b. delete ----------
+	check( 'delete_plan: unused -> delete', array( 'action' => 'delete', 'status' => 200, 'result' => 'deleted' ) === B::delete_plan( true, false, 'active', '', 'archive' ) );
+	check( 'delete_plan: in use -> archive / 409 / already archived', 'archive' === B::delete_plan( true, false, 'active', 'x', 'archive' )['action'] && 409 === B::delete_plan( true, false, 'active', 'x', 'fail' )['status'] && 'already_archived' === B::delete_plan( true, false, 'archived', 'x', 'archive' )['result'] );
+	check( 'delete_plan: missing / retired / bad option', 404 === B::delete_plan( false, false, '', '', 'archive' )['status'] && 'already_deleted' === B::delete_plan( false, true, '', '', 'archive' )['result'] && 'bad_if_in_use' === B::delete_plan( true, false, 'active', '', 'purge' )['error'] );
+	check( 'in_use_reason', 'used_by_ads' === B::in_use_reason( '已经有广告用了这个素材' ) && 'has_data' === B::in_use_reason( '已经有访客或花费数据' ) && '' === B::in_use_reason( '' ) );
+	$fresh = Cr::create( array( 'hook' => 'lab' ), 0, 'to delete' );
+	Ads_Panel::set_landing( $fresh, home_url( '/' ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => strtolower( $fresh ) ) );
+	check( 'delete: unused -> 200 deleted', 200 === $st && array( 'ok' => true, 'code' => $fresh, 'result' => 'deleted', 'reason' => '' ) === $d );
+	check( 'delete: row gone, code retired, landing cleared', null === Cr::get( $fresh ) && in_array( $fresh, Cr::retired_codes(), true ) && ! isset( get_option( Ads_Panel::LANDINGS, array() )[ $fresh ] ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => $fresh ) );
+	check( 'delete: repeat -> 200 already_deleted', 200 === $st && 'already_deleted' === $d['result'] );
+	$next = Cr::create( array( 'hook' => 'lab' ), 0, 'after delete' );
+	check( 'delete: deleted code is never reissued', $next !== $fresh && (int) substr( $next, 1 ) > (int) substr( $fresh, 1 ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => 'C0001', 'if_in_use' => 'fail' ) );
+	check( 'delete: in use + fail -> 409 with reason, untouched', 409 === $st && false === $d['ok'] && 'creative_in_use' === $d['code'] && 'has_data' === $d['reason'] && 'active' === Cr::get( 'C0001' )['status'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => 'C0001' ) );
+	check( 'delete: in use -> archived, data kept', 200 === $st && 'archived' === $d['result'] && 'has_data' === $d['reason'] && 'archived' === Cr::get( 'C0001' )['status'] && 'C0001' === Cr::ad( $ad_y )['code'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => 'C0001' ) );
+	check( 'delete: repeat -> already_archived', 200 === $st && 'already_archived' === $d['result'] );
+	$wa = B::with_archived( array( 'C0002' => array( 'attrs' => array(), 'custom' => array(), 'thumb' => '' ) ), array( 'C0001' => Cr::get( 'C0001' ), 'C0002' => Cr::get( 'C0002' ) ) + ( Cr::get( $next ) ? array( $next => Cr::get( $next ) ) : array() ) );
+	check( 'with_archived: archived added with board shape, active-only list kept, other active not added', array( 'C0002', 'C0001' ) === array_keys( $wa ) && array( 'attrs', 'custom', 'thumb' ) === array_keys( $wa['C0001'] ) );
+	Cr::set_status( 'C0001', Cr::STATUS_ACTIVE ); // 后面的 pull 测试照旧用 C0001。
+	$by_ad = Cr::create( array( 'hook' => 'lab' ), 0, 'ad only' );
+	$wpdb->insert( 'wp_pc_ad_ads', array( 'ad_id' => '120210000000009999', 'code' => $by_ad ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => $by_ad ) );
+	check( 'delete: linked ad but no visits -> archived, reason used_by_ads', 200 === $st && 'archived' === $d['result'] && 'used_by_ads' === $d['reason'] && null !== Cr::get( $by_ad ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => 'C0999' ) );
+	check( 'delete: unknown -> 404 {ok:false}', 404 === $st && 'creative_not_found' === $d['code'] && false === $d['ok'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => 'abc' ) );
+	check( 'delete: malformed code -> 404', 404 === $st );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => $next, 'if_in_use' => 'purge' ) );
+	check( 'delete: bad if_in_use -> 400, nothing deleted', 400 === $st && 'bad_if_in_use' === $d['code'] && null !== Cr::get( $next ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', array( 'code' => $next ), array(), array( 'sign' => str_repeat( '0', 64 ) ) );
+	check( 'delete: bad signature -> 401, nothing deleted', 401 === $st && null !== Cr::get( $next ) );
 
 	// ---------- 5. pull：纯函数 ----------
 	check( 'pull_range defaults: last 7 days, mode last', array( 'from' => '2026-11-15', 'to' => '2026-11-21', 'mode' => 'last' ) === B::pull_range( array(), '2026-11-21' ) );

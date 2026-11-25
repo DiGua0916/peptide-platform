@@ -8,6 +8,7 @@
  *   POST creatives/issue           幂等发号 + 专属投放链接（可带图片）
  *   POST creatives/update-landing  换落地页 / 落地页版本
  *   POST creatives/relink-ad       未登记广告归到某个素材
+ *   POST creatives/delete          删除投放链接（素材编号）：没用过的直接删，有数据的默认归档（2026-11-25）
  *   GET  pull                      区间汇总、人群画像、按天明细、脱敏订单
  *
  * 安全：
@@ -56,6 +57,7 @@ final class AdBrain_Bridge {
 		register_rest_route( self::NS, self::BASE . '/creatives/issue', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_issue' ), 'permission_callback' => $perm ) );
 		register_rest_route( self::NS, self::BASE . '/creatives/update-landing', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_update_landing' ), 'permission_callback' => $perm ) );
 		register_rest_route( self::NS, self::BASE . '/creatives/relink-ad', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_relink_ad' ), 'permission_callback' => $perm ) );
+		register_rest_route( self::NS, self::BASE . '/creatives/delete', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_delete' ), 'permission_callback' => $perm ) );
 		register_rest_route( self::NS, self::BASE . '/pull', array( 'methods' => 'GET', 'callback' => array( self::class, 'rest_pull' ), 'permission_callback' => $perm ) );
 	}
 
@@ -480,6 +482,83 @@ final class AdBrain_Bridge {
 		return new \WP_REST_Response( array( 'ok' => true, 'ad_id' => $ad_id, 'code' => $code ), 200 );
 	}
 
+	// ---------- 4b. delete（2026-11-25）----------
+
+	/**
+	 * 删除一个投放链接要做什么（纯函数）。规则和店铺后台“素材库”一致：
+	 * 没有访客、花费、广告用过的才真删（编号作废、以后不再发）；已经有数据的不能删，默认改成归档（数据保留，店铺后台可恢复），
+	 * if_in_use = "fail" 时改为报 409。重复调用不报错：已删的返回 already_deleted，已归档的返回 already_archived。
+	 *
+	 * @param string $blocker Creatives::delete_blocker() 的结果，'' = 可以删。
+	 * @return array{action:string,status:int,result?:string,error?:string}
+	 */
+	public static function delete_plan( bool $exists, bool $retired, string $status, string $blocker, string $if_in_use ): array {
+		if ( ! in_array( $if_in_use, array( 'archive', 'fail' ), true ) ) {
+			return array( 'action' => 'none', 'status' => 400, 'error' => 'bad_if_in_use' );
+		}
+		if ( ! $exists ) {
+			return $retired ? array( 'action' => 'none', 'status' => 200, 'result' => 'already_deleted' ) : array( 'action' => 'none', 'status' => 404, 'error' => 'creative_not_found' );
+		}
+		if ( '' === $blocker ) {
+			return array( 'action' => 'delete', 'status' => 200, 'result' => 'deleted' );
+		}
+		if ( 'fail' === $if_in_use ) {
+			return array( 'action' => 'none', 'status' => 409, 'error' => 'creative_in_use' );
+		}
+		if ( Creatives::STATUS_ARCHIVED === $status ) {
+			return array( 'action' => 'none', 'status' => 200, 'result' => 'already_archived' );
+		}
+		return array( 'action' => 'archive', 'status' => 200, 'result' => 'archived' );
+	}
+
+	/** 不能删的原因 → 英文代码（has_data：已有访客或花费；used_by_ads：已有广告用了这个编号）。 */
+	public static function in_use_reason( string $blocker ): string {
+		if ( '' === $blocker ) {
+			return '';
+		}
+		return str_contains( $blocker, '广告' ) ? 'used_by_ads' : 'has_data';
+	}
+
+	public static function rest_delete( \WP_REST_Request $request ) {
+		$p         = (array) $request->get_json_params();
+		$code      = is_string( $p['code'] ?? null ) ? strtoupper( trim( $p['code'] ) ) : '';
+		$if_in_use = is_string( $p['if_in_use'] ?? null ) && '' !== $p['if_in_use'] ? $p['if_in_use'] : 'archive';
+		if ( ! Contract::valid_code( $code ) ) {
+			return self::error( 'creative_not_found', 404, 'No creative with this code.' );
+		}
+		$row     = Creatives::get( $code );
+		$blocker = $row ? Creatives::delete_blocker( $code ) : '';
+		$plan    = self::delete_plan( null !== $row, in_array( $code, Creatives::retired_codes(), true ), (string) ( $row['status'] ?? '' ), $blocker, $if_in_use );
+		$reason  = self::in_use_reason( $blocker );
+		if ( 'creative_in_use' === ( $plan['error'] ?? '' ) ) {
+			$why = 'used_by_ads' === $reason ? 'ads using it' : 'visitors or spend';
+			return new \WP_REST_Response( array( 'ok' => false, 'code' => 'creative_in_use', 'message' => 'This creative already has ' . $why . '; it can only be archived.', 'reason' => $reason ), 409 );
+		}
+		if ( isset( $plan['error'] ) ) {
+			$messages = array(
+				'bad_if_in_use'      => 'if_in_use must be "archive" or "fail".',
+				'creative_not_found' => 'No creative with this code.',
+			);
+			return self::error( $plan['error'], $plan['status'], $messages[ $plan['error'] ] );
+		}
+		if ( 'delete' === $plan['action'] ) {
+			if ( is_wp_error( Creatives::delete( $code ) ) ) {
+				return self::error( 'delete_failed', 500, 'Could not delete the creative.' );
+			}
+		} elseif ( 'archive' === $plan['action'] && ! Creatives::set_status( $code, Creatives::STATUS_ARCHIVED ) ) {
+			return self::error( 'delete_failed', 500, 'Could not archive the creative.' );
+		}
+		return new \WP_REST_Response(
+			array(
+				'ok'     => true,
+				'code'   => $code,
+				'result' => $plan['result'],
+				'reason' => $reason,
+			),
+			200
+		);
+	}
+
 	// ---------- 5. pull ----------
 
 	/**
@@ -585,6 +664,27 @@ final class AdBrain_Bridge {
 		return array( 'code' => Board::resolve_code( $v, $ads, $creatives ), 'ad_id' => (string) ( $v['utm_content'] ?? '' ) );
 	}
 
+	/**
+	 * 看板素材表（只有启用的）补上归档素材，形状同 Board::catalog()（纯函数）。
+	 *
+	 * @param array<string,array> $active Board::load() 的 creatives
+	 * @param array<string,array> $all    Creatives::all()
+	 */
+	public static function with_archived( array $active, array $all ): array {
+		foreach ( $all as $code => $c ) {
+			if ( isset( $active[ $code ] ) || Creatives::STATUS_ARCHIVED !== ( $c['status'] ?? '' ) ) {
+				continue;
+			}
+			$id               = (int) ( $c['attachment_id'] ?? 0 );
+			$active[ $code ] = array(
+				'attrs'  => (array) ( $c['attrs'] ?? array() ),
+				'custom' => (array) ( $c['custom'] ?? array() ),
+				'thumb'  => $id > 0 && function_exists( 'wp_get_attachment_image_url' ) ? (string) wp_get_attachment_image_url( $id, 'thumbnail' ) : '',
+			);
+		}
+		return $active;
+	}
+
 	public static function rest_pull( \WP_REST_Request $request ) {
 		$tz    = Board::timezone();
 		$range = self::pull_range( (array) $request->get_query_params(), Board::day( time() * 1000, $tz ) );
@@ -599,6 +699,8 @@ final class AdBrain_Bridge {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
 		$data = Board::load( $ms, $range['from'], $range['to'] );
+		// 店铺看板只算“启用”的素材；拉取要把归档素材也算上，否则通过 delete 归档的链接，历史访客、订单、花费会变成未登记（2026-11-25）。
+		$data['creatives'] = self::with_archived( (array) $data['creatives'], Creatives::all() );
 		$opt  = array( 'mode' => $range['mode'], 'dim' => 'creative', 'from_ms' => $ms[0], 'to_ms' => $ms[1], 'tz' => $tz );
 		$agg  = Board::aggregate( $data, $opt );
 
