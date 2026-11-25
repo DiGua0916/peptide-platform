@@ -1055,3 +1055,16 @@
 - 未动：8141（→ `3.13.90.211:8141` 的 302 跳转，WA-SCRM 已于 11-23 搬到第二台服务器）仍对外开放，风险低；那台服务器自身的鉴权需另行确认。
 - 回滚：`sudo ufw allow 8765/tcp`。
 - 待办（仅体检列出、尚未动手；#1 等所有者点头）：①源站未限制只放行 Cloudflare IP（`/etc/nginx/conf.d/vialcove-cloudflare-realip.conf` 自述 "No origin allow-list"）——动手前的核对清单：总后台(54.144.250.46)连各店走域名还是直连 IP、vc-release 发布后检查（含付款回写探测、前台检查）是否直连源站、PanaPay 回调打域名还是 IP、各会话 `curl --resolve` 直连源站只读核对的替代路径、以及确认 realip 配置与区域路由斗篷取真实 IP 的行为不变；③五家子店管理员名均 `a123456`、无 2FA、fail2ban 未启用；⑤s0001 根目录权限 `777`；⑥WP 7.1.4→7.1.5 / Woo 11.2.1→11.3.1 / fluent-smtp 待更新（走 F1）。
+
+
+### 2026-11-25 ~21:20 UTC 安全加固 #1：web01 443 源站只放行 Cloudflare 网段 + 总后台（防火墙，未发版）
+- 背景/授权：体检 #1，所有者在会话点头「改吧」。此前 443 对 Anywhere 开放，知道源站 IP（34.231.148.231）即可绕过 Cloudflare WAF/Bot Fight 直打源站。F1 只读核过影响：vc-release（SSH 22）、健康检查/总后台连店/付款回写（走 admin 机 s000X.vialcoveresearch.com）、现有域名证书续期（走 CF）均不受影响；仅两条直连 web01 的路要放行。
+- 改动（web01 ufw，未推文件、未走 F1）：
+  - 443 由 `ALLOW Anywhere` 改为只放行 Cloudflare 官方 22 个网段（15 v4 + 7 v6，取自 cloudflare.com/ips-v4|v6，与 `/etc/nginx/conf.d/vialcove-cloudflare-realip.conf` 一致）+ 总后台 `54.144.250.46` 和 `2600:1f18:c52:ac00:af6:a354:2a53:5e13`（`Cdn::origin_ready()` 用 CURLOPT_RESOLVE 直连 web01:443 查证书，`peptide-hq/includes/class-cdn.php:454`）。
+  - 80 保持对 Anywhere 开放（新域名 DNS-only 时 certbot webroot，Let's Encrypt 从任意 IP 直连 web01:80）。22 不动。
+  - 规则带注释 `cf443` / `hq443` 便于管理。
+- 刷新：systemd timer `vialcove-cf-ufw-refresh.timer`（每日，RandomizedDelaySec 30min）跑 `/usr/local/sbin/vialcove-cf-ufw-refresh.sh`，**只增不删**（抓取失败或条数异常[<15 或 >60]则不动），把新出现的 CF 网段补进 443；已下架网段只记日志 `/var/log/vialcove-cf-ufw-refresh.log` 供人工复核。首跑 added=0。
+- 过程修正：首次应用时 CF v4 列表末尾无换行，`cat` 拼接把 `131.0.72.0/22` 与 `2400:cb00::/32` 粘成非法地址漏加（ufw 报 Bad source address）；已单独补上，之后逐条核对 22/22 全在、0 遗漏 0 多余。
+- 安全措施：改前 armed 一个 15 分钟自动回开 443（`ufw allow 443/tcp`）的 systemd 一次性定时器 `ufw443-failsafe`，确认合法流量正常后已取消。
+- 验证：22 个 CF 网段全部在、无 `443/tcp ALLOW Anywhere`；六家店（vialcovepeptides / sarnovea / dalhoben / korgavex / lumornea / rovkazar）经 CF 全部 HTTP 301，合法流量未受影响；80/22 保持开放。直连源站绕过是否被挡，待外网落点复核（本会话沙盒出口不认 `--resolve`，无法自测）。
+- 备份/回滚：`/root/vialcove-backups/cf-ufw-20261125/`（`ufw-before.txt` / `ufw-after.txt` / `iptables-before.txt` / `cf-v4.txt` / `cf-v6.txt`）。回滚：`sudo ufw allow 443/tcp`（恢复对 Anywhere 开放），需要时再 `systemctl disable --now vialcove-cf-ufw-refresh.timer`。
