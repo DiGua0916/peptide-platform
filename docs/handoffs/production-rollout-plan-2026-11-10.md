@@ -1046,3 +1046,12 @@
 - 改法：各店选项 `wprlo_options['exempt_callback_paths']` 由默认 `/wc-api/,/healthz,/ping` 追加 `,/wp-json/peptide/v1/adbrain/`（WP-CLI，以 vcs000X 身份）。撤回：改回原值。
 - 外网核对：5 家子店 adbrain/options 都回 503 bridge_not_configured（未开密钥，正常）；其他 REST（/wp-json/wp/v2/posts）仍是 404。s0001 本来就能通。
 - 注意：重新复制店铺或重装该插件时这项设置可能丢，要重加。
+
+
+### 2026-11-25 ~20:40 UTC 安全加固：web01 关闭 adlab 预览端口 8765 的公网入口（防火墙，未发版）
+- 背景：六家店只读安全体检发现 adlab 预览（nginx:8765 → 本机 python `127.0.0.1:58765`）对 Anywhere 开放，且 nginx 的 `auth_basic` 一直被注释，等于一个内部广告沙盒工具裸露在公网、并绕过 Cloudflare。adlab 配置自述 "synthetic sandbox, open access"，无真实数据；它与经 Cloudflare、带签名保护的 Ad Brain REST 接口（`/wp-json/peptide/v1/adbrain/*`）是两套东西，本次不涉及后者。所有者在会话里明确「先把 2 修了」授权。
+- 改动：web01 `ufw delete allow 8765/tcp`（v4+v6 两条规则删除）。只改防火墙一条规则，未推送任何文件、未走 F1；nginx 配置和 python 后端均未动。
+- 验证：改后 ufw `默认 deny(incoming)` 生效，8765 不再放行；本机经 8765 → 58765 探测仍 HTTP 200（应用未受影响）。站点底层优化会话从外网复核：`34.231.148.231:8765` 已超时、连不上。
+- 未动：8141（→ `3.13.90.211:8141` 的 302 跳转，WA-SCRM 已于 11-23 搬到第二台服务器）仍对外开放，风险低；那台服务器自身的鉴权需另行确认。
+- 回滚：`sudo ufw allow 8765/tcp`。
+- 待办（仅体检列出、尚未动手；#1 等所有者点头）：①源站未限制只放行 Cloudflare IP（`/etc/nginx/conf.d/vialcove-cloudflare-realip.conf` 自述 "No origin allow-list"）——动手前的核对清单：总后台(54.144.250.46)连各店走域名还是直连 IP、vc-release 发布后检查（含付款回写探测、前台检查）是否直连源站、PanaPay 回调打域名还是 IP、各会话 `curl --resolve` 直连源站只读核对的替代路径、以及确认 realip 配置与区域路由斗篷取真实 IP 的行为不变；③五家子店管理员名均 `a123456`、无 2FA、fail2ban 未启用；⑤s0001 根目录权限 `777`；⑥WP 7.1.4→7.1.5 / Woo 11.2.1→11.3.1 / fluent-smtp 待更新（走 F1）。
