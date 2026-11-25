@@ -187,14 +187,20 @@ final class Hub {
 		if ( 'created' === $row['state'] ) {
 			$url = Crypto::decrypt( $row['checkout_box'], 'hub-checkout' );
 			$trust = self::checkout_trust( $row );
-			if ( Configuration::payment_url( $url, $trust ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
+			$listed = Configuration::payment_url( $url, $trust );
+			// 店主 2026-11-25：收单方换付款页域名不再拦截。名单外的域名只要是 HTTPS 公网域名就放行，
+			// 同时开「支付通道提醒」告诉店主；http、IP、内网地址、非 443 端口照旧拦下。
+			$new_host = $listed ? '' : self::unlisted_host( $url, $trust );
+			if ( '' !== $new_host ) { $trust['payment_hosts'][] = $new_host; }
+			if ( ( $listed || '' !== $new_host ) && ! ( $row['test_mode'] && 'production' === wp_get_environment_type() ) ) {
 				$result['type'] = $row['type']; $result['url'] = $url;
-				// Publish the same immutable policy that authorized this session, never
-				// today's account settings or a host inferred from the returned URL.
+				// Publish the policy that authorized this session (its frozen account hosts,
+				// plus the provider's new cashier host when it was let through above).
 				if ( is_string( $row['hosts_box'] ?? null ) && '' !== $row['hosts_box'] ) {
 					$result['checkout_policy'] = self::session_policy( $row, $trust );
 				}
-				self::host_alert_clear( $url );
+				if ( '' === $new_host ) { self::host_alert_clear( $url ); }
+				else { self::host_alert( $row, $url, self::checkout_trust( $row ), true ); }
 			} else { $result['state'] = 'unknown'; self::host_alert( $row, $url, $trust ); }
 		}
 		return $result;
@@ -203,7 +209,22 @@ final class Hub {
 	 * 收单方把付款页放到了名单外的域名（2026-11-09 主店事故）：记进中枢明细，并在总后台开一条「支付通道提醒」，
 	 * 写明是哪个账户、哪个域名、怎么处理。同一域名只开一条，加进名单后自动恢复。
 	 */
-	private static function host_alert( array $row, string $url, array $trust ): void {
+	/**
+	 * 付款页在名单外、但本身是合格的 HTTPS 公网地址时，返回它的域名（之后放行）；否则返回空串（照旧拦下）。
+	 * 合格的判断和名单内域名完全同一套（Configuration::payment_url），只是把这个域名临时算进名单。
+	 */
+	private static function unlisted_host( string $url, array $trust ): string {
+		$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
+		$hosts = (array) ( $trust['payment_hosts'] ?? array() );
+		if ( '' === $host || strlen( $host ) > 253 || false !== filter_var( $host, FILTER_VALIDATE_IP )
+			|| 1 !== preg_match( '/\A(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z](?:[a-z0-9-]{0,61}[a-z0-9])?\z/', $host )
+			|| in_array( $host, $hosts, true ) || count( $hosts ) > 30 ) {
+			return '';
+		}
+		$hosts[] = $host;
+		return Configuration::payment_url( $url, array_merge( $trust, array( 'payment_hosts' => $hosts ) ) ) ? $host : '';
+	}
+	private static function host_alert( array $row, string $url, array $trust, bool $allowed = false ): void {
 		try {
 			$host = strtolower( (string) wp_parse_url( $url, PHP_URL_HOST ) );
 			if ( '' === $host || ! preg_match( '/\A[a-z0-9.-]{1,253}\z/', $host ) ) { return; }
@@ -211,10 +232,12 @@ final class Hub {
 			$gateway = strtolower( (string) wp_parse_url( (string) ( $trust['gateway'] ?? '' ), PHP_URL_HOST ) );
 			if ( in_array( $host, $trusted, true ) || $host === $gateway ) { return; } // 不是域名问题（比如 http、带端口），不在这里提醒。
 			$account = Hub_Accounts::load( self::account_id( $row['account_id'] ?? 'default' ) );
-			$name    = (string) ( $account['account_name'] ?: $account['title'] ?: '支付账户' );
-			Hub_Details::record( (string) $row['ref'], 'create', '收银台域名不在名单', array( 'host' => $host, 'account' => $name, 'order_id' => $row['order_id'] ?? '' ) );
+			$name    = (string) ( ( $account['account_name'] ?? '' ) ?: ( $account['title'] ?? '' ) ?: '支付账户' );
+			Hub_Details::record( (string) $row['ref'], 'create', $allowed ? '收银台新域名（已放行）' : '收银台域名不在名单', array( 'host' => $host, 'account' => $name, 'order_id' => $row['order_id'] ?? '' ) );
 			if ( class_exists( '\PeptideHq\Alerts' ) ) {
-				\PeptideHq\Alerts::raise( 0, 'payment', 'host:' . $host, sprintf( '收单方把「%1$s」的付款页放到了 %2$s，这个域名不在收银台域名名单里，顾客付款会提示“支付会话未确认”。处理：总后台 → 支付账户 → %1$s → 收银台域名，加上 %2$s 即可，之后的订单自动恢复。', $name, $host ) );
+				\PeptideHq\Alerts::raise( 0, 'payment', 'host:' . $host, $allowed
+					? sprintf( '收单方把「%1$s」的付款页换到了新域名 %2$s，已自动放行，顾客可以正常付款。请向收单方确认这个域名是他们的；确认后到 总后台 → 支付账户 → %1$s → 收银台域名 加上 %2$s，这条提醒会自动标记为已处理。如果不是收单方的域名，请马上联系收单方。', $name, $host )
+					: sprintf( '收单方把「%1$s」的付款页放到了 %2$s，这个地址不是 HTTPS 公网域名，已拦下，顾客付款会提示“支付会话未确认”。请联系收单方。', $name, $host ) );
 			}
 		} catch ( \Throwable $ignored ) { /* 提醒失败不能影响支付流程。 */ }
 	}

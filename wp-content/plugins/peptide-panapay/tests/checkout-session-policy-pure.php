@@ -135,8 +135,14 @@ namespace {
 	$gateway_only = array_replace( $row, array( 'checkout_box' => 'https://gateway.example.invalid/pay', 'hosts_box' => json_encode( array( 'gateway' => 'https://gateway.example.invalid', 'payment_hosts' => array() ), JSON_THROW_ON_ERROR ) ) );
 	check( 'empty explicit list retains original implicit gateway trust', array( 'gateway.example.invalid' ) === $hq_session->invoke( null, $gateway_only )['checkout_policy']['payment_hosts'] );
 	$removed = array_replace( $row, array( 'hosts_box' => json_encode( array( 'gateway' => 'https://gateway.example.invalid', 'payment_hosts' => array( 'other.example.invalid' ) ), JSON_THROW_ON_ERROR ) ) );
-	$unavailable = $hq_session->invoke( null, $removed );
-	check( 'HQ does not enroll returned cashier outside frozen trust', 'unknown' === $unavailable['state'] && ! isset( $unavailable['url'], $unavailable['checkout_policy'] ) );
+	// 店主 2026-11-25：名单外但合格的 HTTPS 公网付款页放行，并只给这一次会话的策略加上这个域名。
+	$allowed = $hq_session->invoke( null, $removed );
+	check( 'HQ lets a public HTTPS cashier outside the list through', 'created' === $allowed['state'] && $url === $allowed['url'] );
+	check( 'HQ adds only the returned cashier host to this session policy', array( 'other.example.invalid', 'cashier.example.invalid', 'gateway.example.invalid' ) === $allowed['checkout_policy']['payment_hosts'] );
+	check( 'actual Bridge parser accepts the let-through session', $url === parse_session( $allowed )['url'] );
+	$insecure = array_replace( $removed, array( 'checkout_box' => 'http://cashier.example.invalid/pay' ) );
+	$unavailable = $hq_session->invoke( null, $insecure );
+	check( 'HQ still refuses a non-HTTPS cashier outside the list', 'unknown' === $unavailable['state'] && ! isset( $unavailable['url'], $unavailable['checkout_policy'] ) );
 	$has_success = true;
 	$completed = $hq_session->invoke( null, $row );
 	check( 'HQ success fence cannot expose checkout or policy', array( 'state' => 'unknown', 'account_id' => $account ) === $completed );
