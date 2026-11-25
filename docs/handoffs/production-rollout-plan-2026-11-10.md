@@ -1068,3 +1068,4 @@
 - 安全措施：改前 armed 一个 15 分钟自动回开 443（`ufw allow 443/tcp`）的 systemd 一次性定时器 `ufw443-failsafe`，确认合法流量正常后已取消。
 - 验证：22 个 CF 网段全部在、无 `443/tcp ALLOW Anywhere`；六家店（vialcovepeptides / sarnovea / dalhoben / korgavex / lumornea / rovkazar）经 CF 全部 HTTP 301，合法流量未受影响；80/22 保持开放。直连源站绕过是否被挡，待外网落点复核（本会话沙盒出口不认 `--resolve`，无法自测）。
 - 备份/回滚：`/root/vialcove-backups/cf-ufw-20261125/`（`ufw-before.txt` / `ufw-after.txt` / `iptables-before.txt` / `cf-v4.txt` / `cf-v6.txt`）。回滚：`sudo ufw allow 443/tcp`（恢复对 Anywhere 开放），需要时再 `systemctl disable --now vialcove-cf-ufw-refresh.timer`。
+- 外网复核（站点底层优化，2026-11-25）：直连源站 443（`--resolve` 到 34.231.148.231）vialcovepeptides.com / www / www.sarnovea.com / lumornea.com 均超时（curl exit 28），绕过已挡；直连源站 80 仍 308→https，ACME 路通；经 Cloudflare 手机 UA 访问六店 + `s0001.vialcoveresearch.com` 均 200、页面约 560–570 KB。注意：此后各会话不能再从外网用 `--resolve` 直连源站核对，需在服务器本机看。
