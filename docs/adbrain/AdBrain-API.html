@@ -27,15 +27,15 @@ a{color:var(--accent)}
 <body>
 <main>
 <h1>Ad Brain 店铺接口文档</h1>
-<p class="muted">版本：peptide-core 0.34.13 起 · 2026-11-22 · 适用于 VialCove 全部店铺</p>
+<p class="muted">版本：peptide-core 0.34.17 · 2026-11-26 · 适用于 VialCove 全部店铺（0.34.13 起可用，0.34.17 新增内容见“更新记录”）</p>
 
-<p>Ad Brain 的服务器通过这组接口直接和每家店对接：读取素材选项、给新素材发编号和投放链接、改落地页、把没登记的广告归到素材，以及按日期区间拉取素材效果、人群画像和脱敏订单。</p>
+<p>Ad Brain 的服务器通过这组接口直接和每家店对接：读取素材选项、给新素材发编号和投放链接、改落地页、把没登记的广告归到素材、删除素材，以及按日期区间拉取素材效果、全店漏斗、人群画像和脱敏订单。</p>
 <p><strong>每家店是独立的接口</strong>：地址、密钥都按店分开。要接哪家店，就用哪家店的配置。</p>
 
 <nav><h3>目录</h3><ol>
 <li><a href="#setup">拿到配置</a></li><li><a href="#auth">签名规则</a></li><li><a href="#errors">错误格式</a></li><li><a href="#options">GET options</a></li>
-<li><a href="#issue">POST creatives/issue</a></li><li><a href="#landing">POST creatives/update-landing</a></li><li><a href="#relink">POST creatives/relink-ad</a></li><li><a href="#pull">GET pull</a></li>
-<li><a href="#example">签名示例代码</a></li><li><a href="#faq">常见问题</a></li>
+<li><a href="#issue">POST creatives/issue</a></li><li><a href="#landing">POST creatives/update-landing</a></li><li><a href="#relink">POST creatives/relink-ad</a></li><li><a href="#delete">POST creatives/delete</a></li>
+<li><a href="#pull">GET pull</a></li><li><a href="#example">签名示例代码</a></li><li><a href="#faq">常见问题</a></li><li><a href="#changes">更新记录</a></li>
 </ol></nav>
 
 <h2 id="setup">1. 拿到配置</h2>
@@ -93,7 +93,8 @@ sha256(原始请求体) 的小写十六进制</code></pre>
 <tr><td>400</td><td>见各接口</td><td>参数不对</td></tr>
 <tr><td>404</td><td><code>creative_not_found</code></td><td>素材编号不存在</td></tr>
 <tr><td>409</td><td><code>in_progress</code></td><td>同一个幂等键的请求还在处理中，稍后重试</td></tr>
-<tr><td>500</td><td><code>issue_failed</code> / <code>relink_failed</code></td><td>店铺内部错误，可重试</td></tr>
+<tr><td>409</td><td><code>creative_in_use</code></td><td>要删的素材已有数据，且没传 <code>if_in_use=archive</code></td></tr>
+<tr><td>500</td><td><code>issue_failed</code> / <code>relink_failed</code> / <code>delete_failed</code> / <code>archive_failed</code></td><td>店铺内部错误，可重试</td></tr>
 </table>
 
 <h2 id="options">4. <span class="tag">GET</span>options — 读取素材选项</h2>
@@ -189,30 +190,58 @@ Content-Type: application/json
 <pre><code>{"ok": true, "ad_id": "120211234567890123", "code": "C0123"}</code></pre>
 <p>错误：<code>bad_ad_id</code>（400，必须是 6–25 位数字）、<code>creative_not_found</code>（404）、<code>relink_failed</code>（500）。</p>
 
-<h2 id="pull">8. <span class="tag">GET</span>pull — 拉区间数据</h2>
-<p>按日期区间拉这家店的素材效果、人群画像、每日明细和脱敏订单。</p>
-<pre><code>GET {base_url}pull?from=2026-11-01&amp;to=2026-11-21&amp;mode=last</code></pre>
+<h2 id="delete">8. <span class="tag">POST</span>creatives/delete — 删除素材</h2>
+<p>删除一个素材，规则和店铺后台素材库的“删除”一样。</p>
+<pre><code>POST {base_url}creatives/delete
+{"code": "C0123", "if_in_use": "archive"}</code></pre>
 <table><tr><th>参数</th><th>说明</th></tr>
-<tr><td><code>from</code> / <code>to</code></td><td><code>YYYY-MM-DD</code>，<strong>按店铺时区</strong>，含首尾。默认最近 7 天（含今天），最多 62 天</td></tr>
+<tr><td><code>code</code></td><td>必填，素材编号，如 <code>C0123</code>（大小写不限）</td></tr>
+<tr><td><code>if_in_use</code></td><td>素材已有数据时怎么办：<code>fail</code>（默认，返回 409）或 <code>archive</code>（改为归档，数据保留）</td></tr>
+</table>
+<p>“已有数据”= 有访客、有花费，或有广告用过这个素材。没有数据的素材直接删除，<strong>编号作废、不会再发给新素材</strong>（避免 Meta 里还挂着的旧链接算错）。</p>
+<h3>返回</h3>
+<table><tr><th>情况</th><th>HTTP</th><th>返回</th></tr>
+<tr><td>没有数据，已删除</td><td>200</td><td><code>{"ok":true,"code":"C0123","result":"deleted","code_retired":true}</code></td></tr>
+<tr><td>有数据，<code>if_in_use=archive</code></td><td>200</td><td><code>{"ok":true,"code":"C0123","result":"archived","in_use":true}</code>（已是归档的也返回这个）</td></tr>
+<tr><td>之前已删除过</td><td>200</td><td><code>{"ok":true,"code":"C0123","result":"already_deleted","code_retired":true}</code>，可放心重试</td></tr>
+<tr><td>有数据，<code>if_in_use=fail</code> 或没传</td><td>409</td><td><code>creative_in_use</code></td></tr>
+<tr><td>编号不存在</td><td>404</td><td><code>creative_not_found</code></td></tr>
+<tr><td>参数不对</td><td>400</td><td><code>bad_code</code>、<code>bad_if_in_use</code></td></tr>
+<tr><td>店铺内部错误</td><td>500</td><td><code>delete_failed</code>、<code>archive_failed</code>，可重试</td></tr>
+</table>
+<p>归档的素材仍出现在 <code>pull</code> 的 <code>creatives_catalog</code> 里（<code>status</code> 为 <code>archived</code>），历史数据照常统计。</p>
+
+<h2 id="pull">9. <span class="tag">GET</span>pull — 拉区间数据</h2>
+<p>按日期区间拉这家店的素材效果、全店漏斗、人群画像、每日明细和脱敏订单。</p>
+<pre><code>GET {base_url}pull?from=2026-11-01&amp;to=2026-11-21&amp;mode=last&amp;tz=America/Los_Angeles</code></pre>
+<table><tr><th>参数</th><th>说明</th></tr>
+<tr><td><code>from</code> / <code>to</code></td><td><code>YYYY-MM-DD</code>，按 <code>tz</code>（不传则按店铺时区），含首尾。默认最近 7 天（含今天），最多 62 天</td></tr>
+<tr><td><code>tz</code></td><td>可选，按哪个时区切日。IANA 时区名（<code>America/Los_Angeles</code>、<code>UTC</code>）或固定偏移（<code>UTC-8</code>、<code>GMT+8</code>、<code>-08:00</code>、<code>UTC-07:30</code>）。不传 = 店铺时区</td></tr>
 <tr><td><code>mode</code></td><td>归因方式：<code>last</code>（默认，下单前最后一次付费访问）或 <code>first</code>（第一次付费访问）</td></tr>
 </table>
-<p>参数不对返回 400：<code>bad_range</code>、<code>range_too_long</code>、<code>bad_mode</code>。<strong>记得查询参数不参与签名</strong>，签名路由仍是 <code>/peptide/v1/adbrain/pull</code>。</p>
+<p>参数不对返回 400：<code>bad_range</code>、<code>range_too_long</code>、<code>bad_mode</code>、<code>bad_timezone</code>。<strong>记得查询参数不参与签名</strong>，签名路由仍是 <code>/peptide/v1/adbrain/pull</code>。</p>
 <h3>返回（顶层）</h3>
 <table><tr><th>字段</th><th>说明</th></tr>
-<tr><td><code>store_timezone</code>、<code>from</code>、<code>to</code>、<code>mode</code></td><td>实际使用的区间</td></tr>
+<tr><td><code>store_timezone</code></td><td>店铺自己的时区</td></tr>
+<tr><td><code>applied_timezone</code></td><td>这次实际切日用的时区（传了 <code>tz</code> 就是它，否则同 <code>store_timezone</code>）</td></tr>
+<tr><td><code>from</code>、<code>to</code>、<code>mode</code></td><td>实际使用的区间和归因方式</td></tr>
 <tr><td><code>partial</code></td><td><code>true</code> = 某部分数据读取失败，结果可能不全</td></tr>
 <tr><td><code>creatives_catalog</code></td><td>全部已登记素材：<code>code, status, attrs, note, thumb_url, landing_url, lp_ver, created_at</code></td></tr>
 <tr><td><code>ads_map</code></td><td>广告 → 素材：<code>ad_id, code, ad_name, adset_id, campaign_id, first_seen_ms, last_seen_ms</code></td></tr>
 <tr><td><code>unregistered_ads</code></td><td>还没归到素材的广告：<code>ad_id, code, ad_name, first_seen_ms, spend_cents</code> 等，可用 relink-ad 归位</td></tr>
 <tr><td><code>range_board</code></td><td>区间汇总，见下</td></tr>
 <tr><td><code>daily_rows</code></td><td>按天 × 素材的明细</td></tr>
+<tr><td><code>daily_totals</code></td><td>按天的广告合计、未归因、全店合计，见下</td></tr>
 <tr><td><code>orders_ledger</code></td><td>区间内订单（脱敏），最多 5000 张</td></tr>
 <tr><td><code>orders_truncated</code></td><td><code>true</code> = 超过 5000 张被截断，请缩小区间</td></tr>
 </table>
 <h3>range_board</h3>
 <table><tr><th>字段</th><th>说明</th></tr>
 <tr><td><code>rows[]</code></td><td>每个素材一行（见下表）</td></tr>
-<tr><td><code>total</code></td><td>全部合计，结构同一行（<code>code</code> 为 <code>*</code>）</td></tr>
+<tr><td><code>total</code></td><td>广告带来的访客合计，结构同一行（<code>code</code> 为 <code>*</code>）</td></tr>
+<tr><td><code>unattributed</code></td><td>未归因的访客（没带素材参数进站的，包括自然流量和直接访问），漏斗字段同一行，<code>code</code> 为 <code>UNATTRIBUTED</code>；没有花费、展示、点击和 <code>behavior</code>；多一个 <code>returning_from_ad</code> = 以前从广告来过、这次没带参数回来的访客数（已算在 <code>visitors</code> 里）</td></tr>
+<tr><td><code>store_total</code></td><td>全店合计 = <code>total</code> + <code>unattributed</code> 逐项相加（一定相等），<code>code</code> 为 <code>ALL</code>；花费、展示、点击照抄 <code>total</code></td></tr>
+<tr><td><code>dashboard_funnel</code></td><td>店铺后台仪表盘自己的 8 步漏斗，同一时间窗，供对照：<code>visitors, view_content, add_to_cart, checkout, add_address, add_shipping, add_payment_info, paid</code>。仪表盘按每次访问算、不剔除无效访客，所以和 <code>store_total</code> 可能差几个人；读不到时为 <code>null</code></td></tr>
 <tr><td><code>profiles</code></td><td>每个素材的人群画像（多维分布：地区、设备、来源、时段等），键是素材编号，另有 <code>total</code></td></tr>
 <tr><td><code>untagged_visitors</code></td><td>没带素材参数的访客数</td></tr>
 <tr><td><code>paid_visitors</code></td><td>付费来源访客数</td></tr>
@@ -223,13 +252,19 @@ Content-Type: application/json
 <tr><td><code>code</code></td><td>素材编号；<code>UNREG</code> = 未登记素材的合计</td></tr>
 <tr><td><code>visitors</code> / <code>valid_visitors</code></td><td>访客 / 有效访客</td></tr>
 <tr><td><code>intent</code></td><td>意向分层人数：<code>high, mid, low, invalid</code></td></tr>
-<tr><td><code>add_to_cart</code>、<code>checkout</code>、<code>cashier</code>、<code>orders</code></td><td>加购 / 进结账 / 进收银台 / 下单 人数</td></tr>
+<tr><td><code>view_content</code></td><td>看过商品的人数</td></tr>
+<tr><td><code>add_to_cart</code>、<code>checkout</code></td><td>加购 / 进结账 人数</td></tr>
+<tr><td><code>add_address</code>、<code>add_shipping</code>、<code>add_payment_info</code></td><td>结账里填完地址 / 选了运费 / 选了付款方式 的人数（逐步递减；已下单的访客三步都算）</td></tr>
+<tr><td><code>cashier</code>、<code>orders</code></td><td>进收银台 / 下单 人数</td></tr>
+<tr><td><code>events</code></td><td>同样 8 步的<strong>事件次数</strong>（不去重）：<code>view_content, add_to_cart, checkout, add_address, add_shipping, add_payment_info, cashier, orders</code></td></tr>
 <tr><td><code>sales_cents</code></td><td>销售额（分）</td></tr>
 <tr><td><code>spend_cents</code>、<code>impressions</code>、<code>link_clicks</code></td><td>Meta 花费（分）/ 展示 / 链接点击；没导入花费时为 <code>null</code></td></tr>
 <tr><td><code>behavior</code></td><td><code>avg_dwell_s</code> 平均停留秒数、<code>avg_pv</code> 平均浏览页数、<code>scroll_75_share</code> 滚动过 75% 的比例</td></tr>
 </table>
 <h3>daily_rows[]</h3>
-<p>每行 = 一天（<code>day</code>，店铺时区）× 一个素材：<code>day, code, attrs, custom, thumb, intent{high,mid,low,invalid}, visitors, valid_visitors, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks</code>（计数缺失为 0）。</p>
+<p>每行 = 一天（<code>day</code>，按 <code>applied_timezone</code>）× 一个素材：<code>day, code, attrs, custom, thumb, intent{high,mid,low,invalid}, visitors, valid_visitors, add_to_cart, checkout, cashier, orders, sales_cents, spend_cents, impressions, link_clicks</code>，以及 <code>view_content, add_address, add_shipping, add_payment_info, events{…}</code>（含义同上，计数缺失为 0）。只放素材行。</p>
+<h3>daily_totals[]</h3>
+<p>每天一行：<code>{"day": "2026-11-25", "total": {…}, "unattributed": {…}, "store_total": {…}}</code>。三项结构分别同 <code>range_board</code> 的 <code>total</code>（不含 <code>behavior</code>）、<code>unattributed</code>、<code>store_total</code>。</p>
 <h3>orders_ledger[]</h3>
 <pre><code>{
   "order_id": 11902,
@@ -240,6 +275,12 @@ Content-Type: application/json
   "subtotal_cents": 9799, "discount_cents": 0, "shipping_cents": 0,
   "total_cents": 9799, "refunded_cents": 0,
   "payment_method": "...",
+  "payment_status_norm": "PAID",
+  "failure_reason": null,
+  "gateway_error_code": null,
+  "payment_attempts": 1,
+  "last_attempt_state": "paid",
+  "day_applied_tz": "2026-11-22",
   "country_code": "US", "state_code": "TX", "postcode_prefix": "750",
   "customer_hash": "3f1c0a9b7e2d4c6a8b0e1f23",
   "is_test_hint": false,
@@ -248,14 +289,19 @@ Content-Type: application/json
   "items": [{"sku": "...", "product_id": 123, "name": "...", "qty": 1, "line_total_cents": 9799}]
 }</code></pre>
 <ul>
-<li>订单状态包括：<code>processing</code>、<code>completed</code>（已付）、<code>pending</code>、<code>on-hold</code>、<code>failed</code>、<code>refunded</code>。</li>
+<li>订单状态包括：<code>processing</code>、<code>completed</code>（已付）、<code>pending</code>、<code>on-hold</code>、<code>failed</code>、<code>refunded</code>、<code>cancelled</code>。</li>
+<li><code>payment_status_norm</code> 标准化付款状态：<code>PAID</code>（processing / completed）、<code>REFUNDED</code>（付过款后退款）、<code>UNPAID_CHECKOUT</code>（pending / on-hold）、<code>FAILED</code>、<code>CANCELLED</code>、其他为 <code>OTHER</code>。</li>
+<li><code>failure_reason</code>：<code>gateway_reported_failure</code>（支付通道回报失败）、<code>order_marked_failed</code>（订单标为失败但通道没回报）、<code>payment_result_unknown</code>（待付款且付款结果未知）；其他情况 <code>null</code>。</li>
+<li><code>gateway_error_code</code> 目前一直是 <code>null</code>：支付通道的回调只告诉失败，不给拒付原因或错误码。</li>
+<li><code>payment_attempts</code> 付款尝试次数；<code>last_attempt_state</code> 最近一次尝试的状态，没有为 <code>null</code>。</li>
+<li><code>day_store_tz</code> 按店铺时区的下单日；<code>day_applied_tz</code> 按 <code>applied_timezone</code> 的下单日。</li>
 <li><strong>不返回</strong>姓名、邮箱、电话、详细地址、IP。<code>customer_hash</code> = 邮箱去空格转小写后 sha256 的前 24 位；没有邮箱时用电话最后 10 位数字算。同一个顾客在同一家店的哈希相同，可用来算复购。</li>
 <li><code>is_test_hint</code>：邮箱或姓名含 test，或被标记为测试单。统计时建议排除。</li>
-<li><code>attributed_*</code>：按 <code>mode</code> 归因到的素材和广告；没有付费访问为空串。</li>
+<li><code>attributed_*</code>：按 <code>mode</code> 归因到的素材和广告；没有付费访问为空串。没付款的订单（待付、失败等）现在也会带归因。</li>
 <li>金额全部是<strong>分</strong>（整数）。</li>
 </ul>
 
-<h2 id="example">9. 签名示例代码</h2>
+<h2 id="example">10. 签名示例代码</h2>
 <h3>Python 3</h3>
 <pre><code>import hashlib, hmac, json, secrets, time, urllib.request
 
@@ -298,7 +344,7 @@ export async function call(store, method, path, body, query = "") {
   return res.json();
 }</code></pre>
 
-<h2 id="faq">10. 常见问题</h2>
+<h2 id="faq">11. 常见问题</h2>
 <h3>一直返回 503 bridge_not_configured</h3>
 <p>这家店还没开启。请平台所有者在总后台「Ad Brain 接口」页点开启，再把新配置交过来。</p>
 <h3>一直返回 401 bad_sign</h3>
@@ -312,9 +358,15 @@ export async function call(store, method, path, body, query = "") {
 <h3>pull 很慢或超时</h3>
 <p>区间越长越慢，订单多的店建议按周拉；客户端超时设到 120 秒。</p>
 <h3>数据口径</h3>
-<ul><li>日期全部按<strong>店铺时区</strong>（<code>store_timezone</code>）。</li>
+<ul><li>日期默认按<strong>店铺时区</strong>（<code>store_timezone</code>）；传 <code>tz</code> 时按 <code>applied_timezone</code>。</li>
+<li>全店数字看 <code>store_total</code>；只看广告带来的看 <code>total</code>；两者之差就是 <code>unattributed</code>。</li>
 <li>花费只能对到素材，分不到落地页版本。</li>
 <li>访客、意向分层和店铺后台「广告数据追踪」看板同一套口径。</li></ul>
+<h2 id="changes">12. 更新记录</h2>
+<table><tr><th>版本</th><th>日期</th><th>内容</th></tr>
+<tr><td>0.34.17</td><td>2026-11-26</td><td>新增 <code>POST creatives/delete</code>。<code>pull</code>：新增参数 <code>tz</code> 和返回 <code>applied_timezone</code>；漏斗补 <code>view_content</code>、<code>add_address</code>、<code>add_shipping</code>、<code>add_payment_info</code> 和事件次数 <code>events</code>；<code>range_board</code> 新增 <code>unattributed</code>、<code>store_total</code>、<code>dashboard_funnel</code>；新增 <code>daily_totals</code>；订单新增 <code>cancelled</code> 状态、付款排障字段和 <code>day_applied_tz</code>，没付款的订单也带归因。原有字段和含义不变。</td></tr>
+<tr><td>0.34.13</td><td>2026-11-22</td><td>首版：<code>options</code>、<code>creatives/issue</code>、<code>creatives/update-landing</code>、<code>creatives/relink-ad</code>、<code>pull</code>。</td></tr>
+</table>
 </main>
 </body>
 </html>
