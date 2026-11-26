@@ -86,6 +86,11 @@ namespace {
 			$st  = $this->run( "UPDATE {$table} SET {$set} WHERE {$wh}", array_merge( array_values( $data ), array_values( $where ) ) );
 			return false === $st ? false : $st->rowCount();
 		}
+		public function delete( string $table, array $where ) {
+			$wh = implode( ' AND ', array_map( static fn( $c ) => "{$c} = ?", array_keys( $where ) ) );
+			$st = $this->run( "DELETE FROM {$table} WHERE {$wh}", array_values( $where ) );
+			return false === $st ? false : $st->rowCount();
+		}
 	}
 
 	// ---------- WordPress / WooCommerce 替身 ----------
@@ -156,7 +161,7 @@ namespace PeptideCore\Tracking {
 
 namespace {
 	$inc = dirname( __DIR__ ) . '/includes/';
-	foreach ( array( 'contract', 'schema', 'creatives', 'intent-tiers', 'audience', 'board', 'daily-report', 'ads-panel', 'adbrain-bridge' ) as $f ) {
+	foreach ( array( 'contract', 'schema', 'creatives', 'intent-tiers', 'audience', 'board', 'daily-report', 'ads-panel', 'audience-ai', 'adbrain-bridge' ) as $f ) {
 		require $inc . 'creatives/class-' . $f . '.php';
 	}
 	require $inc . 'admin/class-onboarding.php';
@@ -195,6 +200,7 @@ namespace {
 		'POST /peptide/v1/adbrain/creatives/update-landing'  => 'rest_update_landing',
 		'POST /peptide/v1/adbrain/creatives/relink-ad'       => 'rest_relink_ad',
 		'GET /peptide/v1/adbrain/pull'                       => 'rest_pull',
+		'POST /peptide/v1/adbrain/creatives/delete'          => 'rest_delete',
 	);
 	/** 发一个请求（先过 permission，再进接口；出错时经 format_error 改写）。 */
 	$call = function ( string $method, string $route, $body = '', array $query = array(), array $over = array() ) use ( &$secret, &$nonce_n, $routes ) {
@@ -435,7 +441,8 @@ namespace {
 		new WC_Order( 7004, intdiv( $d0, 1000 ) - 86400 * 30, array( 'status' => 'completed', 'total' => '9.00' ) ),
 	);
 	[ $st, $p ] = $call( 'GET', '/peptide/v1/adbrain/pull', '', array( 'from' => $prev, 'to' => $day, 'mode' => 'last' ) );
-	check( 'pull: 200 with top-level blocks', 200 === $st && true === $p['ok'] && array( 'ok', 'store_timezone', 'from', 'to', 'mode', 'partial', 'creatives_catalog', 'ads_map', 'unregistered_ads', 'range_board', 'daily_rows', 'orders_ledger', 'orders_truncated' ) === array_keys( $p ) );
+	check( 'pull: 200 with top-level blocks', 200 === $st && true === $p['ok'] && array( 'ok', 'store_timezone', 'applied_timezone', 'from', 'to', 'mode', 'partial', 'creatives_catalog', 'ads_map', 'unregistered_ads', 'range_board', 'daily_rows', 'daily_totals', 'orders_ledger', 'orders_truncated' ) === array_keys( $p ) );
+	check( 'pull: no tz -> applied_timezone is the store zone', $tz === $p['store_timezone'] && $tz === $p['applied_timezone'] );
 	check( 'pull: not partial', false === $p['partial'] && $prev === $p['from'] && $day === $p['to'] );
 	$cat = array_column( $p['creatives_catalog'], null, 'code' );
 	check( 'pull: catalog has issued creatives with landing + lp_ver', isset( $cat['C0001'], $cat['C0002'], $cat[ $issued ] ) && 'cat_best' === $cat['C0001']['lp_ver'] && 'https://shop.test/?vc_catalog_category=best' === $cat['C0001']['landing_url'] && 'https://shop.test/uploads/thumb-501.jpg' === $cat['C0001']['thumb_url'] );
@@ -446,7 +453,7 @@ namespace {
 	$rows = array_column( $rb['rows'], null, 'code' );
 	check( 'pull: range rows for C0001 / C0002 / UNREG spend', isset( $rows['C0001'], $rows['C0002'], $rows['UNREG'] ) );
 	check( 'pull: C0001 counts', 1 === $rows['C0001']['visitors'] && 1 === $rows['C0001']['orders'] && 15400 === $rows['C0001']['sales_cents'] && 4000 === $rows['C0001']['spend_cents'] && 30 === $rows['C0001']['link_clicks'] );
-	check( 'pull: row fields', array( 'code', 'visitors', 'valid_visitors', 'intent', 'add_to_cart', 'checkout', 'cashier', 'orders', 'sales_cents', 'spend_cents', 'impressions', 'link_clicks', 'behavior' ) === array_keys( $rows['C0001'] ) && array( 'high', 'mid', 'low', 'invalid' ) === array_keys( $rows['C0001']['intent'] ) );
+	check( 'pull: row fields', array( 'code', 'visitors', 'valid_visitors', 'intent', 'add_to_cart', 'checkout', 'cashier', 'orders', 'sales_cents', 'spend_cents', 'impressions', 'link_clicks', 'behavior', 'view_content', 'add_address', 'add_shipping', 'add_payment_info', 'events' ) === array_keys( $rows['C0001'] ) && array( 'high', 'mid', 'low', 'invalid' ) === array_keys( $rows['C0001']['intent'] ) );
 	check( 'pull: behavior block', array( 'avg_dwell_s', 'avg_pv', 'scroll_75_share' ) === array_keys( $rows['C0001']['behavior'] ) );
 	check( 'pull: C0002 add to cart', 1 === $rows['C0002']['add_to_cart'] );
 	check( 'pull: total row', '*' === $rb['total']['code'] && 2 === $rb['total']['visitors'] && 4900 === $rb['total']['spend_cents'] );
@@ -461,18 +468,20 @@ namespace {
 		$daily[ $r['day'] . '|' . $r['code'] ] = $r;
 	}
 	check( 'pull: daily rows split by day', isset( $daily[ $prev . '|C0001' ], $daily[ $day . '|C0002' ], $daily[ $day . '|UNREG' ] ) && ! isset( $daily[ $day . '|C0001' ] ) );
-	check( 'pull: daily row = report_row shape + day', array( 'day', 'code', 'attrs', 'custom', 'thumb', 'intent', 'visitors', 'valid_visitors', 'add_to_cart', 'checkout', 'cashier', 'orders', 'sales_cents', 'spend_cents', 'impressions', 'link_clicks' ) === array_keys( $daily[ $prev . '|C0001' ] ) );
+	check( 'pull: daily row = report_row shape + day', array( 'day', 'code', 'attrs', 'custom', 'thumb', 'intent', 'visitors', 'valid_visitors', 'add_to_cart', 'checkout', 'cashier', 'orders', 'sales_cents', 'spend_cents', 'impressions', 'link_clicks', 'view_content', 'add_address', 'add_shipping', 'add_payment_info', 'events' ) === array_keys( $daily[ $prev . '|C0001' ] ) );
 	check( 'pull: daily spend only from that day', 4000 === $daily[ $prev . '|C0001' ]['spend_cents'] && 900 === $daily[ $day . '|UNREG' ]['spend_cents'] );
 	check( 'pull: order query asks for the listed statuses only', B::ORDER_STATUSES === $GLOBALS['last_order_query']['status'] );
 	$led = array_column( $p['orders_ledger'], null, 'order_id' );
-	check( 'pull: ledger has in-range listed statuses only', array( 7001, 7002 ) === array_keys( $led ) && false === $p['orders_truncated'] );
+	check( 'pull: ledger has in-range listed statuses only (cancelled included since 11-26)', array( 7001, 7002, 7003 ) === array_keys( $led ) && false === $p['orders_truncated'] );
+	check( 'pull: payment_status_norm', 'PAID' === $led[7001]['payment_status_norm'] && 'FAILED' === $led[7002]['payment_status_norm'] && 'CANCELLED' === $led[7003]['payment_status_norm'] );
+	check( 'pull: failure fields', null === $led[7001]['failure_reason'] && 'order_marked_failed' === $led[7002]['failure_reason'] && null === $led[7002]['gateway_error_code'] && 0 === $led[7001]['payment_attempts'] );
 	$o = $led[7001];
 	check( 'pull: ledger money in cents', 15900 === $o['subtotal_cents'] && 1000 === $o['discount_cents'] && 500 === $o['shipping_cents'] && 15400 === $o['total_cents'] && 0 === $o['refunded_cents'] );
 	check( 'pull: ledger geo', 'PR' === $o['country_code'] && 'PR' === $o['state_code'] && '009' === $o['postcode_prefix'] && $prev === $o['day_store_tz'] );
 	check( 'pull: ledger hash + attribution', substr( hash( 'sha256', 'jane.doe@example.com' ), 0, 24 ) === $o['customer_hash'] && 'C0001' === $o['attributed_cr_code'] && $ad1 === $o['attributed_ad_id'] && false === $o['is_test_hint'] );
 	check( 'pull: ledger items', array( array( 'sku' => 'BPC-5', 'product_id' => 11, 'name' => 'BPC-157 5mg', 'qty' => 2, 'line_total_cents' => 14900 ) ) === $o['items'] );
 	check( 'pull: ledger test hint + no attribution', true === $led[7002]['is_test_hint'] && '' === $led[7002]['attributed_cr_code'] && '100' === $led[7002]['postcode_prefix'] );
-	check( 'pull: ledger fields', array( 'order_id', 'created_at_gmt', 'day_store_tz', 'status', 'currency', 'subtotal_cents', 'discount_cents', 'shipping_cents', 'total_cents', 'refunded_cents', 'payment_method', 'country_code', 'state_code', 'postcode_prefix', 'customer_hash', 'is_test_hint', 'attributed_cr_code', 'attributed_ad_id', 'items' ) === array_keys( $o ) );
+	check( 'pull: ledger fields', array( 'order_id', 'created_at_gmt', 'day_store_tz', 'status', 'currency', 'subtotal_cents', 'discount_cents', 'shipping_cents', 'total_cents', 'refunded_cents', 'payment_method', 'country_code', 'state_code', 'postcode_prefix', 'customer_hash', 'is_test_hint', 'attributed_cr_code', 'attributed_ad_id', 'items', 'payment_status_norm', 'failure_reason', 'gateway_error_code', 'payment_attempts', 'last_attempt_state', 'day_applied_tz' ) === array_keys( $o ) );
 	$json = (string) json_encode( $p['orders_ledger'] );
 	foreach ( array( 'Jane', 'Doe', 'Example.com', 'example.com', '555', 'Calle', 'test@shop.test', 'QA' ) as $needle ) {
 		check( 'pull: no plain PII in ledger (' . $needle . ')', ! str_contains( $json, $needle ) );
@@ -481,6 +490,62 @@ namespace {
 	check( 'pull: range too long -> 400 {ok:false}', 400 === $st && 'range_too_long' === $d['code'] && false === $d['ok'] );
 	[ $st, $p2 ] = $call( 'GET', '/peptide/v1/adbrain/pull', '', array( 'from' => $prev, 'to' => $day, 'mode' => 'first' ) );
 	check( 'pull: mode first works', 200 === $st && 'first' === $p2['mode'] );
+
+	// ---------- 6. 2026-11-26 双桥需求：8 步漏斗、未归因 / 全店、tz、未付单归因、删素材 ----------
+	check( 'parse_tz', array( 'zone' => '-08:00', 'label' => 'UTC-08:00' ) === B::parse_tz( 'UTC-8' ) && '+05:30' === B::parse_tz( 'GMT+5:30' )['zone'] && 'America/Los_Angeles' === B::parse_tz( 'America/Los_Angeles' )['zone'] && null === B::parse_tz( 'Mars/Base' ) && null === B::parse_tz( 'UTC+15' ) && null === B::parse_tz( '' ) );
+	check( 'pull_range: bad tz', 'bad_timezone' === B::pull_range( array( 'tz' => 'nowhere' ), '2026-11-01' )['error'] );
+	check( 'payment_fields: unknown attempt on pending', array( 'payment_status_norm' => 'UNPAID_CHECKOUT', 'failure_reason' => 'payment_result_unknown', 'gateway_error_code' => null, 'payment_attempts' => 1, 'last_attempt_state' => 'unknown' ) === B::payment_fields( 'pending', array( 'active' => 'a1', 'attempts' => array( 'a1' => array( 'state' => 'unknown' ) ) ) ) );
+	check( 'payment_fields: gateway failure; refunded', 'gateway_reported_failure' === B::payment_fields( 'failed', array( 'active' => 'a1', 'attempts' => array( 'a1' => array( 'state' => 'failed' ) ) ) )['failure_reason'] && 'REFUNDED' === B::payment_fields( 'refunded', '' )['payment_status_norm'] );
+	// 一位从 C0002 广告来、进了收银台但没付款的访客（填了地址、选了物流和支付），一位自然流量访客。
+	$wpdb->insert( 'wp_pc_track_visitors', array( 'id' => 205 ) );
+	$wpdb->insert( 'wp_pc_track_visitors', array( 'id' => 206 ) );
+	$wpdb->insert( 'wp_pc_track_visits', $v( array( 'visitor_id' => 205, 'start_ms' => $d1 + 3000, 'creative_code' => 'C0002', 'utm_content' => '120210000000002222', 'stage' => 4, 'order_id' => 7006 ) ) );
+	$wpdb->insert( 'wp_pc_track_visits', $v( array( 'visitor_id' => 206, 'start_ms' => $d1 + 4000, 'source_class' => 'organic', 'utm_content' => '', 'creative_code' => '', 'stage' => 2 ) ) );
+	$v205 = (int) $wpdb->get_var( 'SELECT id FROM wp_pc_track_visits WHERE visitor_id = 205' );
+	foreach ( array( 'product_view', 'add_to_cart', 'add_to_cart', 'checkout_view', 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' ) as $i => $type ) {
+		$wpdb->insert( 'wp_pc_track_events', array( 'visit_id' => $v205, 'type' => $type, 'page_type' => '', 'path' => '/', 'product_id' => 'product_view' === $type ? 11 : 0, 'data' => '{}', 'occurred_ms' => $d1 + 3000 + $i ) );
+	}
+	$GLOBALS['orders'][] = new WC_Order( 7006, intdiv( $d1, 1000 ) + 90, array( 'status' => 'pending', 'total' => '50.00', 'meta' => array( 'active' => 'a1', 'attempts' => array( 'a1' => array( 'state' => 'created' ) ) ) ) );
+	[ $st, $p3 ] = $call( 'GET', '/peptide/v1/adbrain/pull', '', array( 'from' => $prev, 'to' => $day, 'mode' => 'last' ) );
+	$rb3   = $p3['range_board'];
+	$rows3 = array_column( $rb3['rows'], null, 'code' );
+	check( 'funnel: C0002 8 steps (unpaid cashier visitor)', 1 === $rows3['C0002']['add_address'] && 1 === $rows3['C0002']['add_shipping'] && 1 === $rows3['C0002']['add_payment_info'] && 2 === $rows3['C0002']['view_content'] && 1 === $rows3['C0002']['cashier'] ); // 202 加购过，也算看过商品
+	check( 'funnel: event counts', 2 === $rows3['C0002']['events']['add_to_cart'] && 1 === $rows3['C0002']['events']['add_payment_info'] && 1 === $rows3['C0002']['events']['cashier'] && 0 === $rows3['C0002']['events']['orders'] );
+	check( 'funnel: steps never exceed checkout', $rows3['C0002']['add_address'] <= $rows3['C0002']['checkout'] );
+	check( 'unattributed: fb_untagged + organic visitors', 'UNATTRIBUTED' === $rb3['unattributed']['code'] && 2 === $rb3['unattributed']['visitors'] && 0 === $rb3['unattributed']['returning_from_ad'] );
+	$conserved = true;
+	foreach ( array( 'visitors', 'view_content', 'add_to_cart', 'checkout', 'add_address', 'add_shipping', 'add_payment_info', 'cashier', 'orders' ) as $k ) {
+		$conserved = $conserved && $rb3['total'][ $k ] + $rb3['unattributed'][ $k ] === $rb3['store_total'][ $k ];
+	}
+	check( 'store_total = ad total + unattributed', $conserved && 'ALL' === $rb3['store_total']['code'] && 5 === $rb3['store_total']['visitors'] );
+	check( 'ad total unchanged by the organic visitor', 3 === $rb3['total']['visitors'] && 3 === $rb3['paid_visitors'] );
+	$dt = array_column( $p3['daily_totals'], null, 'day' );
+	check( 'daily_totals per day conserve too', isset( $dt[ $day ] ) && $dt[ $day ]['total']['visitors'] + $dt[ $day ]['unattributed']['visitors'] === $dt[ $day ]['store_total']['visitors'] );
+	$led3 = array_column( $p3['orders_ledger'], null, 'order_id' );
+	check( 'unpaid order now carries attribution', 'C0002' === $led3[7006]['attributed_cr_code'] && 'UNPAID_CHECKOUT' === $led3[7006]['payment_status_norm'] && 1 === $led3[7006]['payment_attempts'] && null === $led3[7006]['failure_reason'] );
+	check( 'paid order attribution unchanged', 'C0001' === $led3[7001]['attributed_cr_code'] );
+	[ $st, $p4 ] = $call( 'GET', '/peptide/v1/adbrain/pull', '', array( 'from' => $prev, 'to' => $day, 'tz' => 'UTC-8' ) );
+	check( 'pull tz=UTC-8 echoes applied_timezone', 200 === $st && 'UTC-08:00' === $p4['applied_timezone'] && $tz === $p4['store_timezone'] );
+	$led4 = array_column( $p4['orders_ledger'], null, 'order_id' );
+	$o4 = $p4['orders_ledger'][0] ?? null; // UTC-8 的窗口比纽约晚，7001（纽约昨天 1 点）落到窗口外，取窗口里第一张
+	check( 'ledger day_applied_tz uses tz, day_store_tz stays store zone', null !== $o4 && \PeptideCore\Creatives\Board::day( strtotime( $o4['created_at_gmt'] ) * 1000, '-08:00' ) === $o4['day_applied_tz'] && \PeptideCore\Creatives\Board::day( strtotime( $o4['created_at_gmt'] ) * 1000, $tz ) === $o4['day_store_tz'] );
+	[ $st, $d ] = $call( 'GET', '/peptide/v1/adbrain/pull', '', array( 'tz' => 'Mars/Base' ) );
+	check( 'pull bad tz -> 400', 400 === $st && 'bad_timezone' === $d['code'] );
+
+	// creatives/delete
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0001' ) ) );
+	check( 'delete: in use + default fail -> 409', 409 === $st && 'creative_in_use' === $d['code'] && false === $d['ok'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0001', 'if_in_use' => 'archive' ) ) );
+	check( 'delete: in use + archive -> archived, data kept', 200 === $st && 'archived' === $d['result'] && 'archived' === $wpdb->get_var( "SELECT status FROM wp_pc_ad_creatives WHERE code = 'C0001'" ) );
+	$wpdb->insert( 'wp_pc_ad_creatives', array( 'code' => 'C0900', 'attrs' => '{}', 'custom' => '{}' ) ); // 传错了、还没用过的素材
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0900' ) ) );
+	check( 'delete: unused -> deleted, code retired', 200 === $st && 'deleted' === $d['result'] && null === $wpdb->get_var( "SELECT code FROM wp_pc_ad_creatives WHERE code = 'C0900'" ) && in_array( 'C0900', \PeptideCore\Creatives\Creatives::retired_codes(), true ) );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0900' ) ) );
+	check( 'delete: repeat -> already_deleted', 200 === $st && 'already_deleted' === $d['result'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0999' ) ) );
+	check( 'delete: unknown -> 404', 404 === $st && 'creative_not_found' === $d['code'] );
+	[ $st, $d ] = $call( 'POST', '/peptide/v1/adbrain/creatives/delete', (string) json_encode( array( 'code' => 'C0002', 'if_in_use' => 'drop' ) ) );
+	check( 'delete: bad if_in_use -> 400', 400 === $st && 'bad_if_in_use' === $d['code'] );
 
 	echo "cr-adbrain-bridge-pure: {$checks} checks passed\n";
 }

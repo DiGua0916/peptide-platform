@@ -41,7 +41,21 @@ final class AdBrain_Bridge {
 	public const EMPTY_SHA  = 'e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855';
 
 	/** 订单明细要的状态（已付、待付 / 失败、退款）。 */
-	public const ORDER_STATUSES = array( 'processing', 'completed', 'pending', 'on-hold', 'failed', 'refunded' );
+	public const ORDER_STATUSES = array( 'processing', 'completed', 'pending', 'on-hold', 'failed', 'refunded', 'cancelled' );
+
+	/** 订单状态 → 标准化付款状态（2026-11-26 双桥需求 #2）。退款单付过款，单列 REFUNDED。 */
+	public const PAYMENT_NORM = array(
+		'processing' => 'PAID',
+		'completed'  => 'PAID',
+		'refunded'   => 'REFUNDED',
+		'pending'    => 'UNPAID_CHECKOUT',
+		'on-hold'    => 'UNPAID_CHECKOUT',
+		'failed'     => 'FAILED',
+		'cancelled'  => 'CANCELLED',
+	);
+
+	/** PanaPay 记在订单上的付款尝试（只读，不改 PanaPay）。 */
+	public const PANAPAY_SESSIONS_META = '_pc_panapay_sessions';
 
 	private const IMAGE_TYPES = array( 'image/jpeg' => 'jpg', 'image/png' => 'png', 'image/gif' => 'gif', 'image/webp' => 'webp' );
 
@@ -57,6 +71,7 @@ final class AdBrain_Bridge {
 		register_rest_route( self::NS, self::BASE . '/creatives/update-landing', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_update_landing' ), 'permission_callback' => $perm ) );
 		register_rest_route( self::NS, self::BASE . '/creatives/relink-ad', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_relink_ad' ), 'permission_callback' => $perm ) );
 		register_rest_route( self::NS, self::BASE . '/pull', array( 'methods' => 'GET', 'callback' => array( self::class, 'rest_pull' ), 'permission_callback' => $perm ) );
+		register_rest_route( self::NS, self::BASE . '/creatives/delete', array( 'methods' => 'POST', 'callback' => array( self::class, 'rest_delete' ), 'permission_callback' => $perm ) );
 	}
 
 	// ---------- 验签 ----------
@@ -488,6 +503,9 @@ final class AdBrain_Bridge {
 	 * @return array{from:string,to:string,mode:string}|array{error:string}
 	 */
 	public static function pull_range( array $q, string $today ): array {
+		if ( isset( $q['tz'] ) && '' !== $q['tz'] && null === self::parse_tz( is_string( $q['tz'] ) ? $q['tz'] : '' ) ) {
+			return array( 'error' => 'bad_timezone' );
+		}
 		$to   = is_string( $q['to'] ?? null ) && '' !== $q['to'] ? $q['to'] : $today;
 		$from = is_string( $q['from'] ?? null ) && '' !== $q['from'] ? $q['from'] : gmdate( 'Y-m-d', (int) strtotime( $to . ' 00:00:00 UTC' ) - 6 * 86400 );
 		$mode = is_string( $q['mode'] ?? null ) && '' !== $q['mode'] ? $q['mode'] : 'last';
@@ -501,6 +519,107 @@ final class AdBrain_Bridge {
 			return array( 'error' => 'bad_mode' );
 		}
 		return array( 'from' => $from, 'to' => $to, 'mode' => $mode );
+	}
+
+	/**
+	 * 查询参数 tz（2026-11-26 双桥需求 #4，纯函数）：IANA 时区名（America/Los_Angeles）或固定偏移（UTC-8、GMT+8、-08:00、UTC-07:30）。
+	 * 返回 DateTimeZone 能用的写法和回给调用方的名字；不认识 = null。
+	 *
+	 * @return array{zone:string,label:string}|null
+	 */
+	public static function parse_tz( string $raw ): ?array {
+		$raw = trim( $raw );
+		if ( '' === $raw ) {
+			return null;
+		}
+		if ( preg_match( '/^(?:UTC|GMT)?\s*([+-])(\d{1,2})(?::?(\d{2}))?$/i', $raw, $m ) ) {
+			$h   = (int) $m[2];
+			$min = isset( $m[3] ) ? (int) $m[3] : 0;
+			if ( $h > 14 || $min > 59 || ( 14 === $h && $min > 0 ) ) {
+				return null;
+			}
+			$zone = sprintf( '%s%02d:%02d', $m[1], $h, $min );
+			return array( 'zone' => $zone, 'label' => 'UTC' . $zone );
+		}
+		if ( 0 === strcasecmp( $raw, 'UTC' ) || 0 === strcasecmp( $raw, 'GMT' ) ) {
+			return array( 'zone' => 'UTC', 'label' => 'UTC' );
+		}
+		if ( in_array( $raw, \DateTimeZone::listIdentifiers(), true ) ) {
+			return array( 'zone' => $raw, 'label' => $raw );
+		}
+		return null;
+	}
+
+	/** 8 步漏斗里新加的字段（2026-11-26 双桥需求 #1，纯函数）：去重人数 + 事件次数。 */
+	public static function funnel_fields( array $r ): array {
+		$ev  = (array) ( $r['events'] ?? array() );
+		$out = array(
+			'view_content'     => (int) ( $r['viewed'] ?? 0 ),
+			'add_address'      => (int) ( $r['address'] ?? 0 ),
+			'add_shipping'     => (int) ( $r['shipping'] ?? 0 ),
+			'add_payment_info' => (int) ( $r['payment'] ?? 0 ),
+			'events'           => array(),
+		);
+		foreach ( Board::EVENT_KEYS as $k ) {
+			$out['events'][ $k ] = (int) ( $ev[ $k ] ?? 0 );
+		}
+		return $out;
+	}
+
+	/**
+	 * 全店总漏斗 = 广告归因合计 + 未归因（纯函数，逐项相加，所以 rows 汇总 + unattributed == store_total 一定成立）。
+	 * 花费类字段只有广告有，照抄广告合计。
+	 */
+	public static function store_total( array $ads, array $unattr ): array {
+		$sum = static function ( $a, $b ) use ( &$sum ) {
+			if ( is_array( $a ) || is_array( $b ) ) {
+				$out = array();
+				foreach ( array_unique( array_merge( array_keys( (array) $a ), array_keys( (array) $b ) ) ) as $k ) {
+					$out[ $k ] = $sum( $a[ $k ] ?? 0, $b[ $k ] ?? 0 );
+				}
+				return $out;
+			}
+			return (int) $a + (int) $b;
+		};
+		$out = array( 'code' => 'ALL' );
+		foreach ( array( 'visitors', 'valid_visitors', 'intent', 'view_content', 'add_to_cart', 'checkout', 'add_address', 'add_shipping', 'add_payment_info', 'cashier', 'orders', 'sales_cents', 'events' ) as $k ) {
+			$out[ $k ] = $sum( $ads[ $k ] ?? 0, $unattr[ $k ] ?? 0 );
+		}
+		foreach ( array( 'spend_cents', 'impressions', 'link_clicks' ) as $k ) {
+			$out[ $k ] = $ads[ $k ] ?? null;
+		}
+		return $out;
+	}
+
+	/** 未归因这一桶（纯函数）：和 rows 同样的漏斗字段。 */
+	public static function unattributed_row( array $r, int $returning_ad ): array {
+		$row = self::board_rows( array( array( 'key' => 'UNATTRIBUTED' ) + $r ), array() )[0];
+		unset( $row['spend_cents'], $row['impressions'], $row['link_clicks'], $row['behavior'] );
+		$row['returning_from_ad'] = $returning_ad; // 以前从广告来过、这次没带参回来的访客（也算在 visitors 里）
+		return $row;
+	}
+
+	/**
+	 * 店铺仪表盘自己的 8 步漏斗（同一时间窗，按访问开始时间），给 store_total 对照用。仪表盘口径和看板不同
+	 * （按每次访问的阶段、不剔除无效访客），所以两者可能差几个人；读不到时为 null。
+	 */
+	private static function dashboard_funnel( array $ms ): ?array {
+		if ( ! class_exists( \PeptideCore\Data\Visitor_Funnel::class ) ) {
+			return null;
+		}
+		try {
+			$res  = ( new \PeptideCore\Data\Visitor_Funnel() )->period( $ms[0], $ms[1] );
+			$map  = array( 'visitors' => 'visitors', 'viewed' => 'view_content', 'carted' => 'add_to_cart', 'checkout' => 'checkout', 'address' => 'add_address', 'shipping' => 'add_shipping', 'payment' => 'add_payment_info', 'paid' => 'paid' );
+			$out  = array();
+			foreach ( (array) ( $res['overall']['layers'] ?? array() ) as $layer ) {
+				if ( isset( $map[ $layer['key'] ?? '' ] ) ) {
+					$out[ $map[ $layer['key'] ] ] = (int) $layer['count'];
+				}
+			}
+			return $out ?: null;
+		} catch ( \Throwable $e ) {
+			return null;
+		}
 	}
 
 	/** @return string[] from..to 的每一天 */
@@ -538,7 +657,7 @@ final class AdBrain_Bridge {
 					'avg_pv'          => $total['pv_avg'] ?? null,
 					'scroll_75_share' => $total['scroll75_rate'] ?? null,
 				),
-			);
+			) + self::funnel_fields( $r );
 		}
 		return $out;
 	}
@@ -586,9 +705,15 @@ final class AdBrain_Bridge {
 	}
 
 	public static function rest_pull( \WP_REST_Request $request ) {
-		$tz    = Board::timezone();
-		$range = self::pull_range( (array) $request->get_query_params(), Board::day( time() * 1000, $tz ) );
+		$store_tz = Board::timezone();
+		$query    = (array) $request->get_query_params();
+		$applied  = self::parse_tz( is_string( $query['tz'] ?? null ) ? $query['tz'] : '' );
+		$tz       = null !== $applied ? $applied['zone'] : $store_tz; // 2026-11-26：按 tz 切日；不传沿用店铺时区
+		$range    = self::pull_range( $query, Board::day( time() * 1000, $tz ) );
 		if ( isset( $range['error'] ) ) {
+			if ( 'bad_timezone' === $range['error'] ) {
+				return self::error( 'bad_timezone', 400, 'tz must be an IANA zone (America/Los_Angeles) or a fixed offset (UTC-8, -08:00).' );
+			}
 			return self::error( $range['error'], 400, 'from/to must be YYYY-MM-DD (from <= to, at most ' . self::MAX_DAYS . ' days); mode is last or first.' );
 		}
 		$ms = Board::range_ms( $range['from'], $range['to'], $tz );
@@ -598,27 +723,40 @@ final class AdBrain_Bridge {
 		if ( function_exists( 'set_time_limit' ) ) {
 			@set_time_limit( 120 ); // phpcs:ignore WordPress.PHP.NoSilencedErrors.Discouraged
 		}
-		$data = Board::load( $ms, $range['from'], $range['to'] );
-		$opt  = array( 'mode' => $range['mode'], 'dim' => 'creative', 'from_ms' => $ms[0], 'to_ms' => $ms[1], 'tz' => $tz );
+		$data = Board::load( $ms, $range['from'], $range['to'], true );
+		$opt  = array( 'mode' => $range['mode'], 'dim' => 'creative', 'from_ms' => $ms[0], 'to_ms' => $ms[1], 'tz' => $tz, 'unattributed' => true );
 		$agg  = Board::aggregate( $data, $opt );
+		$total_row = self::board_rows( array( array( 'key' => '*' ) + $agg['total'] ), $agg['profiles'] )[0];
+		$unattr    = self::unattributed_row( (array) $agg['unattributed'], (int) $agg['unattributed_returning_ad'] );
 
-		$daily = array();
+		$daily        = array();
+		$daily_totals = array();
 		foreach ( self::days( $range['from'], $range['to'] ) as $day ) {
 			$dms = Board::range_ms( $day, $day, $tz );
 			$dag = Board::aggregate( self::day_data( $data, $day ), array( 'from_ms' => $dms[0], 'to_ms' => $dms[1] ) + $opt );
+			$steps = array();
+			foreach ( $dag['rows'] as $r ) {
+				$steps[ (string) $r['key'] ] = self::funnel_fields( $r );
+			}
 			foreach ( Daily_Report::report_rows( $dag['rows'], (array) $data['creatives'] ) as $row ) {
 				$clean = Contract::report_row( $row );
 				if ( null !== $clean ) {
-					$daily[] = array( 'day' => $day ) + $clean;
+					$daily[] = array( 'day' => $day ) + $clean + ( $steps[ $clean['code'] ] ?? self::funnel_fields( array() ) );
 				}
 			}
+			// 2026-11-26 双桥需求 #5：每天的广告合计 / 未归因 / 全店（daily_rows 只放素材行，新加的三项单独放，不打乱老的消费逻辑）。
+			$d_total  = self::board_rows( array( array( 'key' => '*' ) + $dag['total'] ), array() )[0];
+			$d_unattr = self::unattributed_row( (array) $dag['unattributed'], (int) $dag['unattributed_returning_ad'] );
+			unset( $d_total['behavior'] );
+			$daily_totals[] = array( 'day' => $day, 'total' => $d_total, 'unattributed' => $d_unattr, 'store_total' => self::store_total( $d_total, $d_unattr ) );
 		}
 
-		$ledger = self::orders_ledger( $ms, $range['mode'], $tz, (array) $data['ads'], (array) $data['creatives'] );
+		$ledger = self::orders_ledger( $ms, $range['mode'], $store_tz, (array) $data['ads'], (array) $data['creatives'], $tz );
 		return new \WP_REST_Response(
 			array(
 				'ok'                => true,
-				'store_timezone'    => $tz,
+				'store_timezone'    => $store_tz,
+				'applied_timezone'  => null !== $applied ? $applied['label'] : $store_tz,
 				'from'              => $range['from'],
 				'to'                => $range['to'],
 				'mode'              => $range['mode'],
@@ -628,18 +766,88 @@ final class AdBrain_Bridge {
 				'unregistered_ads'  => Creatives::unregistered_ads(),
 				'range_board'       => array(
 					'rows'              => self::board_rows( $agg['rows'], $agg['profiles'] ),
-					'total'             => self::board_rows( array( array( 'key' => '*' ) + $agg['total'] ), $agg['profiles'] )[0],
+					'total'             => $total_row,
+					'unattributed'      => $unattr,
+					'store_total'       => self::store_total( $total_row, $unattr ),
+					'dashboard_funnel'  => self::dashboard_funnel( $ms ),
 					'profiles'          => $agg['profiles'],
 					'untagged_visitors' => (int) $agg['untagged'],
 					'paid_visitors'     => (int) $agg['paid'],
 					'missing_param_ads' => Board::missing_params( (array) $data['spend'], (array) $agg['ad_day_visitors'], Board::MIN_CLICKS, (array) $data['ads'] ),
 				),
 				'daily_rows'        => $daily,
+				'daily_totals'      => $daily_totals,
 				'orders_ledger'     => $ledger['orders'],
 				'orders_truncated'  => $ledger['truncated'],
 			),
 			200
 		);
+	}
+
+	/**
+	 * 付款排障字段（2026-11-26 双桥需求 #2，纯函数）。$book 是 PanaPay 存在订单上的付款尝试记录（只读）。
+	 * PanaPay 的回调只告诉我们 FAILED，不给拒付原因 / 错误码，所以 failure_reason 只能说我们这边看到的情况，gateway_error_code 一直是 null。
+	 *
+	 * @param mixed $book
+	 */
+	public static function payment_fields( string $status, $book ): array {
+		$attempts = is_array( $book ) && is_array( $book['attempts'] ?? null ) ? $book['attempts'] : array();
+		$active   = is_array( $book ) && is_string( $book['active'] ?? null ) ? $book['active'] : '';
+		$state    = '' !== $active && is_array( $attempts[ $active ] ?? null ) ? (string) ( $attempts[ $active ]['state'] ?? '' ) : '';
+		$reason   = null;
+		if ( 'failed' === $status ) {
+			$reason = 'failed' === $state ? 'gateway_reported_failure' : 'order_marked_failed';
+		} elseif ( in_array( $status, array( 'pending', 'on-hold' ), true ) && 'unknown' === $state ) {
+			$reason = 'payment_result_unknown';
+		}
+		return array(
+			'payment_status_norm' => self::PAYMENT_NORM[ $status ] ?? 'OTHER',
+			'failure_reason'      => $reason,
+			'gateway_error_code'  => null,
+			'payment_attempts'    => count( $attempts ),
+			'last_attempt_state'  => '' !== $state ? $state : null,
+		);
+	}
+
+	// ---------- 6. creatives/delete ----------
+
+	/**
+	 * 删素材（2026-11-26 双桥需求 #6）。入参 {code, if_in_use: archive | fail}（默认 fail）。
+	 * 规则和素材库的“删除”一样：没有访客、花费、广告用过才真删，删掉的编号不再发给新素材（免得 Meta 里还挂着的旧链接算错）；
+	 * 有数据的按 if_in_use 归档（数据保留）或返回 409 creative_in_use。重复删已删掉的编号返回 already_deleted。
+	 */
+	public static function rest_delete( \WP_REST_Request $request ) {
+		$p    = (array) $request->get_json_params();
+		$code = strtoupper( trim( is_string( $p['code'] ?? null ) ? $p['code'] : '' ) );
+		$mode = is_string( $p['if_in_use'] ?? null ) && '' !== $p['if_in_use'] ? $p['if_in_use'] : 'fail';
+		if ( ! Contract::valid_code( $code ) ) {
+			return self::error( 'bad_code', 400, 'code must be a creative code like C0006.' );
+		}
+		if ( ! in_array( $mode, array( 'archive', 'fail' ), true ) ) {
+			return self::error( 'bad_if_in_use', 400, 'if_in_use must be archive or fail.' );
+		}
+		$row = Creatives::get( $code );
+		if ( null === $row ) {
+			if ( in_array( $code, Creatives::retired_codes(), true ) ) {
+				return new \WP_REST_Response( array( 'ok' => true, 'code' => $code, 'result' => 'already_deleted', 'code_retired' => true ), 200 );
+			}
+			return self::error( 'creative_not_found', 404, 'No creative with this code on this store.' );
+		}
+		$why = Creatives::delete_blocker( $code );
+		if ( '' === $why ) {
+			$done = Creatives::delete( $code );
+			if ( is_wp_error( $done ) ) {
+				return self::error( 'delete_failed', 500, 'The creative could not be deleted; try again.' );
+			}
+			return new \WP_REST_Response( array( 'ok' => true, 'code' => $code, 'result' => 'deleted', 'code_retired' => true ), 200 );
+		}
+		if ( 'fail' === $mode ) {
+			return self::error( 'creative_in_use', 409, $code . ' already has visitors, spend or a linked ad; pass if_in_use=archive to archive it instead.' );
+		}
+		if ( Creatives::STATUS_ARCHIVED !== (string) ( $row['status'] ?? '' ) && ! Creatives::set_status( $code, Creatives::STATUS_ARCHIVED ) ) {
+			return self::error( 'archive_failed', 500, 'The creative could not be archived; try again.' );
+		}
+		return new \WP_REST_Response( array( 'ok' => true, 'code' => $code, 'result' => 'archived', 'in_use' => true ), 200 );
 	}
 
 	/** 全部已登记素材。 */
@@ -687,7 +895,7 @@ final class AdBrain_Bridge {
 	 *
 	 * @param array{0:int,1:int} $ms
 	 */
-	private static function orders_ledger( array $ms, string $mode, string $tz, array $ads, array $creatives ): array {
+	private static function orders_ledger( array $ms, string $mode, string $tz, array $ads, array $creatives, string $applied_tz = '' ): array {
 		global $wpdb;
 		if ( ! function_exists( 'wc_get_orders' ) ) {
 			return array( 'orders' => array(), 'truncated' => false );
@@ -715,6 +923,15 @@ final class AdBrain_Bridge {
 			foreach ( array_chunk( $ids, 500 ) as $chunk ) {
 				$in = implode( ',', array_map( 'intval', $chunk ) );
 				foreach ( (array) $wpdb->get_results( "SELECT order_id, visitor_id, start_ms FROM {$visits} WHERE order_id IN ({$in}) AND stage >= 5 ORDER BY start_ms", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+					$order_visit[ (int) $r['order_id'] ] = $order_visit[ (int) $r['order_id'] ] ?? array( 'visitor_id' => (int) $r['visitor_id'], 'start_ms' => (int) $r['start_ms'] );
+				}
+			}
+			// 2026-11-26（双桥需求 #2）：没付款的订单，访问只到“下单 / 进入结账”（阶段 3–4），上面按阶段 5 找不到 → 以前不带归因。
+			// 付过款的订单还按上面那次（结果不变），没找到的再不限阶段找一次。
+			$missing = array_values( array_diff( $ids, array_keys( $order_visit ) ) );
+			foreach ( array_chunk( $missing, 500 ) as $chunk ) {
+				$in = implode( ',', array_map( 'intval', $chunk ) );
+				foreach ( (array) $wpdb->get_results( "SELECT order_id, visitor_id, start_ms FROM {$visits} WHERE order_id IN ({$in}) ORDER BY start_ms", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 					$order_visit[ (int) $r['order_id'] ] = $order_visit[ (int) $r['order_id'] ] ?? array( 'visitor_id' => (int) $r['visitor_id'], 'start_ms' => (int) $r['start_ms'] );
 				}
 			}
@@ -773,6 +990,8 @@ final class AdBrain_Bridge {
 				'attributed_cr_code' => $attr['code'],
 				'attributed_ad_id'   => $attr['ad_id'],
 				'items'              => $items,
+			) + self::payment_fields( (string) $o->get_status(), is_callable( array( $o, 'get_meta' ) ) ? $o->get_meta( self::PANAPAY_SESSIONS_META, true ) : '' ) + array(
+				'day_applied_tz' => $ts > 0 && '' !== $applied_tz ? Board::day( $ts * 1000, $applied_tz ) : ( $ts > 0 ? Board::day( $ts * 1000, $tz ) : '' ),
 			);
 		}
 		return array( 'orders' => $out, 'truncated' => $truncated );

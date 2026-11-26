@@ -52,7 +52,16 @@ final class Board {
 	public const MATRIX_PREFIX = 'mx:';
 
 	/** 不算“主动操作”的事件。 */
-	private const PASSIVE = array( 'page_view', 'heartbeat', 'visibility_change', 'page_exit', 'product_impression', 'video_progress', 'checkout_step_applicability', 'visit_classification', 'cart_change_response' );
+	private const PASSIVE = array( 'page_view', 'heartbeat', 'visibility_change', 'page_exit', 'product_impression', 'video_progress', 'checkout_step_applicability', 'visit_classification', 'cart_change_response', 'checkout_address_completed', 'checkout_shipping_selected', 'checkout_payment_selected' );
+
+	/**
+	 * 2026-11-26（Ad Brain 双桥 8 步漏斗）：结账里三步的浏览器事件 → 步骤名。
+	 * 只给 8 步漏斗用；它们列在 PASSIVE 里，不算“主动操作”，意向分层和以前一样。
+	 */
+	public const CHECKOUT_STEP_EVENTS = array( 'checkout_address_completed' => 'address', 'checkout_shipping_selected' => 'shipping', 'checkout_payment_selected' => 'payment' );
+
+	/** 8 步漏斗的事件次数（events 对象）的键。 */
+	public const EVENT_KEYS = array( 'view_content', 'add_to_cart', 'checkout', 'add_address', 'add_shipping', 'add_payment_info', 'cashier', 'orders' );
 
 	/** 看过检测报告 / FAQ：模块类型、页面路径。 */
 	private const REPORT_MODULES = array( 'faq', 'report-feature', 'report', 'lab-report', 'coa' );
@@ -94,11 +103,17 @@ final class Board {
 			'first_product_pv' => 0,
 			'variant'          => false,
 			'report_faq'       => false,
+			// 2026-11-26 8 步漏斗：看过商品、填好地址、选了物流、选了支付（同一次访问里按顺序成立），以及各类事件的次数。
+			'viewed'           => $stage >= 1,
+			'address'          => false,
+			'shipping'         => false,
+			'payment'          => false,
+			'ev'               => array_fill_keys( array( 'view_content', 'add_to_cart', 'checkout', 'add_address', 'add_shipping', 'add_payment_info' ), 0 ),
 		);
 		if ( ! $events ) {
 			// 没有事件明细：页面数用访问上的计数，操作次数看不出。
 			$f['pageviews'] = isset( $visit['pageviews'] ) ? (int) $visit['pageviews'] : null;
-			return $f;
+			return self::checkout_steps( $f, $visit );
 		}
 		$pv = 0;
 		$f['interactions'] = 0;
@@ -144,8 +159,34 @@ final class Board {
 			if ( in_array( $type, array( 'checkout_view', 'checkout_submit_attempt' ), true ) ) {
 				$f['checkout'] = true;
 			}
+			if ( 'product_view' === $type ) {
+				++$f['ev']['view_content'];
+			} elseif ( 'add_to_cart' === $type ) {
+				++$f['ev']['add_to_cart'];
+			} elseif ( 'checkout_view' === $type ) {
+				++$f['ev']['checkout'];
+			} elseif ( isset( self::CHECKOUT_STEP_EVENTS[ $type ] ) ) {
+				++$f['ev'][ 'add_' . ( 'payment' === self::CHECKOUT_STEP_EVENTS[ $type ] ? 'payment_info' : self::CHECKOUT_STEP_EVENTS[ $type ] ) ];
+			}
 		}
 		$f['pageviews'] = max( $pv, (int) ( $visit['pageviews'] ?? 0 ) );
+		$f['viewed']    = $f['viewed'] || (bool) $f['products'];
+		return self::checkout_steps( $f, $visit );
+	}
+
+	/**
+	 * 结账里的三步（2026-11-26，口径同店铺仪表盘的 8 步漏斗）：都按“同一次访问”判断——
+	 * 这次访问走到了结账（阶段 ≥ 3）且有填地址事件才算“添加地址”；填了地址再选物流才算“添加物流”；选了物流再选支付才算“添加支付”
+	 * （结账页一打开带的默认物流 / 支付不算）。这次访问付了款（阶段 5 且挂了订单）三步都算。
+	 */
+	private static function checkout_steps( array $f, array $visit ): array {
+		$stage = (int) ( $visit['stage'] ?? 0 );
+		$f['address']  = $stage >= 3 && $f['ev']['add_address'] > 0;
+		$f['shipping'] = $f['address'] && $f['ev']['add_shipping'] > 0;
+		$f['payment']  = $f['shipping'] && $f['ev']['add_payment_info'] > 0;
+		if ( $stage >= 5 && (int) ( $visit['order_id'] ?? 0 ) > 0 ) {
+			$f['address'] = $f['shipping'] = $f['payment'] = true;
+		}
 		return $f;
 	}
 
@@ -191,6 +232,9 @@ final class Board {
 		$ad_day   = array();
 		$aud      = array();
 		$prof     = array(); // 2026-11-13：每条素材的人群画像（Audience）
+		$with_unattr = ! empty( $opt['unattributed'] );
+		$unattr      = self::zero( '未归因' );
+		$unattr_ad   = 0;
 		foreach ( $by_visitor as $vid => $list ) {
 			usort( $list, static fn( $a, $b ) => array( (int) $a['start_ms'], (int) $a['id'] ) <=> array( (int) $b['start_ms'], (int) $b['id'] ) );
 			// 回访、以前看过的商品、到这次为止来了几次。
@@ -215,6 +259,26 @@ final class Board {
 			}
 			$anchor = self::anchor( $list, (array) ( $data['visitors'][ $vid ] ?? array() ), $mode, $from, $to );
 			if ( null === $anchor ) {
+				// 2026-11-26：没有归因到广告、但这段时间来过的访客（自然流量 / 没带参 / 以前从广告来过这次没带参回来）。
+				// 只在调用方要（unattributed 选项）时才算，看板和日报不受影响。
+				if ( $with_unattr ) {
+					$first = null;
+					foreach ( $list as $v ) {
+						if ( (int) $v['start_ms'] >= $from ) {
+							$first = $v;
+							break;
+						}
+					}
+					if ( null !== $first ) {
+						$after = array_values( array_filter( $list, static fn( $v ) => (int) $v['start_ms'] >= (int) $first['start_ms'] ) );
+						$unattr = self::add( $unattr, Intent_Tiers::visitor_tier( array_map( static fn( $v ) => $v['features'], $after ) ), self::facts( $after, $orders ), $vid );
+						$ever_paid = false;
+						foreach ( $list as $v ) {
+							$ever_paid = $ever_paid || Contract::SOURCE_PAID === ( $v['source_class'] ?? '' );
+						}
+						$unattr_ad += $ever_paid ? 1 : 0;
+					}
+				}
 				continue;
 			}
 			$after = array_values( array_filter( $list, static fn( $v ) => (int) $v['start_ms'] >= (int) $anchor['start_ms'] ) );
@@ -272,7 +336,12 @@ final class Board {
 		foreach ( $ad_day as $k => $set ) {
 			$counts[ $k ] = count( $set );
 		}
-		return array(
+		$extra = array();
+		if ( $with_unattr ) {
+			$extra['unattributed']              = self::finish( $unattr, $min );
+			$extra['unattributed_returning_ad'] = $unattr_ad;
+		}
+		return $extra + array(
 			'rows'            => $out,
 			'total'           => self::finish( $total, $min ),
 			'untagged'        => count( $untagged ),
@@ -370,10 +439,17 @@ final class Board {
 
 	/** @return array{carted:bool,checkout:bool,cashier:bool,orders:array<int,int>} */
 	private static function facts( array $visits, array $orders ): array {
-		$out = array( 'carted' => false, 'checkout' => false, 'cashier' => false, 'orders' => array() );
+		$out = array( 'carted' => false, 'checkout' => false, 'cashier' => false, 'orders' => array(), 'viewed' => false, 'address' => false, 'shipping' => false, 'payment' => false, 'ev' => array_fill_keys( self::EVENT_KEYS, 0 ) );
 		foreach ( $visits as $v ) {
 			$stage           = (int) ( $v['stage'] ?? 0 );
 			$f               = (array) ( $v['features'] ?? array() );
+			foreach ( array( 'viewed', 'address', 'shipping', 'payment' ) as $k ) {
+				$out[ $k ] = $out[ $k ] || ! empty( $f[ $k ] );
+			}
+			foreach ( (array) ( $f['ev'] ?? array() ) as $k => $n ) {
+				$out['ev'][ $k ] = (int) ( $out['ev'][ $k ] ?? 0 ) + (int) $n;
+			}
+			$out['ev']['cashier'] += $stage >= 4 ? 1 : 0; // 走到收银台的访问次数
 			$out['carted']   = $out['carted'] || $stage >= 2 || ! empty( $f['carted'] );
 			$out['checkout'] = $out['checkout'] || $stage >= 3 || ! empty( $f['checkout'] );
 			$out['cashier']  = $out['cashier'] || $stage >= 4;
@@ -519,6 +595,11 @@ final class Board {
 			'link_clicks' => 0,
 			'visitor_ids' => array(),
 			'order_ids'   => array(),
+			'viewed'      => 0,
+			'address'     => 0,
+			'shipping'    => 0,
+			'payment'     => 0,
+			'ev'          => array_fill_keys( self::EVENT_KEYS, 0 ),
 		);
 	}
 
@@ -529,6 +610,12 @@ final class Board {
 			$row['carted']   += $facts['carted'] ? 1 : 0;
 			$row['checkout'] += $facts['checkout'] ? 1 : 0;
 			$row['cashier']  += $facts['cashier'] ? 1 : 0;
+			foreach ( array( 'viewed', 'address', 'shipping', 'payment' ) as $k ) {
+				$row[ $k ] += ! empty( $facts[ $k ] ) ? 1 : 0;
+			}
+		}
+		foreach ( (array) ( $facts['ev'] ?? array() ) as $k => $n ) {
+			$row['ev'][ $k ] = (int) ( $row['ev'][ $k ] ?? 0 ) + (int) $n;
 		}
 		foreach ( $facts['orders'] as $oid => $cents ) {
 			if ( ! isset( $row['order_ids'][ $oid ] ) ) {
@@ -598,7 +685,17 @@ final class Board {
 			),
 			$min
 		);
-		return array( 'label' => $row['label'], 'meta' => $row['meta'], 'visitor_ids' => $row['visitor_ids'] ) + $m;
+		$ev           = array_merge( array_fill_keys( self::EVENT_KEYS, 0 ), (array) ( $row['ev'] ?? array() ) );
+		$ev['orders'] = (int) $row['orders'];
+		// 2026-11-26 8 步漏斗（去重人数，和 carted / checkout / cashier 一样不算无效访客）+ 事件次数。
+		$steps = array(
+			'viewed'   => (int) ( $row['viewed'] ?? 0 ),
+			'address'  => (int) ( $row['address'] ?? 0 ),
+			'shipping' => (int) ( $row['shipping'] ?? 0 ),
+			'payment'  => (int) ( $row['payment'] ?? 0 ),
+			'events'   => $ev,
+		);
+		return array( 'label' => $row['label'], 'meta' => $row['meta'], 'visitor_ids' => $row['visitor_ids'] ) + $m + $steps;
 	}
 
 	/**
@@ -860,7 +957,7 @@ final class Board {
 	 * @param array{0:int,1:int} $ms   [开始, 结束) 毫秒
 	 * @return array
 	 */
-	public static function load( array $ms, string $day_from, string $day_to ): array {
+	public static function load( array $ms, string $day_from, string $day_to, bool $all_sources = false ): array {
 		global $wpdb;
 		$visits_t   = \PeptideCore\Tracking\Schema::table( 'visits' );
 		$visitors_t = \PeptideCore\Tracking\Schema::table( 'visitors' );
@@ -879,6 +976,12 @@ final class Board {
 		// 范围内有过付费 / 未带参访问的访客，再取他们到范围结束为止的全部访问（判断首次来源、回访）。
 		$ids = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
 		$seen();
+		if ( $all_sources ) {
+			// 2026-11-26（Ad Brain 未归因 / 全店漏斗）：其余来源的访客另查、另算上限，不挤掉付费访客。
+			$more = array_map( 'intval', (array) $wpdb->get_col( $wpdb->prepare( "SELECT DISTINCT visitor_id FROM {$visits_t} WHERE start_ms >= %d AND start_ms < %d AND source_class NOT IN ('paid','fb_untagged') LIMIT %d", $ms[0], $ms[1], self::MAX_VISITS ) ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			$seen();
+			$ids = array_values( array_unique( array_merge( $ids, $more ) ) );
+		}
 		$cols = 'id, visitor_id, start_ms, last_ms, utm_source, utm_medium, utm_term, utm_content, placement, ad_name, lp_ver, landing_path, creative_code, source_class, ip_type, timezone, language, geo_region, geo_country, in_app, device, pageviews, stage, order_id, ua, os, os_version, device_model, screen, isp, geo_city';
 		$owners = array();
 		foreach ( array_chunk( $ids, 500 ) as $chunk ) {
@@ -895,7 +998,7 @@ final class Board {
 			$seen();
 		}
 		// 事件明细：只取判断意向要用的类型。
-		$types  = "'page_view','product_view','product_click','product_intent','variant_select','module_click','add_to_cart','add_to_cart_attempt','checkout_view','checkout_submit_attempt','cart_view','cart_open','product_favorite','product_share','video_play','scroll','product_scroll'";
+		$types  = "'page_view','product_view','product_click','product_intent','variant_select','module_click','add_to_cart','add_to_cart_attempt','checkout_view','checkout_submit_attempt','cart_view','cart_open','product_favorite','product_share','video_play','scroll','product_scroll','checkout_address_completed','checkout_shipping_selected','checkout_payment_selected'";
 		$events = array();
 		foreach ( array_chunk( array_keys( $out['visits'] ), 500 ) as $chunk ) {
 			$in = implode( ',', $chunk );
