@@ -1069,3 +1069,12 @@
 - 验证：22 个 CF 网段全部在、无 `443/tcp ALLOW Anywhere`；六家店（vialcovepeptides / sarnovea / dalhoben / korgavex / lumornea / rovkazar）经 CF 全部 HTTP 301，合法流量未受影响；80/22 保持开放。直连源站绕过是否被挡，待外网落点复核（本会话沙盒出口不认 `--resolve`，无法自测）。
 - 备份/回滚：`/root/vialcove-backups/cf-ufw-20261125/`（`ufw-before.txt` / `ufw-after.txt` / `iptables-before.txt` / `cf-v4.txt` / `cf-v6.txt`）。回滚：`sudo ufw allow 443/tcp`（恢复对 Anywhere 开放），需要时再 `systemctl disable --now vialcove-cf-ufw-refresh.timer`。
 - 外网复核（站点底层优化，2026-11-25）：直连源站 443（`--resolve` 到 34.231.148.231）vialcovepeptides.com / www / www.sarnovea.com / lumornea.com 均超时（curl exit 28），绕过已挡；直连源站 80 仍 308→https，ACME 路通；经 Cloudflare 手机 UA 访问六店 + `s0001.vialcoveresearch.com` 均 200、页面约 560–570 KB。注意：此后各会话不能再从外网用 `--resolve` 直连源站核对，需在服务器本机看。
+
+### 2026-11-26 14:40 UTC 年龄门禁焦点框热补丁 + 归档 11-22 antigravity 线上版（release.py 2026.11.26-1440，成功）
+- 背景：总后台发布记录 #13（2026.11.23-0150「手机端8项体验精修」）、#14（2026.11.23-0221「移除前台斜向↗箭头精修」）由 antigravity 从 c1b17270 的未提交工作区打包上线（core 0.34.15、主题 0.3.12），仓库里没有。站点会话 vc-release check 发现漂移后停发。
+- 归档：从生产 s0006 前台取出 26 个文件（core 8、主题 18），14 份店铺副本（6 店前后台 + 两份模板）逐文件哈希一致；panapay、ops 与仓库一致。提交 `2938452f`。
+- 热补丁：主线 `27099f06`（account-gate.js/css）+ core 0.34.15 → 0.34.16（`7530d7a0`）。
+- 发布：所有者 11-26 在 F1 会话确认“现在发”。沙盒 sb-agegate-1126 先过（本机测试 114/0/2，critical-path 54/0/3）。生产 `--skip-hq`，不含桥目录；6 家店前后台 + 两份模板，14 份副本清单哈希一致，用时 237 秒。
+- 测试单订单号（店内编号）：11907（s0001，待付款）；六店收款回写均 PASS。
+- 第一次尝试 2026.11.26-1438 在 s0001 因工具的附加启用步骤失败，自动回滚，线上未变；关掉该步骤后重发成功。
+- 注意：antigravity 这类工作区直发会让主线落后线上；以后要发请先提交进主线再走 vc-release。
