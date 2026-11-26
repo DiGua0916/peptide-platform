@@ -156,6 +156,11 @@ JS;
 		wp_enqueue_script( 'pc-admin-workspace', $url . 'admin-workspace.js', array(), $ver( 'admin-workspace.js' ), true );
 		wp_enqueue_script( 'pc-workspace-navigation-feedback', $url . 'workspace-navigation-feedback.js', array( 'pc-admin-workspace' ), $ver( 'workspace-navigation-feedback.js' ), true );
 		wp_enqueue_script( 'pc-workspace-touch', $url . 'workspace-touch.js', array( 'pc-admin-workspace' ), $ver( 'workspace-touch.js' ), true );
+		// 店主 2026-11-26：顶栏“美西 / 美东”看数时区开关（内嵌页没有顶栏，不加载）。
+		if ( ! Workspace_Shell::embedded() ) {
+			wp_enqueue_script( 'pc-view-timezone', $url . 'view-timezone.js', array( 'pc-admin-workspace' ), $ver( 'view-timezone.js' ), true );
+			wp_add_inline_script( 'pc-view-timezone', 'window.pcViewTimezone=' . wp_json_encode( \PeptideCore\Viewer_Time::script_config() ) . ';', 'before' );
+		}
 		$home = \PeptideCore\Staff::is_staff( get_current_user_id() ) ? \PeptideCore\Staff::home_url( get_current_user_id() ) : Overview_Page::url();
 		wp_add_inline_script( 'pc-admin-workspace', 'window.pcWorkspaceHome=' . wp_json_encode( $home ) . ';', 'before' );
 		// 店主 2026-11-14：左侧菜单固定后自己滚动；打开页面时把当前菜单项滚到看得见的位置。
@@ -209,7 +214,7 @@ JS;
 		$screen = get_current_screen();
 		$is_product = $screen && 'product' === $screen->post_type && 'post' === $screen->base;
 		$back_url = admin_url( $is_product ? 'edit.php?post_type=product' : 'admin.php?page=pc-overview' );
-		echo '<header class="pc-workspace-header" aria-label="工作区"><button type="button" class="pc-workspace-nav-toggle" data-vc-nav-toggle aria-label="打开导航" aria-controls="adminmenuwrap" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><nav class="pc-workspace-header__context" aria-label="当前位置"><a href="' . esc_url( $back_url ) . '">' . ( $is_product ? '商品管理' : '客户后台' ) . '</a><span aria-hidden="true">/</span><strong aria-current="page">' . esc_html( $label ) . '</strong></nav><div class="pc-workspace-header__actions"><span class="pc-workspace-store">' . esc_html( get_bloginfo( 'name' ) ) . '</span><a href="' . esc_url( home_url( '/' ) ) . '" target="_blank" rel="noopener">查看店铺<span class="screen-reader-text">（在新标签页打开）</span></a></div></header>';
+		echo '<header class="pc-workspace-header" aria-label="工作区"><button type="button" class="pc-workspace-nav-toggle" data-vc-nav-toggle aria-label="打开导航" aria-controls="adminmenuwrap" aria-expanded="false" hidden><svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><nav class="pc-workspace-header__context" aria-label="当前位置"><a href="' . esc_url( $back_url ) . '">' . ( $is_product ? '商品管理' : '客户后台' ) . '</a><span aria-hidden="true">/</span><strong aria-current="page">' . esc_html( $label ) . '</strong></nav><div class="pc-workspace-header__actions">' . \PeptideCore\Viewer_Time::control_html() . '<span class="pc-workspace-store">' . esc_html( get_bloginfo( 'name' ) ) . '</span><a href="' . esc_url( home_url( '/' ) ) . '" target="_blank" rel="noopener">查看店铺<span class="screen-reader-text">（在新标签页打开）</span></a></div></header>';
 	}
 
 	public static function login_assets(): void {

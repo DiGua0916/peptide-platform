@@ -82,6 +82,14 @@ body.pc-admin-workspace #wpadminbar #wp-admin-bar-menu-toggle>.ab-item:is(:hover
 .pc-workspace-header__context>strong{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
 .pc-workspace-store{color:var(--pc-ui-muted);font-size:12px;line-height:16px;max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .pc-workspace-header__actions>a{white-space:nowrap;text-decoration:none;font-weight:600}
+/* 看数时区开关（店主 2026-11-26）：默认店铺时间；美西 / 美东二选一，再点一次回到默认。 */
+.pc-view-tz{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto}
+.pc-view-tz__label{color:var(--pc-ui-muted);font-size:12px;line-height:16px;white-space:nowrap;margin-right:2px}
+.pc-view-tz__btn{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;border:1px solid var(--pc-ui-line);border-radius:var(--pc-ui-control-radius);background:var(--pc-ui-surface);color:var(--pc-ui-text);font-size:12px;line-height:16px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s,color .15s}
+.pc-view-tz__btn:hover{border-color:#bdbdbd;background:var(--pc-ui-soft)}
+.pc-view-tz__btn[aria-pressed="true"]{border-color:var(--pc-ui-accent);background:var(--pc-ui-accent);color:#ffffff}
+.pc-view-tz[data-current]:not([data-current=""]) .pc-view-tz__label{color:var(--pc-ui-text);font-weight:600}
+.pc-view-tz.is-busy{opacity:.6;pointer-events:none}
 .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content{box-sizing:border-box;padding-bottom:64px}
 .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:24px var(--pc-ui-gutter) 0;max-width:none;min-width:0}
 .pc-admin-workspace #wpbody-content>.wrap>h1{display:inline-flex;align-items:center;gap:12px;vertical-align:middle;box-sizing:border-box;min-height:36px;margin:0 12px 20px 0;padding:2px 0;font-size:24px;line-height:32px;font-weight:650;letter-spacing:-.02em}
@@ -305,6 +313,8 @@ body.pc-admin-workspace.folded #adminmenu li.menu-top>.wp-submenu>li>a{padding-l
  .pc-admin-workspace .pc-workspace-header__context>span,.pc-admin-workspace .pc-workspace-header__context>a,.pc-admin-workspace .pc-workspace-store{display:none}
  .pc-admin-workspace .pc-workspace-header__context>strong{font-size:14px}
  .pc-admin-workspace .pc-workspace-header__actions>a{display:inline-flex;align-items:center;min-height:44px;font-size:12px;line-height:18px}
+ .pc-admin-workspace .pc-view-tz__label{display:none}
+ .pc-admin-workspace .pc-view-tz__btn{min-height:36px;padding:0 8px}
  .pc-admin-workspace:not(.pc-design-editor-page) #wpbody-content>.wrap{margin:20px var(--pc-ui-gutter) 0}
  .pc-admin-workspace #wpbody-content>.wrap>h1{display:flex;min-height:32px;margin:0 0 12px;padding:0;font-size:22px;line-height:30px}
  .pc-admin-workspace #wpbody-content>.wrap>.page-title-action{margin-bottom:16px}

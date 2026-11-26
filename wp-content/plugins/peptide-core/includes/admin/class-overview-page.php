@@ -49,7 +49,7 @@ final class Overview_Page {
 							// Several open dashboards each re-ran the full statistics every minute
 							// (code review 2026-11-06). Share one result per range and store day for 30 s.
 							// M6：开关不是 off 时缓存另存一份，换档后不会再显示上一档算出来的数字。off 时缓存名和以前一样。
-							$cache = 'pc_overview_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . '|' . get_locale() . ( Metrics_Switch::off() ? '' : '|' . Metrics_Switch::mode() ) );
+							$cache = 'pc_overview_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . \PeptideCore\Viewer_Time::cache_tag() . '|' . get_locale() . ( Metrics_Switch::off() ? '' : '|' . Metrics_Switch::mode() ) );
 							$data = get_transient( $cache );
 							if ( ! is_array( $data ) ) {
 								$data = self::data( $range );

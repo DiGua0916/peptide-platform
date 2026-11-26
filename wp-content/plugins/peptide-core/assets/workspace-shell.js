@@ -172,6 +172,8 @@
       if (!url) { location.assign(location.href); return; }
       if (!await visit(url,false)) history.pushState({pcShell:true},'',activeURL);
     });
+    // 顶栏开关（如看数时区）换了设置后只重开内容页，左侧菜单和顶栏不重载；有未保存内容时照常先问。
+    window.pcWorkspaceShell = {reload: function () { const url = canonical(activeURL, base); return url ? visit(url, false) : Promise.resolve(false); }};
     const initial = canonical(location.href,base);
     if (initial) visit(initial,false);
   }

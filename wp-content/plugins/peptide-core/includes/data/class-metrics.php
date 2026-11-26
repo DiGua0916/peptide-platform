@@ -562,7 +562,7 @@ final class Metrics {
 		if ( $to <= $from || ! class_exists( Recovery_Items::class ) ) {
 			return array();
 		}
-		$name   = 'pc_m6_abandoned_daily_' . md5( $from . '|' . $to );
+		$name   = 'pc_m6_abandoned_daily_' . md5( $from . '|' . $to . ( class_exists( \PeptideCore\Viewer_Time::class ) ? \PeptideCore\Viewer_Time::cache_tag() : '' ) );
 		$cached = get_transient( $name );
 		if ( is_array( $cached ) ) {
 			return $cached;

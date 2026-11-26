@@ -36,6 +36,7 @@ final class Plugin {
 		Public_Site_Search::register_hooks();
 		YouTube_Metadata::register_hooks();
 		Admin\Workspace::register_hooks();
+		Viewer_Time::register_hooks(); // 后台看数时区（美西 / 美东），按账号记住。
 		foreach ( array( Customer_Segments::class, Loyalty::class, Modules\Commerce_Blocks::class, Subscriptions::class, Content_Tools::class ) as $feature ) {
 			if ( class_exists( $feature ) ) { $feature::register_hooks(); }
 		}

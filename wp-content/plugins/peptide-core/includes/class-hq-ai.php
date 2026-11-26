@@ -358,7 +358,7 @@ final class Hq_Ai {
 			$visit   = 0;
 			$period  = 'all' === $period ? 'day' : $period;
 		}
-		$cache = 'pc_ai_' . md5( implode( '|', array( $scope, $visitor, $visit, $period, $date ) ) );
+		$cache = 'pc_ai_' . md5( implode( '|', array( $scope, $visitor, $visit, $period, $date ) ) . Viewer_Time::cache_tag() );
 		if ( ! $refresh ) {
 			$hit = get_transient( $cache );
 			if ( is_array( $hit ) ) {

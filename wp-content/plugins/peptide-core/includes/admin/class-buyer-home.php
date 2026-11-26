@@ -149,7 +149,7 @@ final class Buyer_Home {
 	 */
 	public static function payload( string $range ): array {
 		$range = isset( self::RANGES[ $range ] ) ? $range : 'today';
-		$key   = 'pc_buyer_home_' . md5( $range . '|' . wp_date( 'Y-m-d' ) );
+		$key   = 'pc_buyer_home_' . md5( $range . '|' . wp_date( 'Y-m-d' ) . \PeptideCore\Viewer_Time::cache_tag() );
 		$data  = get_transient( $key );
 		if ( ! is_array( $data ) ) {
 			$n             = self::numbers( $range );

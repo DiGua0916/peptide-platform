@@ -28,7 +28,7 @@ final class Board_Page {
 	/** 今天已处理的行 key => 时间戳（换天自动清空）。 */
 	public static function handled_today(): array {
 		$h = get_option( self::OPTION_HANDLED, array() );
-		return is_array( $h ) && ( $h['day'] ?? '' ) === wp_date( 'Y-m-d' ) && is_array( $h['keys'] ?? null ) ? $h['keys'] : array();
+		return is_array( $h ) && ( $h['day'] ?? '' ) === \PeptideCore\Viewer_Time::store_date( 'Y-m-d' ) && is_array( $h['keys'] ?? null ) ? $h['keys'] : array();
 	}
 
 	/** 默认看最近几天。 */
@@ -117,7 +117,7 @@ final class Board_Page {
 				} else {
 					unset( $keys[ $key ] );
 				}
-				update_option( self::OPTION_HANDLED, array( 'day' => wp_date( 'Y-m-d' ), 'keys' => $keys ), false );
+				update_option( self::OPTION_HANDLED, array( 'day' => \PeptideCore\Viewer_Time::store_date( 'Y-m-d' ), 'keys' => $keys ), false );
 			}
 			self::back( 'success', 'handled' === $op ? '已标记为处理过，今天不再提醒。' : '已撤销，重新放回待办。' );
 		}
