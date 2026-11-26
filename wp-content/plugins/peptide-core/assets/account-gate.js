@@ -40,6 +40,11 @@
 		if ( 'function' === typeof d.showModal ) {
 			try {
 				d.showModal();
+				// showModal() 会自动聚焦第一个可点元素（门禁里是 Terms of Use），浏览器随之画出焦点框；改为聚焦弹窗本身。
+				if ( ! d.querySelector( '[autofocus]' ) ) {
+					d.setAttribute( 'tabindex', '-1' );
+					try { d.focus( { preventScroll: true } ); } catch ( e2 ) { d.focus(); }
+				}
 				return;
 			} catch ( e ) {}
 		}

@@ -34,3 +34,4 @@ html.pc-acc-lock, html.pc-acc-lock body { overflow: hidden; }
 .pc-acc__ruo { display: flex; gap: 10px; align-items: flex-start; text-align: left; margin: 0 0 14px; padding: 10px 12px; border: 1px solid #d9d9d9; border-radius: 10px; font-size: 13.5px; color: #222; cursor: pointer; }
 .pc-acc__ruo input { flex: 0 0 auto; width: 18px; height: 18px; margin: 1px 0 0; accent-color: #111; }
 .pc-acc__returning { margin: 14px 0 0; text-align: center; }
+.pc-acc:focus, .pc-acc:focus-visible { outline: none; }
