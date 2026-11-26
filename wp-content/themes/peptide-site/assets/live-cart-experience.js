@@ -831,6 +831,41 @@
             })); }
             // P0-3: Keep Continue to checkout & non-mutating controls interactive during item updates!
             const checkout = root.querySelector('[data-cart-checkout]'); checkout.setAttribute('aria-disabled', String(!cart?.items?.length));
+            if (root.dataset.drawer === '0') {
+                if (!view.mobileBar) {
+                    const bar = el('div', 'vc-cart-mobile-bar'); bar.hidden = true;
+                    const meta = el('div', 'vc-cart-mobile-bar__meta'), totalEl = el('strong', 'vc-cart-mobile-bar__total'), saveEl = el('span', 'vc-cart-mobile-bar__save');
+                    const btn = el('a', 'vc-cart-mobile-bar__btn', 'Checkout →'); btn.href = checkout.href;
+                    meta.append(totalEl, saveEl); bar.append(meta, btn); document.body.appendChild(bar);
+                    view.mobileBar = { bar, totalEl, saveEl, btn, inlineVisible: false };
+                    if (typeof IntersectionObserver === 'function') {
+                        view.mobileBarObserver = new IntersectionObserver(entries => {
+                            entries.forEach(e => { view.mobileBar.inlineVisible = e.isIntersecting; });
+                            view.syncMobileBar?.();
+                        }, { threshold: 0.15 });
+                        view.mobileBarObserver.observe(checkout);
+                    }
+                    global.addEventListener('resize', () => view.syncMobileBar?.());
+                }
+                view.syncMobileBar = () => {
+                    const latestCart = view.latestBarCart;
+                    const isMobile = (global.innerWidth || 999) <= 767;
+                    if (!isMobile || !latestCart?.items?.length || view.mobileBar.inlineVisible) {
+                        view.mobileBar.bar.hidden = true;
+                        root.classList.remove('has-vc-cart-mobile-bar');
+                        return;
+                    }
+                    const savedRow = view.latestTotalRows?.find(r => r.savedTotal);
+                    view.mobileBar.totalEl.textContent = money(latestCart.totals?.total_price, latestCart.totals);
+                    view.mobileBar.saveEl.textContent = savedRow ? ('Save ' + money(savedRow.minor, latestCart.totals)) : (latestCart.items_count + (latestCart.items_count === 1 ? ' box' : ' boxes'));
+                    view.mobileBar.btn.href = checkout.href;
+                    view.mobileBar.bar.hidden = false;
+                    root.classList.add('has-vc-cart-mobile-bar');
+                };
+                view.latestBarCart = cart;
+                view.latestTotalRows = totalRows;
+                view.syncMobileBar();
+            }
             root.querySelectorAll('[data-cart-coupon] input,[data-cart-coupon] button,[data-cart-protect]').forEach(node => { node.disabled = !valid && !cart; });
             const coupons = root.querySelector('[data-cart-coupons]'), couponsSignature = JSON.stringify((cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon); return [display.code, display.label, display.removeLabel]; }));
             if (view.couponsSignature !== couponsSignature) { view.couponsSignature = couponsSignature; coupons.replaceChildren(...(cart?.coupons || []).map(coupon => { const display = couponPresentation(coupon), button = el('button', '', display.label + ' ×'); button.type = 'button'; button.setAttribute('aria-label', display.removeLabel); button.addEventListener('click', () => client.write('remove-coupon', { code: display.code }).catch(() => {})); return button; })); }
@@ -949,6 +984,6 @@
         wasNativeBusy = busy;
     });
     global.VialCoveLiveCart = { canOpen: drawerController.available, open: trigger => openDrawer(trigger) || location.assign(config.cartUrl), close: closeDrawer, refresh: () => client.refresh(), snapshot: () => client.snapshot(), addOne: (item, { signal } = {}) => addOne(client, item, signal), applyCoupon: code => client.write('apply-coupon', { code }) };
-    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; returnSync.destroy(); deviceSettings.destroy(); recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
+    global.addEventListener('pagehide', event => { if (event.persisted) return; disposed = true; returnSync.destroy(); deviceSettings.destroy(); recommendationEnrichment.destroy(); stopNativeSubscription(); clearTimeout(nativeRefreshTimer); drawerController.destroy(); quickOpener?.remove(); clearInterval(polling); client.destroy(); views.forEach(view => { view.progress?.destroy(); view.recommendation?.destroy(); view.mobileBarObserver?.disconnect(); view.mobileBar?.bar.remove(); clearTimeout(view.recentResetTimer); for (const feedback of view.recentFeedbacks || []) feedback.destroy(); }); });
     if (deviceEnabled() && roots.some(root => root.dataset.drawer === '0')) refreshVisible();
 })(typeof window === 'undefined' ? null : window);

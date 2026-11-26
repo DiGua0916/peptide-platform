@@ -39,7 +39,7 @@
     box.append(dismiss,node('h2','',title),node('p','vc-dialog-reference-note','Results apply to the sample named in the report. Not a verified VialCove stock batch certificate.'),pdf);
     if (home) {
       for (const value of [link.dataset.vcReportMeta,link.dataset.vcReportContext]) if (value?.trim()) box.append(node('p','vc-dialog-reference-note',value.trim()));
-      const original = node('a','vc-dialog-pdf-original','Open the original report ↗'); original.href = url; original.target = '_blank'; original.rel = 'noopener noreferrer'; box.append(original);
+      const original = node('a','vc-dialog-pdf-original','Open the original report'); original.href = url; original.target = '_blank'; original.rel = 'noopener noreferrer'; box.append(original);
       const action = node('a','vc-dialog-pdf-download','Download reference PDF'), downloadURL = new URL(url); downloadURL.searchParams.set('download','1'); action.href = downloadURL.href; box.append(action);
     }
     const download = card.querySelector('.pc-coa-library__download');

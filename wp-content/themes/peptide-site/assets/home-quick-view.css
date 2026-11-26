@@ -134,9 +134,9 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-dialog .vc-dialog-heading .vc-home-quick__eyebrow{font-size:12px;font-weight:600;letter-spacing:.08em;margin-bottom:12px}
 .vc-product-dialog.woocommerce div.product.vc-product-experience>div.summary{grid-column:2;grid-row:2;padding:0 0 40px!important}
 .vc-product-dialog .vc-product-experience>.vc-showcase-quick__media{grid-column:1;grid-row:1/3;align-self:start;display:block;padding:16px!important;border-radius:12px;background:#f0f5f6;position:relative;top:auto;overflow:hidden}
-.vc-product-dialog .vc-dialog-gallery{display:flex;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.vc-product-dialog .vc-dialog-gallery{display:flex;gap:4px;width:100%;overflow-x:auto;scroll-snap-type:x mandatory;overscroll-behavior-x:contain;scrollbar-width:none;-webkit-overflow-scrolling:touch}
 .vc-product-dialog .vc-dialog-gallery::-webkit-scrollbar{display:none}
-.vc-product-dialog .vc-dialog-slide{flex:0 0 100%;min-width:0;width:100%;position:relative;aspect-ratio:1;padding:0;margin:0;border:0;border-radius:0;background:transparent;overflow:hidden;scroll-snap-align:start;scroll-snap-stop:always;color:var(--ink);cursor:zoom-in}
+.vc-product-dialog .vc-dialog-slide{flex:0 0 100%;min-width:0;width:100%;position:relative;aspect-ratio:1;padding:0;margin:0;border:0;border-radius:0;background:transparent;overflow:hidden;clip-path:inset(0);contain:paint;scroll-snap-align:start;scroll-snap-stop:always;color:var(--ink);cursor:zoom-in}
 .vc-product-dialog .vc-dialog-slide img{position:static!important;width:100%!important;height:100%!important;max-height:100%!important;object-fit:contain;display:block}
 .vc-product-dialog .vc-dialog-slide--report img{mix-blend-mode:normal;padding:12px}
 .vc-product-dialog .vc-dialog-slide:disabled{cursor:default;opacity:1}
@@ -230,8 +230,8 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
 .vc-product-pdf .pdf-zoom{display:flex;align-items:center;gap:4px;flex:none}
 .vc-product-pdf .pdf-zoom button{width:40px;height:40px;border:0;border-radius:8px;background:transparent;color:var(--ink);font-size:24px;cursor:pointer}
 .vc-product-pdf .pdf-zoom-value{min-width:40px;text-align:center;font-size:13px}
-.vc-product-pdf .pdf-pages{padding:12px;overflow-x:auto}
-.vc-product-pdf .pdf-page{width:var(--pdf-scale,100%);margin:0 auto 16px;background:white;box-shadow:0 4px 16px #18394412}
+.vc-product-pdf .pdf-pages{padding:12px;overflow-x:auto;overscroll-behavior-x:contain;-webkit-overflow-scrolling:touch}
+.vc-product-pdf .pdf-page{width:var(--pdf-scale,100%);max-width:none;margin:0 auto 16px;background:white;box-shadow:0 4px 16px #18394412}
 .vc-product-pdf canvas{display:block;width:100%;height:auto;background:white}
 .vc-product-pdf figcaption{padding:8px;text-align:center;font-size:12px;color:var(--muted)}
 .vc-product-pdf .pdf-retry{margin:12px;padding:12px 20px;background:var(--ink);color:white;border:0;border-radius:8px}
@@ -258,6 +258,10 @@ body:has(.vc-home-quick[open]) { overflow:hidden; }
  .vc-product-dialog-questions__heading{margin-bottom:24px}
  .vc-product-dialog-questions__heading h2{font-size:30px;line-height:36px}
  .vc-product-dialog .vc-dialog-sticky{order:6;margin:0 -24px;padding:12px 24px calc(12px + env(safe-area-inset-bottom));gap:12px}
+ .vc-product-dialog .announcement{--announcement-height:52px;min-height:52px;height:auto}
+ .vc-product-dialog .announcement-line{padding:8px 10px;gap:8px;min-height:52px}
+ .vc-product-dialog .announcement-copy{font-size:12.5px;line-height:17px;white-space:normal;flex-wrap:wrap;row-gap:2px}
+ .vc-product-dialog .announcement-message{white-space:normal;overflow:visible;text-overflow:clip}
  .vc-product-dialog .vc-dialog-sticky-add{min-width:155px;font-size:16px;padding:12px 16px}
  .vc-product-dialog .vc-home-quick__toolbar>button:not(.vc-showcase-quick__close){font-size:14px;padding-inline:12px}
  .vc-product-child-dialog{width:100vw;max-width:100vw;max-height:100dvh;min-height:100dvh;margin:0;border-radius:0;padding:16px}

@@ -1,31 +1,42 @@
 /* P1-1 (排版 A) + P0-6: Slim privacy-safe return strip + emergency WhatsApp help button. */
-.vc-welcome { margin: 8px auto 0; max-width: 1280px; padding: 0 16px; }
+.vc-welcome { margin: 8px auto 8px; max-width: 1280px; padding: 0 16px; }
 .vc-welcome__inner {
   display: flex; flex-wrap: wrap; align-items: center; gap: 8px 12px;
-  padding: 8px 12px; border-radius: 10px;
+  padding: 6px 8px 6px 12px; border-radius: 10px;
   background: #f0f9fa; border: 1px solid #bae6fd; color: #0e2a33; position: relative;
 }
-.vc-welcome--pending .vc-welcome__inner { background: #fffbeb; border: 1.5px solid #f59e0b; }
-.vc-welcome--failed .vc-welcome__inner { background: #f0fdf4; border: 1.5px solid #16a34a; }
-.vc-welcome__text { display: flex; flex-wrap: wrap; align-items: baseline; gap: 4px 8px; flex: 1 1 200px; min-width: 0; font-size: 13.5px; line-height: 1.4; }
-.vc-welcome__text strong { font-size: 13.5px; font-weight: 700; color: #0e2a33; }
-.vc-welcome__text span { font-size: 13px; color: #355059; }
-.vc-welcome__actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.vc-welcome--pending .vc-welcome__inner { background: #fffbeb; border: 1.5px solid #f59e0b; padding: 8px 12px; }
+.vc-welcome--failed .vc-welcome__inner { background: #f0fdf4; border: 1.5px solid #16a34a; padding: 8px 12px; }
+.vc-welcome__icon { display: inline-block; width: 15px; height: 15px; flex: 0 0 15px; vertical-align: -2px; margin-right: 5px; color: #0e7484; }
+.vc-welcome__wa .vc-welcome__icon { color: currentColor; margin-right: 4px; }
+.vc-welcome__text { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 6px; flex: 1 1 160px; min-width: 0; font-size: 13.5px; line-height: 1.35; }
+.vc-welcome__text strong { display: inline-flex; align-items: center; font-size: 13.5px; font-weight: 700; color: #0e2a33; white-space: nowrap; }
+.vc-welcome__text span { font-size: 13px; color: #355059; min-width: 0; }
+.vc-welcome__actions { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; flex: 0 0 auto; }
 .vc-welcome__go {
   display: inline-flex; align-items: center; justify-content: center;
-  min-height: 34px; padding: 0 14px; border-radius: 8px;
+  min-height: 36px; padding: 0 14px; border-radius: 8px;
   background: #0e7484; color: #fff !important; font-weight: 700; font-size: 13px;
   text-decoration: none !important; white-space: nowrap;
 }
 .vc-welcome__wa {
   display: inline-flex; align-items: center; justify-content: center;
-  min-height: 34px; padding: 0 12px; border-radius: 8px;
+  min-height: 36px; padding: 0 12px; border-radius: 8px;
   background: #16a34a; color: #fff !important; font-weight: 700; font-size: 13px;
   text-decoration: none !important; white-space: nowrap;
 }
 .vc-welcome__x {
-  width: 28px; height: 28px; border: 0; border-radius: 50%;
-  background: transparent; color: #48636c; font-size: 18px; line-height: 1; cursor: pointer;
+  display: inline-grid; place-items: center; flex: 0 0 36px;
+  width: 36px; height: 36px; padding: 0; border: 0; border-radius: 50%;
+  background: transparent; color: #48636c; font-size: 20px; line-height: 1; cursor: pointer;
+}
+@media (max-width: 600px) {
+  .vc-welcome { padding: 0 14px; }
+  .vc-welcome--bag .vc-welcome__inner { flex-wrap: nowrap; gap: 6px; padding: 5px 4px 5px 10px; }
+  .vc-welcome--bag .vc-welcome__text { flex: 1 1 auto; flex-wrap: nowrap; white-space: nowrap; overflow: hidden; }
+  .vc-welcome--bag .vc-welcome__text span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12.5px; }
+  .vc-welcome--bag .vc-welcome__actions { flex-wrap: nowrap; gap: 2px; }
+  .vc-welcome--bag .vc-welcome__go { min-height: 36px; padding: 0 11px; font-size: 12.5px; }
 }
 .vc-welcome__recent { display: grid; gap: 6px; margin-top: 8px; }
 .vc-welcome__recent-title { font-size: 12.5px; font-weight: 700; color: #3d5a61; }

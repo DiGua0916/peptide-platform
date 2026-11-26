@@ -165,7 +165,8 @@
             if (root.hidden || destroyed) return;
             const captions = [...nodeViews.values()].map(view => view.querySelector('.' + prefix + 'node-label'));
             captions.forEach(caption => caption.style.top = '22px');
-            const rects = captions.map(caption => caption.getBoundingClientRect()), lanes = labelLanes(rects), height = Math.max(32, ...rects.map(rect => rect.height));
+            const laneGap = window.innerWidth <= 480 ? 4 : 8;
+            const rects = captions.map(caption => caption.getBoundingClientRect()), lanes = labelLanes(rects, laneGap), height = Math.max(32, ...rects.map(rect => rect.height));
             captions.forEach((caption, index) => caption.style.top = 22 + lanes[index] * (height + 8) + 'px');
             const padding = 22 + (Math.max(0, ...lanes) + 1) * (height + 8) + 'px';
             if (milestones.style.paddingBottom !== padding) milestones.style.paddingBottom = padding;

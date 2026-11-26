@@ -31,7 +31,7 @@ $contact_label = $s['link']['label'] ?? '';
             <h3><?php echo esc_html( $row['question'] ); ?></h3>
             <div class="vc-delivery-support-copy"><?php echo wp_kses_post( $row['answerHtml'] ); ?></div>
             <?php if ( '' !== $contact && '' !== $contact_label ) : ?>
-                <a class="vc-delivery-contact" href="<?php echo esc_url( $contact ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $contact_label . ' (opens in a new tab)' ); ?>"><?php echo esc_html( $contact_label ); ?> <span aria-hidden="true">↗</span></a>
+                <a class="vc-delivery-contact" href="<?php echo esc_url( $contact ); ?>" target="_blank" rel="noopener noreferrer" aria-label="<?php echo esc_attr( $contact_label . ' (opens in a new tab)' ); ?>"><?php echo esc_html( $contact_label ); ?></a>
             <?php endif; ?>
         </article>
     <?php endforeach; ?>

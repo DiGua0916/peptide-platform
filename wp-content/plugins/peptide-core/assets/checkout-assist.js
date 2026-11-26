@@ -393,7 +393,7 @@
                 const extBtn = document.createElement('button');
                 extBtn.type = 'button';
                 extBtn.className = 'pc-pay-rescue__ext';
-                extBtn.textContent = isInAppWebView() ? '↗ Open in Safari/Chrome (Keep Details)' : '🔗 Copy Saved Checkout Link';
+                extBtn.textContent = isInAppWebView() ? 'Open in Safari/Chrome (Keep Details)' : '🔗 Copy Saved Checkout Link';
                 extBtn.addEventListener('click', async () => {
                     extBtn.disabled = true;
                     const a = addresses();
@@ -442,10 +442,34 @@
         });
     }
 
+    function postcodeAndSelects() {
+        const addr = addresses();
+        const shipCountry = addr?.ship?.country || 'US';
+        const billCountry = addr?.bill?.country || shipCountry;
+        [
+            ['#shipping-postcode', shipCountry],
+            ['#billing-postcode', billCountry]
+        ].forEach(([sel, country]) => {
+            const input = document.querySelector(sel);
+            if (!input) return;
+            const numericZip = country === 'US' || country === 'PR';
+            const targetMode = numericZip ? 'numeric' : 'text';
+            if (input.getAttribute('inputmode') !== targetMode) input.setAttribute('inputmode', targetMode);
+            if (numericZip) {
+                if (input.getAttribute('pattern') !== '[0-9-]*') input.setAttribute('pattern', '[0-9-]*');
+            } else if (input.hasAttribute('pattern')) {
+                input.removeAttribute('pattern');
+            }
+        });
+        document.querySelectorAll('.wc-blocks-components-select__select[size="1"]').forEach(selectEl => {
+            selectEl.removeAttribute('size');
+        });
+    }
+
     let frame = 0;
     function tick() {
         frame = 0;
-        restore(); zipToCityAndState(); phone(); payButton(); strikes(); paymentHelp(); save();
+        restore(); postcodeAndSelects(); zipToCityAndState(); phone(); payButton(); strikes(); paymentHelp(); save();
     }
     const schedule = () => { if (!frame) frame = setTimeout(tick, 60); };
     function start() {

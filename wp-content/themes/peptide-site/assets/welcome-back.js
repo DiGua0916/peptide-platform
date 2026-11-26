@@ -52,15 +52,48 @@
     main.insertBefore(strip, main.firstChild);
   }
 
-  function build({ title, line, button, href, waHref, kind, dismissKey, onClick }) {
+  function iconSvg(kind) {
+    const ns = 'http://www.w3.org/2000/svg';
+    const svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', '0 0 24 24');
+    svg.setAttribute('width', '15');
+    svg.setAttribute('height', '15');
+    svg.setAttribute('fill', 'none');
+    svg.setAttribute('stroke', 'currentColor');
+    svg.setAttribute('stroke-width', '2');
+    svg.setAttribute('stroke-linecap', 'round');
+    svg.setAttribute('stroke-linejoin', 'round');
+    svg.setAttribute('aria-hidden', 'true');
+    svg.setAttribute('class', 'vc-welcome__icon');
+    if (kind === 'chat') {
+      const p = document.createElementNS(ns, 'path');
+      p.setAttribute('d', 'M21 11.5a8.4 8.4 0 0 1-.9 3.8 8.5 8.5 0 0 1-7.6 4.7 8.4 8.4 0 0 1-3.8-.9L3 21l1.9-5.7a8.4 8.4 0 0 1-.9-3.8 8.5 8.5 0 0 1 4.7-7.6 8.4 8.4 0 0 1 3.8-.9h.5a8.5 8.5 0 0 1 8 8v.5z');
+      svg.appendChild(p);
+    } else {
+      const p1 = document.createElementNS(ns, 'path');
+      p1.setAttribute('d', 'M6 2 3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4Z');
+      const p2 = document.createElementNS(ns, 'path');
+      p2.setAttribute('d', 'M3 6h18');
+      const p3 = document.createElementNS(ns, 'path');
+      p3.setAttribute('d', 'M16 10a4 4 0 0 1-8 0');
+      svg.append(p1, p2, p3);
+    }
+    return svg;
+  }
+
+  function build({ title, icon, line, button, href, waHref, kind, dismissKey, onClick }) {
     const box = el('section', 'vc-welcome vc-welcome--' + kind);
     box.setAttribute('aria-label', title);
     const wrap = el('div', 'vc-welcome__inner');
     const text = el('div', 'vc-welcome__text');
-    text.append(el('strong', '', title), el('span', '', line));
+    const strongEl = el('strong', '');
+    if (icon) strongEl.appendChild(iconSvg(icon));
+    strongEl.appendChild(document.createTextNode(title));
+    text.append(strongEl, el('span', '', line));
     const actions = el('div', 'vc-welcome__actions');
     if (waHref) {
-      const wa = el('a', 'vc-welcome__wa', '💬 Pay via WhatsApp');
+      const wa = el('a', 'vc-welcome__wa');
+      wa.append(iconSvg('chat'), document.createTextNode('Pay via WhatsApp'));
       wa.href = waHref;
       wa.target = '_blank';
       wa.rel = 'noopener noreferrer';
@@ -126,7 +159,8 @@
       if (items.length) {
         strip = build({
           kind: 'bag',
-          title: '🛍 ' + cart.items_count + (cart.items_count === 1 ? ' box' : ' boxes'),
+          icon: 'bag',
+          title: cart.items_count + (cart.items_count === 1 ? ' box' : ' boxes'),
           line: '· ' + money(cart.totals?.total_price || subtotal, unit, symbol) + (metaParts.length ? ' · ' + metaParts.join(' · ') : ''),
           button: draftInfo ? 'Resume →' : 'View bag →',
           href: draftInfo ? (cfg.checkoutUrl || '/checkout/') : (cfg.cartUrl || '/cart/'),
@@ -137,7 +171,8 @@
         if (snap && Array.isArray(snap.items) && snap.items.length && Date.now() - Number(snap.at) < DAYS * 864e5) {
           strip = build({
             kind: 'bag',
-            title: '🛍 Saved bag (' + snap.count + (snap.count === 1 ? ' box' : ' boxes') + ')',
+            icon: 'bag',
+            title: 'Saved bag (' + snap.count + (snap.count === 1 ? ' box' : ' boxes') + ')',
             line: (snap.subtotal ? '· ' + money(snap.subtotal, snap.unit, snap.symbol) : '') + (metaParts.length ? ' · ' + metaParts.join(' · ') : ''),
             button: draftInfo ? 'Resume →' : 'Restore bag →',
             href: restoreUrl(snap.items, Boolean(draftInfo), draftInfo ? draftInfo.coupons : []),

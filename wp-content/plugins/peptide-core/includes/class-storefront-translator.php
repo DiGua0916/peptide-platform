@@ -197,6 +197,7 @@ final class Storefront_Translator {
 			echo '<svg class="pc-language-check" viewBox="0 0 16 16" width="16" height="16" aria-hidden="true" focusable="false"><path d="m3 8 3 3 7-7" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg></a>';
 		}
 		echo '</div></details></nav>';
+		echo '<script>(function(){var s=document.querySelector("[data-pc-language-switcher]"),d=document.querySelector(".header-actions,.vc-demo-header-actions");if(s&&d){d.prepend(s);s.classList.add("pc-language-switcher--header");}})();</script>';
 	}
 
 	public static function alternate_links(): void {

@@ -1015,7 +1015,8 @@ final class Promotions {
 		if ( $ship_tiers ) {
 			echo '<article class="pc-coupon"><div class="pc-coupon__value">' . esc_html__( 'Shipping Offers (Auto-Applied at Checkout)', 'peptide-core' ) . '</div><ul class="pc-coupon__list">';
 			foreach ( $ship_tiers as $st ) {
-				$min_txt = isset( $st['min_subtotal'] ) ? html_entity_decode( wp_strip_all_tags( wc_price( (float) $st['min_subtotal'] ) ), ENT_QUOTES, 'UTF-8' ) : '';
+				$min_val = isset( $st['min_subtotal'] ) ? (float) $st['min_subtotal'] : ( isset( $st['min_minor'] ) ? ( (float) $st['min_minor'] ) / 100 : 0.0 );
+				$min_txt = $min_val > 0 ? html_entity_decode( wp_strip_all_tags( wc_price( $min_val ) ), ENT_QUOTES, 'UTF-8' ) : '';
 				$rew_txt = 'percent' === ( $st['kind'] ?? '' ) && (float) ( $st['value'] ?? 0 ) >= 100
 					? __( 'Free FedEx Shipping', 'peptide-core' )
 					: ( 'percent' === ( $st['kind'] ?? '' )

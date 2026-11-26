@@ -55,14 +55,20 @@
 }
 
 .pc-coupon__copy,
-.pc-coupon__apply {
-	padding: 8px 14px;
+.pc-coupon__apply,
+.pc-coupon__more {
+	display: inline-flex;
+	align-items: center;
+	justify-content: center;
+	min-height: 42px;
+	padding: 8px 16px;
 	border: 0;
-	border-radius: 4px;
+	border-radius: 6px;
 	background: #177e9b;
-	color: #fff;
+	color: #fff !important;
 	font: inherit;
-	text-decoration: none;
+	font-weight: 600;
+	text-decoration: none !important;
 	cursor: pointer;
 }
 

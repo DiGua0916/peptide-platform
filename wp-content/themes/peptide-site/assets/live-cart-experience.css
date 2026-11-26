@@ -86,3 +86,14 @@
 .vc-live-cart__protect-label input{width:18px;height:18px;margin:0;accent-color:#1b7f8e;flex:0 0 auto}
 .vc-live-cart__protect-ref{font-weight:400;opacity:.55;margin-right:2px}
 .vc-live-cart__protect.is-off strong{opacity:.55}
+/* Mobile standalone /cart/ sticky bottom Checkout bar (auto-hides when inline button is visible) */
+.vc-cart-mobile-bar{display:none}
+@media(max-width:767px){
+.vc-live-cart.has-vc-cart-mobile-bar{padding-bottom:96px}
+.vc-cart-mobile-bar{position:fixed;left:0;right:0;bottom:0;z-index:9985;display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 16px max(10px,env(safe-area-inset-bottom));background:rgba(255,255,255,.98);backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);border-top:1px solid var(--line,#d5e2e5);box-shadow:0 -6px 24px rgb(15 40 50 / .10)}
+.vc-cart-mobile-bar[hidden],body:has(dialog[open]) .vc-cart-mobile-bar{display:none!important}
+.vc-cart-mobile-bar__meta{display:grid;gap:1px;min-width:0}
+.vc-cart-mobile-bar__total{font-size:18px;line-height:22px;font-weight:750;color:#102a32;font-variant-numeric:tabular-nums}
+.vc-cart-mobile-bar__save{font-size:12px;line-height:16px;font-weight:650;color:#16803c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.vc-cart-mobile-bar__btn{flex:0 0 auto;display:inline-flex;align-items:center;justify-content:center;min-height:46px;padding:0 18px;border-radius:10px;background:var(--teal,#117e97);color:#fff!important;font-size:15px;font-weight:700;text-decoration:none!important;white-space:nowrap;touch-action:manipulation}
+}

@@ -40,7 +40,7 @@
 .vc-campaign-strip .pc-campaign::after{content:none}
 .vc-campaign-strip .pc-campaign__head{display:contents;margin:0;padding:0;text-align:left}
 .vc-campaign-strip .pc-campaign .pc-campaign__title{grid-column:1;grid-row:1;max-width:12ch;margin:0;color:#fff;font:650 14px/20px Geist,Arial,sans-serif;letter-spacing:-.01em;text-align:left;white-space:nowrap;text-overflow:ellipsis;overflow:hidden}
-.vc-campaign-strip .pc-campaign__rail{grid-column:2;grid-row:1;min-width:0;max-width:100%;margin:0;padding:0;overflow:hidden}
+.vc-campaign-strip .pc-campaign__rail{grid-column:2;grid-row:1;min-width:0;max-width:100%;margin:0;padding:0;overflow:hidden;-webkit-mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%);mask-image:linear-gradient(90deg,transparent 0,#000 14px,#000 calc(100% - 14px),transparent 100%)}
 .vc-campaign-strip .pc-campaign__tiers{display:flex!important;grid-template-columns:none!important;grid-auto-columns:auto!important;grid-auto-flow:row!important;align-items:center;gap:0;min-width:0;margin:0;padding:0;overflow-x:auto;overflow-y:hidden;scroll-snap-type:none;scrollbar-width:none;overscroll-behavior-inline:contain;scroll-behavior:auto}
 .vc-campaign-strip .pc-campaign__tiers::-webkit-scrollbar{display:none}
 .vc-campaign-strip .vc-campaign-track{display:flex;align-items:center;flex:0 0 auto;width:max-content;gap:0}

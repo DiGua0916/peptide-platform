@@ -56,6 +56,7 @@
     .pc-language-switcher .pc-language-options [data-pc-language-option]:hover{background:#f2f2f2;color:#171717}
 }
 @media(max-width:767px){
+    body:has([data-vc-demo-header],.site-header) .pc-language-switcher:not(.pc-language-switcher--header){display:none}
     .pc-language-switcher [data-pc-language-trigger]{padding-inline:4px}
     /* Only a header containing this control shares its finite mobile row. */
     .vc-demo-header-inner:has(.pc-language-switcher--header){gap:8px}

@@ -78,7 +78,7 @@
 .vc-coupons .vc-coupon-button:hover { background: #126b84; border-color: #126b84; color: #fff; }
 .vc-coupons .vc-coupon-button--secondary { background: transparent; color: var(--coupon-accent); }
 .vc-coupons .vc-coupon-button--secondary:hover { background: #e3f0f4; color: #126b84; }
-.vc-coupons .vc-coupon-link { color: var(--coupon-accent); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
+.vc-coupons .vc-coupon-link { display: inline-flex; align-items: center; min-height: 40px; color: var(--coupon-accent); font-size: 13px; text-decoration: underline; text-underline-offset: 4px; text-decoration-thickness: 1px; }
 .vc-coupons .vc-coupon-link:hover { color: #126b84; }
 .vc-coupons :is(a, button):focus-visible { outline: 3px solid var(--coupon-accent); outline-offset: 4px; }
 .vc-coupons .vc-coupon-status { min-height: 1.6em; font-size: 12px; color: var(--coupon-ink); margin-top: 8px; overflow-wrap: anywhere; }

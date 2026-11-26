@@ -29,8 +29,13 @@ dialog.vc-showcase-quick[open]::backdrop,dialog.vc-product-child-dialog[open]::b
 
 /* Close remains a real 44px button, without a decorative square or disc.
    One high-specificity group also covers the native cart's former circle. */
-body.vialcove-site :is(.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close,.vc-home-quick .vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]){
+body.vialcove-site :is(.vc-live-cart .vc-live-cart__heading>button.vc-live-cart__close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]){
  background:transparent!important;border:0!important;box-shadow:none!important;border-radius:0!important;
+ min-width:44px;min-height:44px;-webkit-tap-highlight-color:transparent;
+}
+body.vialcove-site :is(.vc-home-quick .vc-showcase-quick__close,.vc-product-child-close){
+ background:rgba(255,255,255,.92)!important;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);
+ border:1px solid rgba(217,228,231,.92)!important;border-radius:50%!important;box-shadow:0 2px 10px rgba(23,52,62,.08)!important;
  min-width:44px;min-height:44px;-webkit-tap-highlight-color:transparent;
 }
 html[data-vc-input=pointer] body.vialcove-site :is(.vc-live-cart__close,.vc-showcase-quick__close,.vc-product-child-close,.vc-demo-report-close,.vc-cart-close,[data-vc-demo-close]):focus{outline:none!important}

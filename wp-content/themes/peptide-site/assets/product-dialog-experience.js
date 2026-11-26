@@ -241,7 +241,8 @@
     const reportSlide = button('vc-dialog-slide vc-dialog-slide--report', '', () => openReport()); reportSlide.hidden = true;
     const ribbon = node('span', 'vc-dialog-ribbon'), productImg = node('img', 'vc-dialog-product-image');
     const emptyImage = node('p', 'vc-home-quick__missing', 'Image not available for this specification.');
-    const zoom = node('span', 'vc-dialog-zoom', '↗'); zoom.setAttribute('aria-hidden', 'true');
+    const zoom = node('span', 'vc-dialog-zoom'); zoom.setAttribute('aria-hidden', 'true');
+    zoom.innerHTML = '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5M11 8v6M8 11h6"/></svg>';
     productSlide.append(productImg, emptyImage, ribbon, zoom); productSlide.setAttribute('aria-label', 'Enlarge product image');
     track.append(productSlide, reportSlide); media.append(track);
     // Swipe hint (phones): one dot per visible slide, the current one filled.
@@ -594,7 +595,7 @@
       copy.append(node('p', 'vc-home-quick__eyebrow', 'Certificate of analysis'), node('h2', '', 'The report. In full view.'), node('strong', '', titleText));
       const metadata = [report.issuer_name, date(report.issued_on)].filter(Boolean).join(' · '); if (metadata) copy.append(node('p', '', metadata));
       copy.append(node('p', 'vc-dialog-reference-note', 'Third-party reference report. Results apply to the sample named in the document, not a verified VialCove stock batch.'));
-      copy.append(button('vc-dialog-report-open', 'View reference COA ↗', openReport)); documents.append(copy);
+      copy.append(button('vc-dialog-report-open', 'View reference COA', openReport)); documents.append(copy);
       if (safeURL(report.thumbnail_url)) { const art = button('vc-dialog-document-art', '', openReport); const img = node('img', ''); img.src = safeURL(report.thumbnail_url); img.alt = titleText; img.loading = 'lazy'; img.addEventListener('error',()=>art.remove(),{once:true}); art.append(img); documents.prepend(art); }
     }
     async function readReports({resume = false, requested = ''} = {}) {
