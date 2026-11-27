@@ -1380,6 +1380,15 @@
       "module": "M1"
     },
     {
+      "name": "logistics-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/logistics-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M1"
+    },
+    {
       "name": "viewer-time-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/viewer-time-pure.php",

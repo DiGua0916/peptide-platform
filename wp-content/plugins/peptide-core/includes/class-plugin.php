@@ -114,6 +114,7 @@ final class Plugin {
 		Test_Orders::register_hooks();
 		Store_Config::register_hooks();
 		Shipping\Plans::register_hooks();
+		Shipping\Logistics::register_hooks();
 		Shipping\Discounts::register_hooks();
 		Pricing\Runtime::register_hooks();
 		Shipping\Protection::register_hooks();
