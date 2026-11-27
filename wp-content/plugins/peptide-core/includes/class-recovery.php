@@ -42,6 +42,9 @@ final class Recovery {
 	/** 最后一封提醒发出后多久没回来算召回失败。 */
 	public const FAIL_AFTER_MS = DAY_IN_SECONDS * 1000;
 
+	/** 购物车最后一次改动后最多跟进多久（第 3 封默认 7 天，留足余量）；超过还没结束的收尾。 */
+	public const MAX_OPEN_MS = 14 * DAY_IN_SECONDS * 1000;
+
 	public static function register_hooks(): void {
 		add_filter( 'cron_schedules', array( self::class, 'cron_schedule' ) );
 		add_action( self::CRON, array( self::class, 'scan' ) );
@@ -338,12 +341,20 @@ final class Recovery {
 			$wpdb->update( $t, $data, array( 'id' => (int) $rec['id'] ) ); // phpcs:ignore WordPress.DB.DirectDatabaseQuery
 		}
 
-		// 会话已经不在：发过提醒的算召回失败，没发过的作废。
+		// 店主 2026-11-27：Woo 购物车会话大约 2 天就过期。以前会话一没就结束记录，第 2 封（3 天）多数等不到，第 3 封（7 天）一封都没发出过。
+		// 现在会话不在了也继续按阶段发：购物车内容存在记录里，恢复链接照样能把商品放回；付没付款每次发信前都按邮箱查订单。
+		// 开启的阶段都发完、24 小时没回来才算失败（发信循环里）；购物车最后改动超过 MAX_OPEN_MS 还没结束的才收尾。
 		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE {$open}", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
-			if ( ! isset( $alive[ $r['session_key'] ] ) ) {
-				self::finish( $r, (int) $r['emails'] ? 'failed' : 'void', 'session expired', $now );
+			if ( ! isset( $alive[ $r['session_key'] ] ) && $now - (int) $r['changed_ms'] > self::MAX_OPEN_MS ) {
+				self::finish( $r, (int) $r['emails'] ? 'failed' : 'void', 'too old', $now );
 				++$stats[ (int) $r['emails'] ? 'failed' : 'voided' ];
 			}
+		}
+
+		// 同一个邮箱又建了新的购物车：旧的那条不再发，只跟新购物车，免得一个人同时收到两套提醒。
+		foreach ( $wpdb->get_results( "SELECT * FROM {$t} WHERE {$open} AND EXISTS ( SELECT 1 FROM {$t} n WHERE n.email = {$t}.email AND n.id > {$t}.id AND n.status IN ('pending','recalling') )", ARRAY_A ) as $r ) { // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			self::finish( $r, (int) $r['emails'] ? 'failed' : 'void', 'newer cart', $now );
+			++$stats[ (int) $r['emails'] ? 'failed' : 'voided' ];
 		}
 
 		$stats['blocked'] = self::blocked_reason();
@@ -398,6 +409,11 @@ final class Recovery {
 			}
 			// 店主 2026-11-10：两封提醒之间至少隔 24 小时（之前积压的会在一次扫描里连着发，10 分钟收到两封）。
 			if ( (int) $r['last_sent_ms'] && $now - (int) $r['last_sent_ms'] < self::STAGE_GAP_MS ) {
+				continue;
+			}
+			// 24 小时间隔按人算：这个邮箱的其他购物车刚收过提醒，新购物车也先等着（以前同一个人一天能收到好几封“第 1 封”）。
+			$last_any = (int) $wpdb->get_var( $wpdb->prepare( "SELECT MAX(last_sent_ms) FROM {$t} WHERE email = %s AND id <> %d", (string) $r['email'], (int) $r['id'] ) ); // phpcs:ignore WordPress.DB.PreparedSQL.InterpolatedNotPrepared,WordPress.DB.DirectDatabaseQuery
+			if ( $last_any && $now - $last_any < self::STAGE_GAP_MS ) {
 				continue;
 			}
 			if ( Recovery_Items::still_here( 0, (string) $r['session_key'], (int) $r['changed_ms'] ) ) {

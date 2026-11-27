@@ -214,14 +214,49 @@ $session( $keyD, 'smoke-rc-d@example.com', 1 );
 Recovery::scan( $now, 'smoke_rc_' );
 $wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $keyD ) ); // phpcs:ignore
 Recovery::scan( $now + 60000, 'smoke_rc_' );
-$ok( 'session gone before any email: voided', 'void' === $record( $keyD )['status'] );
+$ok( 'session gone before any email: record stays open', 'pending' === $record( $keyD )['status'] );
+$wpdb->update( Recovery::table(), array( 'changed_ms' => $now - 400000 ), array( 'id' => (int) $record( $keyD )['id'] ) ); // phpcs:ignore
+$mails = array();
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'session gone before any email: stage 1 still sent from the saved cart', 'recalling' === $record( $keyD )['status'] && 1 === (int) $record( $keyD )['stage'] && array_filter( $mails, static fn( $m ) => 'smoke-rc-d@example.com' === $to_of( $m ) ) );
+$back = static function ( string $key, array $set ) use ( $wpdb, $record ) {
+	$wpdb->update( Recovery::table(), $set, array( 'id' => (int) $record( $key )['id'] ) ); // phpcs:ignore
+};
 $keyX = 'smoke_rc_x_' . $sfx;
 $session( $keyX, 'smoke-rc-x@example.com', 1 );
 Recovery::scan( $now, 'smoke_rc_' );
-Recovery::scan( $now + 301000, 'smoke_rc_' );
+$back( $keyX, array( 'changed_ms' => $now - 400000 ) );
+Recovery::scan( $now, 'smoke_rc_' );
 $wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $keyX ) ); // phpcs:ignore
-Recovery::scan( $now + 400000, 'smoke_rc_' );
-$ok( 'session gone after an email: recall failed', 'failed' === $record( $keyX )['status'] && 'session expired' === $record( $keyX )['note'] );
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'session gone after an email: recall keeps going', 'recalling' === $record( $keyX )['status'] && 1 === (int) $record( $keyX )['stage'] );
+$back( $keyX, array( 'last_sent_ms' => $now - Recovery::STAGE_GAP_MS - 1000, 'changed_ms' => $now - 8 * DAY_IN_SECONDS * 1000 ) ); // 第 2 封默认 3 天后。
+$mails = array();
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'session gone after an email: stage 2 still sent a day later', 2 === (int) $record( $keyX )['stage'] && 2 === (int) $record( $keyX )['emails'] && array_filter( $mails, static fn( $m ) => 'smoke-rc-x@example.com' === $to_of( $m ) ) );
+$back( $keyX, array( 'changed_ms' => $now - Recovery::MAX_OPEN_MS - 1000 ) );
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'cart untouched past the follow-up window: closed as too old', 'failed' === $record( $keyX )['status'] && 'too old' === $record( $keyX )['note'] );
+
+// 同一个邮箱又建了新购物车：旧记录结束，24 小时间隔按人算。
+$keyY1 = 'smoke_rc_y1_' . $sfx;
+$keyY2 = 'smoke_rc_y2_' . $sfx;
+$session( $keyY1, 'smoke-rc-y@example.com', 1 );
+Recovery::scan( $now, 'smoke_rc_' );
+$back( $keyY1, array( 'changed_ms' => $now - 400000 ) );
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'first cart got its stage 1 email', 1 === (int) $record( $keyY1 )['emails'] );
+$wpdb->delete( $wpdb->prefix . 'woocommerce_sessions', array( 'session_key' => $keyY1 ) ); // phpcs:ignore
+$session( $keyY2, 'smoke-rc-y@example.com', 2 );
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'newer cart for the same email: older record closed', 'failed' === $record( $keyY1 )['status'] && 'newer cart' === $record( $keyY1 )['note'] );
+$back( $keyY2, array( 'changed_ms' => $now - 400000 ) );
+$mails = array();
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'newer cart waits 24 h after the last reminder to that email', 'pending' === $record( $keyY2 )['status'] && ! array_filter( $mails, static fn( $m ) => 'smoke-rc-y@example.com' === $to_of( $m ) ) );
+$back( $keyY1, array( 'last_sent_ms' => $now - Recovery::STAGE_GAP_MS - 1000 ) );
+Recovery::scan( $now, 'smoke_rc_' );
+$ok( 'a day later the newer cart starts at stage 1', 'recalling' === $record( $keyY2 )['status'] && 1 === (int) $record( $keyY2 )['stage'] );
 
 $staff = wp_insert_user( array( 'user_login' => 'smoke_rc_staff_' . $sfx, 'user_email' => 'smoke-rc-staff-' . $sfx . '@example.com', 'user_pass' => wp_generate_password(), 'role' => 'shop_manager' ) );
 $session( (string) $staff, 'smoke-rc-staff-' . $sfx . '@example.com', 1 );
