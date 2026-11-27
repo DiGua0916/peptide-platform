@@ -16,6 +16,7 @@ namespace {
 
 	define( 'ABSPATH', __DIR__ . '/' );
 	define( 'DAY_IN_SECONDS', 86400 );
+	define( 'ARRAY_A', 'ARRAY_A' );   // WordPress 的常量，pending() 要用
 
 	$GLOBALS['t_checks']  = 0;
 	$GLOBALS['t_options'] = array();
@@ -35,6 +36,17 @@ namespace {
 	class WC_Order {}
 	class WC_Order_Item_Product {}
 	class WC_Product {}
+
+	/** $wpdb 桩：只够 pending() 用，队列内容放在内存里。 */
+	class T_WPDB {
+		public string $prefix = 'wp_';
+		public array $rows = array();
+		public function get_results( $sql, $mode = null ) { return $this->rows; }
+		public function prepare( $sql, ...$a ) { return $sql; }
+		public function get_charset_collate() { return ''; }
+		public function insert( $t, $d, $f = null ) { return 1; }
+		public function query( $sql ) { return 0; }
+	}
 }
 
 namespace PeptideCore {
@@ -96,6 +108,25 @@ namespace PeptideCore {
 		\check( "5: 支持事件 {$e}", true === Lifecycle_Events::should_record( $e, array( 'email' => 'a@b.test' ) ) );
 	}
 	\check( '5: 一共 6 个事件，够 6 条流水线用', 6 === count( Lifecycle_Events::EVENTS ) );
+
+	// ---------- 6. pending() 必须把 context 解码成数组交给引擎 ----------
+	// 这条是端到端验证逼出来的真 bug：原来写成 foreach ( (array) $rows as &$r )，
+	// 强制转换产生临时值、PHP 不能对它取引用，循环改的是副本，引擎会拿到 JSON 字符串。
+	$GLOBALS['wpdb'] = new \T_WPDB();
+	$GLOBALS['t_options'][ Lifecycle_Events::DB_OPTION ] = Lifecycle_Events::DB_VERSION;
+	$ctx = Lifecycle_Events::context( array( 'email' => 'buyer@example.test', 'country' => 'US', 'state' => 'PR' ) );
+	$GLOBALS['wpdb']->rows = array(
+		array( 'id' => 1, 'event' => 'checkout_email', 'email' => 'buyer@example.test', 'order_id' => 0,
+			'context' => json_encode( $ctx ), 'created_at' => time() ),
+	);
+	$out = Lifecycle_Events::pending( 10 );
+	\check( '6: pending() 返回 1 条', 1 === count( $out ) );
+	\check( '6: context 必须是数组，不能是 JSON 字符串', is_array( $out[0]['context'] ) );
+	\check( '6: 解码后波多黎各标识还在', true === ( $out[0]['context']['is_pr'] ?? null ) );
+	\check( '6: 解码后西语轨标识还在', true === ( $out[0]['context']['spanish'] ?? null ) );
+	\check( '6: 解码后邮箱还在', 'buyer@example.test' === ( $out[0]['context']['email'] ?? '' ) );
+	$GLOBALS['wpdb']->rows = array( array( 'id' => 2, 'event' => 'order_paid', 'email' => 'x@y.test', 'order_id' => 0, 'context' => '不是合法 JSON', 'created_at' => time() ) );
+	\check( '6: context 是坏数据时给空数组，不让引擎拿到字符串', array() === Lifecycle_Events::pending( 10 )[0]['context'] );
 
 	echo 'PASS ', $GLOBALS['t_checks'], " lifecycle event-bus assertions\n";
 }

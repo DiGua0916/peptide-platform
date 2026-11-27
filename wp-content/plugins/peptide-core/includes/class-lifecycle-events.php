@@ -198,10 +198,14 @@ final class Lifecycle_Events {
 				$wpdb->prepare( 'SELECT id,event,email,order_id,context,created_at FROM ' . self::table() . ' WHERE status=%s ORDER BY id ASC LIMIT %d', 'pending', max( 1, min( 500, $limit ) ) ),
 				ARRAY_A
 			);
-			foreach ( (array) $rows as &$r ) {
-				$r['context'] = json_decode( (string) $r['context'], true ) ?: array();
+			// 不要写成 foreach ( (array) $rows as &$r )：强制转换产生临时值，PHP 不能对它取引用，
+			// 循环改的是副本，context 会原样留着 JSON 字符串发给引擎。用下标改，不用引用。
+			$rows = is_array( $rows ) ? $rows : array();
+			foreach ( $rows as $i => $r ) {
+				$decoded = json_decode( (string) ( $r['context'] ?? '' ), true );
+				$rows[ $i ]['context'] = is_array( $decoded ) ? $decoded : array();
 			}
-			return (array) $rows;
+			return $rows;
 		} catch ( \Throwable $e ) {
 			return array();
 		}
