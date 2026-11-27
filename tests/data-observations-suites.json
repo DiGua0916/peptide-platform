@@ -1389,6 +1389,24 @@
       "module": "M1"
     },
     {
+      "name": "protection-tiers-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/protection-tiers-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M1"
+    },
+    {
+      "name": "lifecycle-events-pure",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/lifecycle-events-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "module-gate",
+      "module": "M1"
+    },
+    {
       "name": "viewer-time-pure",
       "language": "php",
       "path": "wp-content/plugins/peptide-core/tests/viewer-time-pure.php",

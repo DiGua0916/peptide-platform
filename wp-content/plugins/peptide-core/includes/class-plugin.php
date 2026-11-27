@@ -118,6 +118,7 @@ final class Plugin {
 		Shipping\Discounts::register_hooks();
 		Pricing\Runtime::register_hooks();
 		Shipping\Protection::register_hooks();
+		Lifecycle_Events::register_hooks();
 		Resale_Prompt::register_hooks();
 		Product_Codes::register_hooks();
 		Catalog_Labels::register_hooks();
