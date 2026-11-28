@@ -456,7 +456,8 @@
             const targetMode = numericZip ? 'numeric' : 'text';
             if (input.getAttribute('inputmode') !== targetMode) input.setAttribute('inputmode', targetMode);
             if (numericZip) {
-                if (input.getAttribute('pattern') !== '[0-9-]*') input.setAttribute('pattern', '[0-9-]*');
+                // '-' escaped: browsers compile pattern with the v flag, where an unescaped '-' in a class is a syntax error
+                if (input.getAttribute('pattern') !== '[0-9\\- ]*') input.setAttribute('pattern', '[0-9\\- ]*');
             } else if (input.hasAttribute('pattern')) {
                 input.removeAttribute('pattern');
             }
