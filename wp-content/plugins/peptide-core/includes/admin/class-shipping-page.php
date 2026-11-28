@@ -11,6 +11,7 @@
 namespace PeptideCore\Admin;
 
 use PeptideCore\Shipping\Plans;
+use PeptideCore\Shipping\Regions;
 
 defined( 'ABSPATH' ) || exit;
 
@@ -23,6 +24,7 @@ final class Shipping_Page {
 		add_action( 'admin_post_pc_shipping_save', array( self::class, 'save' ) );
 		add_action( 'admin_post_pc_shipping_delete', array( self::class, 'delete' ) );
 		add_action( 'admin_post_pc_shipping_rules', array( self::class, 'save_rules' ) );
+		add_action( 'admin_post_pc_shipping_regions', array( self::class, 'save_regions' ) );
 		add_action( 'admin_enqueue_scripts', array( self::class, 'enqueue' ) );
 	}
 
@@ -60,6 +62,7 @@ final class Shipping_Page {
 		echo '<a class="button button-primary pc-pl-new" href="' . esc_url( self::url( array( 'new' => $tab ) ) ) . '">+ ' . esc_html( 'custom' === $tab ? __( 'New custom shipping', 'peptide-core' ) : __( 'New general shipping', 'peptide-core' ) ) . '</a></div>';
 
 		self::status_notice();
+		self::regions_card();
 
 		echo '<div class="pc-pl-card"><nav class="pc-pl-tabs">';
 		foreach ( array( 'general' => __( 'General shipping', 'peptide-core' ), 'custom' => __( 'Custom shipping', 'peptide-core' ) ) as $k => $label ) {
@@ -259,6 +262,73 @@ final class Shipping_Page {
 			Plans::delete( $plan['id'] );
 		}
 		wp_safe_redirect( self::url( array( 'tab' => $plan ? $plan['type'] : 'general', 'pc_deleted' => 1 ) ) );
+		exit;
+	}
+
+	/**
+	 * 地区分流（SHIPPING-REGION-01）：把每个地区绑到一个通用物流方案上。
+	 *
+	 * 收费本来就按收货地址走方案的区域（美国方案勾 50 州 + DC，波多黎各方案只勾 PR 州），
+	 * 这里绑的是**店面文案读哪一套门槛**：开关打开后，购物车接口只会吐出访客自己那个地区的阶梯，
+	 * 另一个地区的数字连响应都进不去。
+	 */
+	private static function regions_card(): void {
+		$settings = Regions::settings();
+		$plans    = Plans::of_type( 'general' );
+		$labels   = array(
+			'us'   => __( 'United States (50 states + DC)', 'peptide-core' ),
+			'pr'   => __( 'Puerto Rico', 'peptide-core' ),
+			'intl' => __( 'Other countries', 'peptide-core' ),
+		);
+		echo '<div class="pc-pl-card pc-pl-pad"><form method="post" action="' . esc_url( admin_url( 'admin-post.php' ) ) . '"><input type="hidden" name="action" value="pc_shipping_regions">';
+		wp_nonce_field( 'pc_shipping_regions' );
+		echo '<h2>' . esc_html__( 'Region routing', 'peptide-core' ) . '</h2>';
+		echo '<p class="description">' . esc_html__( 'Serve each region its own shipping thresholds. The storefront only ever receives the visitor\'s own region: another region\'s thresholds never reach the browser. Checkout always charges by the shipping address; the copy follows the visitor\'s IP until an address is entered, then follows the address.', 'peptide-core' ) . '</p>';
+		echo '<label class="pc-pl-radio"><input type="checkbox" name="enabled" value="1"' . checked( true, (bool) $settings['enabled'], false ) . '> <strong>' . esc_html__( 'Serve region-specific thresholds to the storefront', 'peptide-core' ) . '</strong></label>';
+		echo '<table class="pc-pl-table"><thead><tr><th>' . esc_html__( 'Region', 'peptide-core' ) . '</th><th>' . esc_html__( 'Shipping plan', 'peptide-core' ) . '</th><th>' . esc_html__( 'Thresholds read from it', 'peptide-core' ) . '</th></tr></thead><tbody>';
+		foreach ( Regions::KEYS as $key ) {
+			$bound = (int) $settings['plans'][ $key ];
+			echo '<tr><td>' . esc_html( $labels[ $key ] ) . '</td><td><select name="plans[' . esc_attr( $key ) . ']"><option value="0">' . esc_html__( '— not routed —', 'peptide-core' ) . '</option>';
+			foreach ( $plans as $plan ) {
+				echo '<option value="' . esc_attr( (string) $plan['id'] ) . '"' . selected( $bound, $plan['id'], false ) . '>' . esc_html( $plan['name'] ) . '</option>';
+			}
+			echo '</select></td><td class="pc-pl-muted">' . esc_html( self::ladder_text( $key ) ) . '</td></tr>';
+		}
+		echo '</tbody></table>';
+		echo '<p><label>' . esc_html__( 'Region used when neither the address nor the IP says where the visitor is:', 'peptide-core' ) . ' <select name="default">';
+		foreach ( Regions::KEYS as $key ) {
+			echo '<option value="' . esc_attr( $key ) . '"' . selected( $settings['default'], $key, false ) . '>' . esc_html( $labels[ $key ] ) . '</option>';
+		}
+		echo '</select></label></p>';
+		echo '<p><button class="button button-primary">' . esc_html__( 'Save region routing', 'peptide-core' ) . '</button></p></form></div>';
+	}
+
+	/** 后台预览：这个地区现在会读到哪几档。看得见才敢开开关。 */
+	private static function ladder_text( string $key ): string {
+		$ladder = Regions::ladder( $key, 0.0 );
+		if ( null === $ladder ) {
+			return __( 'No plan bound, or the plan has no order-amount rates.', 'peptide-core' );
+		}
+		$parts = array( $ladder['track'] );
+		foreach ( $ladder['tiers'] as $tier ) {
+			$fee     = $tier['free'] ? __( 'free', 'peptide-core' ) : wc_format_decimal( $tier['fee_minor'] / 100, 2 );
+			$parts[] = wc_format_decimal( $tier['min_minor'] / 100, 2 ) . '+ → ' . $fee;
+		}
+		return implode( ' · ', $parts );
+	}
+
+	public static function save_regions(): void {
+		self::guard( 'pc_shipping_regions' );
+		// phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$raw = wp_unslash( $_POST );
+		Regions::save(
+			array(
+				'enabled' => ! empty( $raw['enabled'] ),
+				'default' => sanitize_key( (string) ( $raw['default'] ?? 'us' ) ),
+				'plans'   => array_map( 'absint', (array) ( $raw['plans'] ?? array() ) ),
+			)
+		);
+		wp_safe_redirect( self::url( array( 'pc_saved' => 1 ) ) );
 		exit;
 	}
 

@@ -73,6 +73,10 @@ final class Store_Api {
 					'shipping_savings' => \PeptideCore\Shipping\Savings_Trace::for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
 					// 1 号站 P0-5：分档运费进度条和运费险。
 					'shipping_tiers' => \PeptideCore\Shipping\Discounts::tiers_for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
+					// 运费地区分流（SHIPPING-REGION-01）：只给访客自己那一个地区的阶梯，另一个地区的数字
+					// 根本不会被读出来。收费仍由收货地址决定，文案在地址填上之后跟着地址走。
+					'shipping_region' => \PeptideCore\Shipping\Regions::public_region(),
+					'shipping_ladder' => \PeptideCore\Shipping\Regions::for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
 					'shipping_protection' => \PeptideCore\Shipping\Protection::for_cart( function_exists( 'WC' ) ? WC()->cart : null ),
 					// 1 号站 P1-1：首页「订单待付款」条的数据（A 线渲染）。
 					'pending_order' => \PeptideCore\Pending_Order::for_visitor(),
@@ -104,6 +108,14 @@ final class Store_Api {
 					'shipping_tiers' => array(
 						'description' => __( 'Order-total shipping discount tiers and the item total they are measured on (minor units, before coupons).', 'peptide-core' ),
 						'type' => 'object', 'context' => array( 'view', 'edit' ), 'readonly' => true,
+					),
+					'shipping_region' => array(
+						'description' => __( 'The shipping region this visitor is served: key, how it was decided (address, IP or default) and whether region routing is on.', 'peptide-core' ),
+						'type' => 'object', 'context' => array( 'view', 'edit' ), 'readonly' => true,
+					),
+					'shipping_ladder' => array(
+						'description' => __( 'This visitor\'s own shipping threshold ladder (minor units). Never contains another region\'s thresholds. Null when region routing is off.', 'peptide-core' ),
+						'type' => array( 'object', 'null' ), 'context' => array( 'view', 'edit' ), 'readonly' => true,
 					),
 					'shipping_protection' => array(
 						'description' => __( 'Optional shipping protection fee: whether it applies, whether the shopper kept it, price and crossed-out reference (minor units).', 'peptide-core' ),

@@ -43,6 +43,12 @@ final class US_Territories {
 	/** 波多黎各邮编前三位（008 是美属维尔京群岛，不算）。 */
 	private const PR_ZIP = array( '006', '007', '009' );
 
+	/** 邮编是不是波多黎各的（008 是美属维尔京群岛，不算）。名单只有这一份，运费地区分流也读它。 */
+	public static function is_pr_postcode( string $postcode ): bool {
+		$digits = (string) preg_replace( '/\D/', '', $postcode );
+		return in_array( substr( $digits, 0, 3 ), self::PR_ZIP, true );
+	}
+
 	public static function register_hooks(): void {
 		add_filter( 'woocommerce_states', array( self::class, 'states' ), 20 );
 		// 国家下拉里去掉已经做成「州」的属地，避免同一个地方有两个入口。
@@ -74,7 +80,7 @@ final class US_Territories {
 			// PR/空、PR/Trujillo、PR/Cidra, Puerto Rico … 一律收成 US/PR。
 			return array( 'US', $country );
 		}
-		if ( 'US' === $country && 'PR' !== $state && in_array( substr( $zip, 0, 3 ), self::PR_ZIP, true ) ) {
+		if ( 'US' === $country && 'PR' !== $state && self::is_pr_postcode( $zip ) ) {
 			// 国家选了美国、邮编是波多黎各，但州填成别的（或空着）。
 			return array( 'US', 'PR' );
 		}

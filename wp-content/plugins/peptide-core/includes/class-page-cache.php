@@ -213,6 +213,9 @@ final class Page_Cache {
 			'locale' => get_locale(),
 			'country' => (string) ( $language['country_code'] ?? '' ),
 			'customer_country' => $customer ? (string) $customer->get_billing_country() . '|' . (string) $customer->get_shipping_country() : '',
+			// 运费地区分流：美国和波多黎各的运费文案不一样，同一个 URL 的两份 HTML 不能共用一把钥匙。
+			// customer_country 两边都是 US，分不开，所以这里按判定出来的地区再分一次。
+			'ship_region' => class_exists( Shipping\Regions::class ) ? Shipping\Regions::current()['key'] : '',
 			'device' => function_exists( 'wp_is_mobile' ) && wp_is_mobile() ? 'mobile' : 'desktop',
 			'declined' => class_exists( Tracking\Tracker::class ) && Tracking\Tracker::declined(),
 			'pixels' => class_exists( Pixels::class ) && Pixels::allowed(),

@@ -147,6 +147,14 @@ final class Shipping_Discounts_Page {
 		/* translators: %d: maximum number of stages */
 		echo '</div><p><button type="button" class="button pc-mk-stage-add" data-max="' . (int) Discounts::MAX_STAGES . '">+ ' . esc_html__( 'Add stage', 'peptide-core' ) . '</button> <span class="pc-pl-muted">' . esc_html( sprintf( __( 'Up to %d stages. Stages must not overlap; between stages there is no discount.', 'peptide-core' ), Discounts::MAX_STAGES ) ) . '</span></p></div>';
 		echo '<div class="pc-mk-field">' . Marketing::label( __( 'Minimum order', 'peptide-core' ) ) . '<div class="pc-mk-inline"><input type="number" min="0" step="0.01" class="pc-mk-num" name="min_subtotal" value="' . esc_attr( (string) ( (float) ( $d['min_subtotal'] ?? 0 ) ?: '' ) ) . '" placeholder="0"> <span class="pc-pl-muted">' . esc_html__( 'Item total before coupons. Leave empty for every order. Several discounts with different minimums make tiers: the lowest shipping wins.', 'peptide-core' ) . '</span></div></div>';
+		// 运费地区（2026-11-28）：不勾 = 所有地区。勾了就只对那些地区的访客生效，而且是在服务端整条剔除 ——
+		// 美国和波多黎各互相看不到对方的门槛，打开浏览器开发者工具也看不到。
+		$region_labels = array( 'us' => __( 'United States (50 states + DC)', 'peptide-core' ), 'pr' => __( 'Puerto Rico', 'peptide-core' ), 'intl' => __( 'Other countries', 'peptide-core' ) );
+		echo '<div class="pc-mk-field">' . Marketing::label( __( 'Shipping regions', 'peptide-core' ), false, __( 'Leave every box unticked to apply everywhere. Tick some and only visitors in those regions get this discount – and only their own thresholds reach their browser.', 'peptide-core' ) ) . '<div class="pc-mk-weekdays">';
+		foreach ( \PeptideCore\Shipping\Regions::KEYS as $region_key ) {
+			echo '<label><input type="checkbox" name="regions[]" value="' . esc_attr( $region_key ) . '"' . checked( in_array( $region_key, (array) ( $d['regions'] ?? array() ), true ), true, false ) . '> ' . esc_html( $region_labels[ $region_key ] ) . '</label>';
+		}
+		echo '</div></div>';
 		Marketing::card_close();
 		// phpcs:enable WordPress.Security.EscapeOutput.OutputNotEscaped
 
@@ -193,6 +201,7 @@ final class Shipping_Discounts_Page {
 				'kind'        => (string) ( $in['kind'] ?? '' ),
 				'value'       => $in['value'] ?? '',
 				'min_subtotal' => $in['min_subtotal'] ?? 0,
+				'regions'     => (array) ( $in['regions'] ?? array() ),
 				'stages'      => $stages,
 				'customers'   => (string) ( $in['customers'] ?? '' ),
 				'emails'      => (string) ( $in['emails'] ?? '' ),

@@ -1414,6 +1414,14 @@
       "node_test": false,
       "status": "module-gate",
       "module": "M1"
+    },
+    {
+      "name": "shipping-regions-php",
+      "language": "php",
+      "path": "wp-content/plugins/peptide-core/tests/shipping-regions-pure.php",
+      "core": true,
+      "node_test": false,
+      "status": "final-source-gate"
     }
   ]
 }

@@ -13,6 +13,9 @@
  * 结账时在 woocommerce_package_rates 里改运费（在物流方案之后），税按比例同步减少；
  * 订单的运费行记下折扣名称和原运费。运费缓存的键里带上当前可用的折扣，换邮箱、活动开始或结束时会重新计算。
  *
+ * 地区（regions，2026-11-28）：留空 = 所有地区；选了就只对那些地区的访客生效，而且是在 applicable()
+ * 里整条剔除 —— 别的地区的折扣连购物车接口都进不去，美国和波多黎各互相看不到对方的门槛。
+ *
  * 数据存在选项 peptide_core_shipping_discounts（不自动加载）。
  *
  * @package PeptideCore
@@ -53,6 +56,7 @@ final class Discounts {
 			'value'       => 0.0,
 			'min_subtotal' => 0.0,    // 商品金额（未扣优惠码）达到这个数才生效；0 = 不限
 			'stages'      => array(),  // [{start, end, value}]
+			'regions'     => array(),  // 运费地区（Regions::KEYS）；空 = 所有地区。见 class-regions.php
 			'customers'   => 'all',    // all / emails
 			'emails'      => array(),
 			'segment_tags' => array(),
@@ -150,6 +154,16 @@ final class Discounts {
 		}
 		$min = $raw['min_subtotal'] ?? 0;
 		$d['min_subtotal'] = is_numeric( $min ) ? max( 0.0, round( (float) $min, 2 ) ) : 0.0;
+		$keys    = class_exists( Regions::class ) ? Regions::KEYS : array();
+		$regions = array();
+		foreach ( (array) ( $raw['regions'] ?? array() ) as $r ) {
+			$r = strtolower( sanitize_key( (string) $r ) );
+			if ( in_array( $r, $keys, true ) && ! in_array( $r, $regions, true ) ) {
+				$regions[] = $r;
+			}
+		}
+		// 全选等于不限，存成空数组，省得以后加地区时漏掉。
+		$d['regions'] = count( $regions ) === count( $keys ) ? array() : $regions;
 		$d['member_day']  = ! empty( $raw['member_day'] );
 		$d['member_days'] = array_values( array_unique( array_filter( array_map( 'intval', (array) ( $raw['member_days'] ?? array() ) ), static fn( $n ) => $n >= 1 && $n <= 7 ) ) );
 		sort( $d['member_days'] );
@@ -254,13 +268,38 @@ final class Discounts {
 		return null;
 	}
 
-	/** 这位顾客现在能不能用（会员日、指定顾客）。 */
-	public static function applies_to( array $d, string $email, int $user_id, ?int $now = null ): bool {
+	/**
+	 * 这位顾客现在能不能用（运费地区、会员日、指定顾客）。
+	 *
+	 * @param string|null $region 访客所在的运费地区；null = 不按地区过滤（给纯逻辑测试用）。
+	 */
+	public static function applies_to( array $d, string $email, int $user_id, ?int $now = null, ?string $region = null ): bool {
 		$now = $now ?? time();
+		if ( ! self::in_region( $d, $region ) ) {
+			return false;
+		}
 		if ( $d['member_day'] && ( ! $user_id || ! in_array( (int) wp_date( 'N', $now ), $d['member_days'], true ) ) ) {
 			return false;
 		}
 		return \PeptideCore\Customer_Segments::matches( $d, $email, $user_id );
+	}
+
+	/** 访客所在的运费地区。地区分流还没载入（纯逻辑测试）时返回 null，不限定地区的折扣照常生效。 */
+	private static function visitor_region(): ?string {
+		return class_exists( Regions::class ) ? Regions::current()['key'] : null;
+	}
+
+	/**
+	 * 折扣是否适用于这个地区。空名单 = 所有地区。
+	 * **这是美国 / 波多黎各互相看不见对方门槛的那一刀**：不满足就从 applicable() 里整条去掉，
+	 * 根本不会进到 Store API 的响应里，前端也就无从读起。
+	 */
+	public static function in_region( array $d, ?string $region ): bool {
+		$allowed = (array) ( $d['regions'] ?? array() );
+		if ( ! $allowed ) {
+			return true;
+		}
+		return null !== $region && in_array( $region, $allowed, true );
 	}
 
 	/** 当前顾客：[邮箱, 用户 ID]。结账里填的邮箱优先，登录顾客没填时用账户邮箱。 */
@@ -278,14 +317,17 @@ final class Discounts {
 	 *
 	 * @return array<int,array{0:array,1:float}> [折扣, 折扣值]
 	 */
-	public static function applicable( ?int $now = null, ?string $email = null, ?int $user_id = null ): array {
+	public static function applicable( ?int $now = null, ?string $email = null, ?int $user_id = null, ?string $region = null ): array {
 		if ( null === $email || null === $user_id ) {
 			[ $email, $user_id ] = self::customer();
+		}
+		if ( null === $region ) {
+			$region = self::visitor_region();
 		}
 		$out = array();
 		foreach ( self::all() as $d ) {
 			$v = self::value_now( $d, $now );
-			if ( null !== $v && self::applies_to( $d, $email, $user_id, $now ) ) {
+			if ( null !== $v && self::applies_to( $d, $email, $user_id, $now, $region ) ) {
 				$out[] = array( $d, $v );
 			}
 		}
@@ -305,6 +347,12 @@ final class Discounts {
 		// 价格引擎“开”档（M4）：可用的折扣和“取折后最低”由引擎给出；引擎出错时返回 null，照旧走旧逻辑。
 		$engine = \PeptideCore\Pricing\Runtime::on() ? \PeptideCore\Pricing\Runtime::shipping_applicable() : null;
 		$list   = null !== $engine ? $engine : self::applicable();
+		if ( null !== $engine ) {
+			// 价格引擎自己挑的折扣没过地区这一关，这里补上，否则引擎开着就等于绕过了分流。
+			// 收费按地址：包裹的收货地址就是收费依据，比访客当前的 IP 更权威。
+			$region = self::package_region( is_array( $package ) ? $package : array() );
+			$list   = array_values( array_filter( $list, static fn( $row ) => self::in_region( (array) ( $row[0] ?? array() ), $region ) ) );
+		}
 		if ( ! $list ) {
 			return $rates;
 		}
@@ -368,7 +416,24 @@ final class Discounts {
 	}
 
 	/**
+	 * 包裹收货地址所在的运费地区。**收费一律按地址**（店主 2026-11-28），地址缺失时才退回访客判定。
+	 */
+	public static function package_region( array $package ): ?string {
+		$dest   = (array) ( $package['destination'] ?? array() );
+		if ( ! class_exists( Regions::class ) ) {
+			return null;
+		}
+		$region = Regions::from_address(
+			(string) ( $dest['country'] ?? '' ),
+			(string) ( $dest['state'] ?? '' ),
+			(string) ( $dest['postcode'] ?? '' )
+		);
+		return null === $region ? Regions::current()['key'] : $region;
+	}
+
+	/**
 	 * 分档运费（P0-5）给购物车进度条：现在可用、带订单金额门槛的折扣，按门槛从低到高。
+	 * applicable() 已经按访客地区筛过，所以这里吐出的只有访客自己那一套数字。
 	 *
 	 * @return array{subtotal_minor:int,tiers:array<int,array{min_minor:int,kind:string,value:float,label:string}>}
 	 */
@@ -393,7 +458,7 @@ final class Discounts {
 		if ( ! is_array( $packages ) ) {
 			return $packages;
 		}
-		$sig = array();
+		$sig = array( 'r=' . (string) self::visitor_region() );
 		foreach ( self::applicable() as [ $d, $v ] ) {
 			$sig[] = $d['id'] . ':' . $v;
 		}
