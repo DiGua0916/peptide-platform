@@ -1096,3 +1096,10 @@
 - 第一次生产 2026.11.27-1340（总后台记录 #19）：s0001、s0006 换好并通过（测试单 11912）后，主线在发布中途前进到 `13fdf131`（物流引擎 0.34.20，未经确认），`--mainline` 核对按设计停止；s0007–s0010 和模板未动，线上无故障。
 - 所有者确认“补发剩下的”：2026.11.27-1501（总后台记录 #20），同一提交 f4ada538、不带 `--mainline`（物流引擎未上线，不存在覆盖线上改动的问题），6 家店前后台 + 两份模板，14 份副本清单哈希一致，用时 259 秒；测试单 11913（s0001，待付款）；六店收款回写均 PASS。
 - 注意：主线 `13fdf131` 物流引擎（0.34.20）尚未发布，下次从主线发会带上它，需所有者单独确认。
+
+### 2026-11-28 14:45 UTC 总后台邮件中心：删掉三家新店的 orders@ 发信连接（后台配置，非发布）
+- 现象：北京时间 11-28 20:52 起李军、光辉、老毛三店的店铺邮件全部失败（店铺 outbox「邮件中心：HTTP 502」）。
+- 原因：FluentSMTP 里给新店建的 `orders@店铺域名` 连接是复制主店 Cloudflare 连接（主店账号令牌），但新店域名都在投手各自的 Cloudflare 账号里，Cloudflare 一直拒发（`email.sending.error.email.invalid`，10202）；之前全靠 Fallback 的 Outlook（VialCovePeptides@outlook.com）代发，20:52 微软把它锁了（`AADSTS70000 service abuse mode`），两条路都断。主店 `orders@vialcovepeptides.com` 走 Cloudflare 一直正常。
+- 处理：所有者在本会话同意“先改地址”。在总后台 FluentSMTP 删掉 `orders@lumornea.com`、`orders@korgavex.com`、`orders@dalhoben.com` 三条连接（这三个域名的令牌有 IP 限制，自动接入不会再建回来），这三店邮件改由 `orders@vialcovepeptides.com` 经 Cloudflare 发出，显示名仍是店铺品牌。
+- `orders@sarnovea.com`、`orders@rovkazar.com` 删了会被 CDN 定时任务（Mail_Domains::backfill）一分钟内建回来，暂时保留，李军、阳两店仍失败，需发 peptide-hq 0.5.5（Mail_Domains::other_account：域名在别的 Cloudflare 账号就不建连接）后再删这两条。
+- 回滚：在 FluentSMTP 重新添加对应连接（或等 backfill 自动建回）。Outlook 解锁需所有者本人登录。
