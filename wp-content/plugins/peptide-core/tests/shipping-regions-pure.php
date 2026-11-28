@@ -53,6 +53,8 @@ namespace {
 	class T_Countries {
 		public function get_countries() { return array( 'US' => 'United States', 'PR' => 'Puerto Rico', 'CA' => 'Canada', 'GB' => 'United Kingdom' ); }
 		public function get_states( $cc ) { return 'US' === $cc ? array( 'CA' => 'California', 'NY' => 'New York', 'DC' => 'DC', 'PR' => 'Puerto Rico' ) : array(); }
+		/** 店铺所在国。WooCommerce 用它预填新访客的地址，判定必须把它排除掉。 */
+		public function get_base_country() { return 'US'; }
 	}
 
 	class T_WC {
@@ -137,6 +139,37 @@ namespace {
 	$customer->f['billing_country']  = 'US';
 	$customer->f['billing_state']    = 'PR';
 	check( '只填了账单地址也认', array( 'key' => 'pr', 'source' => 'address' ) === Regions::current() );
+
+	// ---------- 2b. WooCommerce 预填的国家不能当成访客填的地址 ----------
+	// 2026-11-28 在沙盒里实测到的：WooCommerce 给每个新访客都预填了国家 = 店铺所在国（US），
+	// 州和邮编都是空的。照收的话 from_customer() 永远返回 us，IP 这条路就是死的，
+	// 波多黎各访客刚进站会看到美国的门槛 —— 正好是这次要避免的事故。
+
+	Country_Provider::$code = 'PR';
+	Regions::reset_cache();
+	$blank = new WC_Customer();
+	$blank->f['shipping_country'] = 'US';   // 店铺所在国，州和邮编都空着
+	$GLOBALS['t_wc']->customer    = $blank;
+	check( '只有预填的店铺所在国 → 让给 IP，PR 访客看到 pr', array( 'key' => 'pr', 'source' => 'ip' ) === Regions::current() );
+
+	$blank->f['shipping_postcode'] = '90001';
+	check( '填了邮编就是真地址 → 按地址算美国', array( 'key' => 'us', 'source' => 'address' ) === Regions::current() );
+
+	$blank->f['shipping_postcode'] = '';
+	$blank->f['shipping_state']    = 'CA';
+	check( '填了州就是真地址 → 按地址算美国', array( 'key' => 'us', 'source' => 'address' ) === Regions::current() );
+
+	$blank->f['shipping_state']   = '';
+	$blank->f['shipping_country'] = 'CA';   // 访客自己把国家换掉了，不是预填值
+	check( '访客换过国家，哪怕没填州和邮编也算真地址', array( 'key' => 'intl', 'source' => 'address' ) === Regions::current() );
+
+	$blank->f['shipping_country'] = 'US';
+	$blank->f['billing_country']  = 'US';   // 账单地址也只有预填的国家
+	$blank->f['billing_state']    = '';
+	$blank->f['billing_postcode'] = '';
+	Country_Provider::$code = null;
+	Regions::reset_cache();
+	check( '两个地址都只有预填国家、IP 又查不到 → 走默认地区', array( 'key' => 'us', 'source' => 'default' ) === Regions::current() );
 
 	// ---------- 3+4. 两套阶梯，按店主 2026-11-28 的表 ----------
 

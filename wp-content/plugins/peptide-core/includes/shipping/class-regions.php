@@ -147,17 +147,55 @@ final class Regions {
 		if ( ! $customer instanceof \WC_Customer ) {
 			return null;
 		}
+		$base = self::base_country();
 		foreach ( array( 'shipping', 'billing' ) as $type ) {
-			$region = self::from_address(
-				self::field( $customer, "get_{$type}_country" ),
-				self::field( $customer, "get_{$type}_state" ),
-				self::field( $customer, "get_{$type}_postcode" )
-			);
+			$country  = self::field( $customer, "get_{$type}_country" );
+			$state    = self::field( $customer, "get_{$type}_state" );
+			$postcode = self::field( $customer, "get_{$type}_postcode" );
+			if ( ! self::entered( $country, $state, $postcode, $base ) ) {
+				continue;
+			}
+			$region = self::from_address( $country, $state, $postcode );
 			if ( null !== $region ) {
 				return $region;
 			}
 		}
 		return null;
+	}
+
+	/** 店铺所在国家。WooCommerce 会把它当成新访客地址的默认值，所以判定要把它排除掉。 */
+	private static function base_country(): string {
+		if ( ! function_exists( 'WC' ) || ! isset( WC()->countries ) || ! is_object( WC()->countries ) ) {
+			return '';
+		}
+		if ( ! is_callable( array( WC()->countries, 'get_base_country' ) ) ) {
+			return '';
+		}
+		try {
+			return strtoupper( trim( (string) WC()->countries->get_base_country() ) );
+		} catch ( \Throwable $error ) {
+			return '';
+		}
+	}
+
+	/**
+	 * 这个地址是访客自己填的，还是 WooCommerce 给的默认值？
+	 *
+	 * 2026-11-28 在沙盒里实测出来的坑：WooCommerce 会把**每一个**新访客的国家预填成店铺所在国
+	 * （这里是 US），哪怕人家一个字都没填。如果照单全收，from_customer() 永远返回 us，IP 这条路
+	 * 等于是死的 —— 波多黎各的访客刚进站会看到美国的门槛，这正好是本次要避免的事。
+	 *
+	 * 所以：州或邮编有一个填了，就是真地址；只有国家、而且就是店铺所在国，那是默认值，让给 IP；
+	 * 只有国家但不是店铺所在国（访客自己换过国家，或 WooCommerce 按 IP 预填过），仍然算真地址。
+	 */
+	private static function entered( string $country, string $state, string $postcode, string $base ): bool {
+		if ( '' === trim( $country ) ) {
+			return false;
+		}
+		if ( '' !== trim( $state ) || '' !== trim( $postcode ) ) {
+			return true;
+		}
+		return '' === $base || strtoupper( trim( $country ) ) !== $base;
 	}
 
 	/** 读顾客地址的一个字段。读不到就当空，判定本身绝不能把结账打断。 */
