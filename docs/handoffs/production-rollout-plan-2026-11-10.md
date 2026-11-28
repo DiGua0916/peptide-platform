@@ -1103,3 +1103,10 @@
 - 处理：所有者在本会话同意“先改地址”。在总后台 FluentSMTP 删掉 `orders@lumornea.com`、`orders@korgavex.com`、`orders@dalhoben.com` 三条连接（这三个域名的令牌有 IP 限制，自动接入不会再建回来），这三店邮件改由 `orders@vialcovepeptides.com` 经 Cloudflare 发出，显示名仍是店铺品牌。
 - `orders@sarnovea.com`、`orders@rovkazar.com` 删了会被 CDN 定时任务（Mail_Domains::backfill）一分钟内建回来，暂时保留，李军、阳两店仍失败，需发 peptide-hq 0.5.5（Mail_Domains::other_account：域名在别的 Cloudflare 账号就不建连接）后再删这两条。
 - 回滚：在 FluentSMTP 重新添加对应连接（或等 backfill 自动建回）。Outlook 解锁需所有者本人登录。
+
+### 2026-11-28 11:29 UTC 总后台邮件中心：域名在别的 Cloudflare 账号时不建 orders@ 连接（release.py 2026.11.28-1925，成功）
+- 背景：总后台给新店建 orders@域名 连接时复制主店的 Cloudflare 发信连接，但 s0006–s0010 的域名在别的 Cloudflare 账号，发信全部被拒（10202 email.invalid）；Outlook 兜底 11-28 被微软锁定后，5 家新店自 14:00 UTC 起零成功发信。站点会话删连接后被 Cdn 定时补建。
+- 改动：只取主线 `7d3837e0` 的 peptide-hq（0.5.4 → 0.5.5，`class-mail-domains.php`）。主线 HEAD 上另有未经批准的 core 改动（物流引擎、运费险/邮件事件总线、美国/波多黎各运费分流，core 0.34.24），所以在线上 0.34.19（f4ada538）之上单独做发布提交 `72b04066`（分支 `claude/release-hq055-1128`），core 保持 0.34.19。发前只读核对线上总后台 peptide-hq / panapay / ops 与仓库 f4ada538 逐文件一致。
+- 所有者 11-28 在 F1 会话确认“现在发”。沙盒 sb-hq055-1128 先过（本机测试 115/0/2，critical-path 54/0/3）；生产含总后台（不加 `--skip-hq`），6 家店前后台 + 两份模板 + 总后台，15 份副本清单哈希一致，用时 243 秒。总后台发布记录 #22。
+- 测试单订单号（店内编号）：11915（s0001，待付款）；六店收款回写均 PASS。
+- 后续：站点会话删除 5 家店的 orders@ 连接并实发确认。主线 core 0.34.20–0.34.24 仍未发布。
