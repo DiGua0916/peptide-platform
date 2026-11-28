@@ -51,15 +51,16 @@ final class Stats {
 	 * @return array{0:string,1:string}
 	 */
 	public static function range( string $key ): array {
-		$today = wp_date( 'Y-m-d' );
+		// 这张表是各店按天送来的，取日子按总后台自己的时区，不跟美西开关变（2026-11-28）。
+		$today = Viewer_Time::home_date( 'Y-m-d' );
 		switch ( $key ) {
 			case 'yesterday':
-				$y = wp_date( 'Y-m-d', time() - DAY_IN_SECONDS );
+				$y = Viewer_Time::home_date( 'Y-m-d', time() - DAY_IN_SECONDS );
 				return array( $y, $y );
 			case '30d':
-				return array( wp_date( 'Y-m-d', time() - 29 * DAY_IN_SECONDS ), $today );
+				return array( Viewer_Time::home_date( 'Y-m-d', time() - 29 * DAY_IN_SECONDS ), $today );
 			case '7d':
-				return array( wp_date( 'Y-m-d', time() - 6 * DAY_IN_SECONDS ), $today );
+				return array( Viewer_Time::home_date( 'Y-m-d', time() - 6 * DAY_IN_SECONDS ), $today );
 			default:
 				return array( $today, $today );
 		}

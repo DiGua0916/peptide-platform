@@ -14,6 +14,7 @@ final class Plugin {
 	public static function boot(): void {
 		load_plugin_textdomain( 'peptide-hq', false, dirname( plugin_basename( PEPTIDE_HQ_FILE ) ) . '/languages' );
 		Db::maybe_upgrade();
+		Viewer_Time::register_hooks(); // 总后台美西时间开关，按账号记住（2026-11-28）。
 		Site_Lifecycle::register_hooks();
 		Monitor::register_hooks();
 		Register::register_hooks();

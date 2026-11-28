@@ -437,6 +437,16 @@ body.pchq-workspace .pchq-workspace-head{padding-inline:32px}
 .pchq-workspace-user .pchq-workspace-account:hover{background:var(--vc-soft)}
 .pchq-workspace-logout{padding:6px 10px;border-radius:6px;color:var(--vc-muted)!important;font-size:12px;line-height:16px;text-decoration:none;white-space:nowrap}
 .pchq-workspace-logout:hover{background:var(--vc-soft);color:var(--vc-ink)!important}
+/* 美西时间开关（2026-11-28，和店铺后台 .pc-view-tz 一样的样子）。 */
+.pchq-view-tz{display:inline-flex;align-items:center;gap:4px;flex:0 0 auto;margin-right:8px}
+.pchq-view-tz__label{color:var(--vc-muted);font-size:12px;line-height:16px;white-space:nowrap;margin-right:2px}
+.pchq-view-tz__btn{display:inline-flex;align-items:center;justify-content:center;min-height:28px;padding:0 10px;border:1px solid var(--vc-line);border-radius:var(--vc-control-radius);background:var(--vc-surface);color:var(--vc-ink);font-size:12px;line-height:16px;font-weight:600;cursor:pointer;white-space:nowrap;transition:background-color .15s,border-color .15s,color .15s}
+.pchq-view-tz__btn:hover{border-color:#bdbdbd;background:var(--vc-soft)}
+.pchq-view-tz__btn[aria-pressed="true"]{border-color:var(--vc-accent);background:var(--vc-accent);color:#fff}
+.pchq-view-tz[data-current]:not([data-current=""]) .pchq-view-tz__label{color:var(--vc-ink);font-weight:600}
+.pchq-view-tz.is-busy{opacity:.6;pointer-events:none}
+@media(max-width:640px){.pchq-view-tz__label{display:none}.pchq-view-tz__btn{min-height:36px;padding:0 8px}.pchq-view-tz{margin-right:4px}}
+.pchq-day-note{margin:8px 0;color:var(--vc-muted);font-size:12px;line-height:18px}
 
 /* Rail: a section group (总后台, 用户) reads as a label; only the current page is selected. */
 body.pchq-workspace #adminmenu{margin-top:16px}

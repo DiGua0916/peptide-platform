@@ -168,6 +168,9 @@ final class Report_Page {
 		}
 		echo '<label>从<input type="date" name="from" value="' . esc_attr( $from ) . '"></label><label>到<input type="date" name="to" value="' . esc_attr( $to ) . '"></label><button type="submit" class="button">查看</button></form>';
 
+		if ( '' !== \PeptideHq\Viewer_Time::day_keyed_note() ) {
+			echo '<p class="pchq-day-note">' . esc_html( \PeptideHq\Viewer_Time::day_keyed_note() ) . '</p>';
+		}
 		echo '<div class="pcp-scroll"><table class="pcp-matrix"><thead><tr><th scope="col">系列 / 投手 / 店铺</th><th scope="col" class="pchq-f3-num">订单</th>' . ( Orders::extras() ? '<th scope="col" class="pchq-f3-num">顾客</th>' : '' ) . '<th scope="col" class="pchq-f3-num">订单金额</th><th scope="col" class="pchq-f3-num">已标记退款</th><th scope="col" class="pchq-f3-num">销售额（净额）</th><th scope="col" class="pchq-f3-num">广告花费</th><th scope="col" class="pchq-f3-num">ROAS</th><th scope="col" class="pchq-f3-num">客单价</th><th scope="col" class="pchq-f3-num">访客</th><th scope="col" class="pchq-f3-num">转化率</th>' . ( Orders::extras() ? '<th scope="col" class="pchq-f3-num">弃单</th><th scope="col" class="pchq-f3-num">弃单率</th>' : '' ) . '</tr></thead><tbody>';
 		echo '<tr class="pchq-f3-level1"><td>全部系列合计</td>' . self::cells( $report['total'] ) . '</tr>'; // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- cells() 已转义。
 		foreach ( $report['series'] as $s ) {

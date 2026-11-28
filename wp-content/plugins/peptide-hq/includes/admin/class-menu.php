@@ -128,6 +128,9 @@ final class Menu {
 		wp_enqueue_style( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.css', PEPTIDE_HQ_FILE ), $dependencies, PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ) ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$file = PEPTIDE_HQ_DIR . '/assets/hq-workspace.js';
 		wp_enqueue_script( 'peptide-hq-workspace', plugins_url( 'assets/hq-workspace.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		$file = PEPTIDE_HQ_DIR . '/assets/hq-view-timezone.js';
+		wp_enqueue_script( 'peptide-hq-view-timezone', plugins_url( 'assets/hq-view-timezone.js', PEPTIDE_HQ_FILE ), array(), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
+		wp_add_inline_script( 'peptide-hq-view-timezone', 'window.pchqViewTimezone=' . wp_json_encode( \PeptideHq\Viewer_Time::script_config() ) . ';', 'before' );
 		$file = PEPTIDE_HQ_DIR . '/assets/workspace-touch.js';
 		wp_enqueue_script( 'peptide-hq-touch', plugins_url( 'assets/workspace-touch.js', PEPTIDE_HQ_FILE ), array( 'peptide-hq-workspace' ), PEPTIDE_HQ_VERSION . '.' . (int) @filemtime( $file ), true ); // phpcs:ignore WordPress.PHP.NoSilencedErrors
 		$page = isset( $_GET['page'] ) && is_string( $_GET['page'] ) ? $_GET['page'] : '';
@@ -271,6 +274,7 @@ final class Menu {
 				<span aria-hidden="true">/</span><span aria-current="page"><?php echo esc_html( wp_strip_all_tags( (string) $title ) ); ?></span>
 			</nav>
 			<div class="pchq-workspace-user">
+				<?php echo \PeptideHq\Viewer_Time::control_html(); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped -- 拼装时已转义。 ?>
 				<a class="pchq-workspace-account" href="<?php echo esc_url( admin_url( 'profile.php' ) ); ?>" title="<?php echo esc_attr( $zh ? '个人资料' : 'Profile' ); ?>"><span class="pchq-workspace-account__mark" aria-hidden="true"><?php echo esc_html( $zh ? '我' : 'Me' ); ?></span><span><?php echo esc_html( $user->display_name ); ?></span></a>
 				<?php // The WordPress toolbar (with its log-out link) is hidden on desktop in Layout v2. ?>
 				<a class="pchq-workspace-logout" href="<?php echo esc_url( wp_logout_url( admin_url() ) ); ?>"><?php echo esc_html( $zh ? '退出登录' : 'Log out' ); ?></a>

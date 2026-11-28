@@ -113,6 +113,10 @@ final class Dashboard_Page {
 				</span>
 			</div>
 
+			<?php if ( '' !== \PeptideHq\Viewer_Time::overview_note() ) : ?>
+				<p class="pchq-day-note"><?php echo esc_html( \PeptideHq\Viewer_Time::overview_note() ); ?></p>
+			<?php endif; ?>
+
 			<div class="pchq-tiles">
 				<div class="pchq-tile pchq-tile--hero">
 					<span class="pchq-tile__label"><?php esc_html_e( 'Sales', 'peptide-hq' ); ?></span>
@@ -199,8 +203,8 @@ final class Dashboard_Page {
 	 */
 	private static function render_chart( string $range, string $currency ): void {
 		$days = '30d' === $range ? 30 : 7;
-		$to   = wp_date( 'Y-m-d' );
-		$from = wp_date( 'Y-m-d', time() - ( $days - 1 ) * DAY_IN_SECONDS );
+		$to   = \PeptideHq\Viewer_Time::home_date( 'Y-m-d' ); // 各店按天送来的数，取日子不跟美西开关变。
+		$from = \PeptideHq\Viewer_Time::home_date( 'Y-m-d', time() - ( $days - 1 ) * DAY_IN_SECONDS );
 		$data = Stats::per_day( $from, $to, $currency );
 		// 没有销售时纵轴也用 0–100 这样的整数刻度。
 		$max  = max( 100.0, max( array_column( $data, 'revenue' ) ) );
