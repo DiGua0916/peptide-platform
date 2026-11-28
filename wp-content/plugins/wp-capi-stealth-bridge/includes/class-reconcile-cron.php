@@ -1,12 +1,12 @@
 <?php
 /**
- * Async Retry Queue + 10-Minute Two-Way Gateway Delta Reconciler (`class-reconcile-cron.php`).
+ * Async Retry Queue + 10-Minute Real-Time Transient Failure Reconciler (`class-reconcile-cron.php` V3.7).
  *
- * Every 10 minutes:
- * 1. Drains transient retry queue for shallow/IC events.
- * 2. Scans last 24h paid HPOS orders (`processing` / `completed`), sends HMAC-signed `action_uuids`
- *    to Gateway `POST /v3/reconcile/batch-check`, and automatically compensates any order reported
- *    in `missing_action_uuids` (or locally marked `retry_pending`) using frozen buyer context.
+ * Strict Policy:
+ * 1. Drains transient retry queue for shallow/IC events (strictly within 24h).
+ * 2. Scans ONLY real-time paid HPOS orders whose authentic `paid_ts` (`date_paid`) is within the last 24 hours (`<= 86400s`),
+ *    verifies against Gateway `POST /v3/reconcile/batch-check`, and compensates genuine transient network misses.
+ * 3. NEVER automatically backfills historical orders older than 24 hours (`enable_historical_backfill` defaults to `false`).
  */
 
 namespace StealthCapiBridge;
@@ -20,6 +20,7 @@ final class Reconcile_Cron {
 	public const CRON_RETRY_WORKER  = 'stealth_capi_retry_worker';
 	public const OPTION_RETRY_QUEUE = 'stealth_capi_retry_queue';
 	public const OPTION_STATS       = 'stealth_capi_reconciler_stats';
+	public const HARD_24H_CAP_SEC   = 86400;
 	private const MAX_QUEUE_SIZE    = 200;
 	private const MAX_ATTEMPTS      = 8;
 
@@ -33,13 +34,13 @@ final class Reconcile_Cron {
 	public static function add_cron_interval( array $schedules ): array {
 		$schedules[ self::CRON_SCHEDULE ] = array(
 			'interval' => 600,
-			'display'  => 'Every 10 Minutes (Stealth CAPI Batch Reconciler)',
+			'display'  => 'Every 10 Minutes (Stealth CAPI 24h Real-Time Reconciler)',
 		);
 		return $schedules;
 	}
 
 	public static function ensure_cron_scheduled(): void {
-		if ( Config_Manager::is_connector_ready() && ! wp_next_scheduled( self::CRON_RECONCILE ) ) {
+		if ( ! wp_next_scheduled( self::CRON_RECONCILE ) ) {
 			wp_schedule_event( time() + 60, self::CRON_SCHEDULE, self::CRON_RECONCILE );
 		}
 	}
@@ -52,7 +53,11 @@ final class Reconcile_Cron {
 	}
 
 	public static function enqueue_event_retry( array $payload, array $tenant ): void {
-		if ( empty( $payload['action_uuid'] ) || ! Config_Manager::is_connector_ready() ) {
+		if ( empty( $payload['action_uuid'] ) ) {
+			return;
+		}
+		$occurred_at = isset( $payload['occurred_at'] ) ? (int) $payload['occurred_at'] : time();
+		if ( ( time() - $occurred_at ) > self::HARD_24H_CAP_SEC ) {
 			return;
 		}
 		$queue = get_option( self::OPTION_RETRY_QUEUE, array() );
@@ -76,9 +81,7 @@ final class Reconcile_Cron {
 	}
 
 	public static function schedule_immediate_reconcile(): void {
-		if ( Config_Manager::is_connector_ready() ) {
-			self::schedule_async_worker( self::CRON_RECONCILE, 15 );
-		}
+		self::schedule_async_worker( self::CRON_RECONCILE, 15 );
 	}
 
 	private static function schedule_async_worker( string $hook, int $delay_seconds ): void {
@@ -102,13 +105,12 @@ final class Reconcile_Cron {
 			'queue_delivered'      => $retry_res['delivered'],
 			'queue_remaining'      => $retry_res['remaining'],
 			'orders_scanned'       => $reconcile_res['scanned'],
+			'skipped_outside_24h'  => $reconcile_res['skipped_outside_24h'],
 			'batch_missing_found'  => $reconcile_res['batch_missing_found'],
 			'orders_compensated'   => $reconcile_res['compensated'],
 			'orders_still_pending' => $reconcile_res['still_pending'],
 		);
-		if ( Config_Manager::is_connector_ready() ) {
-			update_option( self::OPTION_STATS, $stats, false );
-		}
+		update_option( self::OPTION_STATS, $stats, false );
 		return $stats;
 	}
 
@@ -130,7 +132,8 @@ final class Reconcile_Cron {
 				unset( $queue[ $uuid ] );
 				continue;
 			}
-			if ( ( $now - (int) ( $entry['updated_at'] ?? $now ) ) > 518400 ) {
+			$ev_ts = isset( $entry['payload']['occurred_at'] ) ? (int) $entry['payload']['occurred_at'] : (int) ( $entry['updated_at'] ?? $now );
+			if ( ( $now - $ev_ts ) > self::HARD_24H_CAP_SEC || ( $now - (int) ( $entry['updated_at'] ?? $now ) ) > self::HARD_24H_CAP_SEC ) {
 				unset( $queue[ $uuid ] );
 				continue;
 			}
@@ -161,10 +164,12 @@ final class Reconcile_Cron {
 
 	/**
 	 * Two-Way Gateway Delta Reconciler via `POST /v3/reconcile/batch-check`.
+	 * Strictly clamped to `paid_ts` within the last 24 hours (`<= 86400s`) unless explicitly invoked by an admin-authorized backfill.
 	 */
-	public static function reconcile_paid_orders( int $lookback_seconds = 86400, int $limit = 100 ): array {
+	public static function reconcile_paid_orders( int $lookback_seconds = 86400, int $limit = 100, bool $allow_extended_window = false ): array {
 		$summary = array(
 			'scanned'             => 0,
+			'skipped_outside_24h' => 0,
 			'batch_missing_found' => 0,
 			'compensated'         => 0,
 			'still_pending'       => 0,
@@ -179,15 +184,21 @@ final class Reconcile_Cron {
 			return $summary;
 		}
 
-		$safe_lookback = min( 561600, max( 3600, $lookback_seconds ) );
-		$orders        = wc_get_orders(
+		$cfg         = Config_Manager::get_config();
+		$cfg_max_age = isset( $cfg['reconcile_max_paid_age_sec'] ) ? (int) $cfg['reconcile_max_paid_age_sec'] : self::HARD_24H_CAP_SEC;
+		$max_paid_age = $allow_extended_window
+			? min( Cashier_Listener::MAX_EVENT_AGE_SECONDS, max( 3600, $lookback_seconds ) )
+			: min( self::HARD_24H_CAP_SEC, max( 3600, min( $cfg_max_age, $lookback_seconds ) ) );
+
+		$now    = time();
+		$orders = wc_get_orders(
 			array(
-				'status'       => array( 'processing', 'completed' ),
-				'date_created' => '>' . ( time() - $safe_lookback ),
-				'limit'        => max( 1, min( 500, $limit ) ),
-				'orderby'      => 'ID',
-				'order'        => 'DESC',
-				'return'       => 'objects',
+				'status'     => array( 'processing', 'completed' ),
+				'date_paid'  => '>' . ( $now - $max_paid_age ),
+				'limit'      => max( 1, min( 500, $limit ) ),
+				'orderby'    => 'ID',
+				'order'      => 'DESC',
+				'return'     => 'objects',
 			)
 		);
 
@@ -201,7 +212,13 @@ final class Reconcile_Cron {
 		$order_by_uid = array();
 
 		foreach ( $orders as $order ) {
-			if ( ! $order instanceof \WC_Order ) {
+			if ( ! $order instanceof \WC_Order || ! $order->is_paid() ) {
+				continue;
+			}
+			$date_paid = $order->get_date_paid();
+			$paid_ts   = $date_paid ? (int) $date_paid->getTimestamp() : 0;
+			if ( $paid_ts <= 0 || ( $now - $paid_ts ) > $max_paid_age ) {
+				++$summary['skipped_outside_24h'];
 				continue;
 			}
 			++$summary['scanned'];
@@ -232,9 +249,12 @@ final class Reconcile_Cron {
 			$summary['batch_missing_found'] = count( $gateway_missing_set );
 		}
 
-		// Step 2: Compensate any order reported missing by Gateway OR locally undelivered.
+		// Step 2: Compensate ONLY orders within the allowed window that genuinely missed delivery due to transient failure.
 		foreach ( $order_by_uid as $uid => $order ) {
-			$lock_state         = (string) $order->get_meta( Cashier_Listener::META_PURCHASE_LOCK, true );
+			$lock_state = (string) $order->get_meta( Cashier_Listener::META_PURCHASE_LOCK, true );
+			if ( in_array( $lock_state, array( 'expired_7d_skipped', 'filtered_safe_page', 'filtered_bot_ua' ), true ) ) {
+				continue;
+			}
 			$reported_by_gw     = isset( $gateway_missing_set[ $uid ] );
 			$locally_incomplete = ( 'delivered' !== $lock_state );
 
@@ -252,9 +272,23 @@ final class Reconcile_Cron {
 		return $summary;
 	}
 
+	/**
+	 * Historical backfill (>24h up to 6.5d) is DISABLED by default (`enable_historical_backfill = false`).
+	 */
 	public static function backfill_historical_paid_orders( int $days = 7 ): array {
+		$cfg = Config_Manager::get_config();
+		if ( empty( $cfg['enable_historical_backfill'] ) ) {
+			return array(
+				'scanned'             => 0,
+				'skipped_outside_24h' => 0,
+				'batch_missing_found' => 0,
+				'compensated'         => 0,
+				'still_pending'       => 0,
+				'disabled_by_policy'  => true,
+			);
+		}
 		$days = max( 1, min( 7, $days ) );
-		return self::reconcile_paid_orders( min( 561600, $days * 86400 ), 300 );
+		return self::reconcile_paid_orders( min( Cashier_Listener::MAX_EVENT_AGE_SECONDS, $days * 86400 ), 300, true );
 	}
 
 	public static function get_local_health(): array {

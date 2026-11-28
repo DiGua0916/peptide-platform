@@ -1,12 +1,11 @@
 <?php
 /**
- * Configuration Manager, Cloak-Verified Real IP Extractor & Gateway Transport (V3.2 Ultimate).
+ * Configuration Manager, Cloak-Verified Real IP Extractor, Safe-Page/Bot Guard & Gateway Transport (V3.7).
  *
- * Aligns 100% with `b_wp 终极版.md` & `a_capi终极版.md`:
- * - Priority #1 buyer IP: `$GLOBALS['wprlo_verified_client_ip']` (Cloak traffic router) -> Cloudflare -> X-Real-IP -> XFF.
- * - Supports `tenant_mode`: `'AD_ACQUISITION'` (6 ad stores) vs `'ORGANIC_RETENTION_HUB'` (Dec Station #2).
- * - Supports HMAC-SHA256 `X-Tenant-Signature` for `/ingest`, `/repurchase-relay`, and `/v3/reconcile/batch-check`.
- * - Sends `X-Admin-Master-Key` for all `/v3/admin/*` endpoints (including streaming `export-seed-csv`).
+ * - Priority #1 buyer IP: `$GLOBALS['wprlo_verified_client_ip']` -> Cloudflare CIDR `CF-Connecting-IP` -> right-to-left peeled `X-Forwarded-For` -> `X-Real-IP` -> public non-server `REMOTE_ADDR`.
+ * - Rejects private/loopback/Cloudflare-edge/server public IPs (`54.144.250.46`, `34.231.148.231`, `18.221.238.49`) from ever leaking as buyer `client_ip`.
+ * - Lossless raw `fbclid` extraction preserving exact uppercase/lowercase characters.
+ * - Defense-in-depth Safe Page & Crawler/Bot zero-reporting guard.
  */
 
 namespace StealthCapiBridge;
@@ -17,35 +16,121 @@ final class Config_Manager {
 
 	public const OPTION_NETWORK = 'stealth_capi_network_config';
 	public const OPTION_SITE    = 'stealth_capi_site_config';
-	public const FBP_FBC_REGEX  = '/^fb\.[012]\.\d{10,16}\..+$/';
+	public const FBP_REGEX      = '/^fb\.[012]\.\d{10,16}\.\d{8,16}$/';
+	public const FBC_REGEX      = '/^fb\.[012]\.\d{10,16}\.[A-Za-z0-9._\-]{1,512}$/';
+	public const FBP_FBC_REGEX  = '/^fb\.[012]\.\d{10,16}\.[A-Za-z0-9._\-]{1,512}$/';
+	public const EID_REGEX      = '/^[A-Za-z0-9_.\-]{6,128}$/';
 
 	public const MODE_AD_ACQUISITION        = 'AD_ACQUISITION';
 	public const MODE_ORGANIC_RETENTION_HUB = 'ORGANIC_RETENTION_HUB';
 
+	public const CLOUDFLARE_CIDRS = array(
+		'173.245.48.0/20',
+		'103.21.244.0/22',
+		'103.22.200.0/22',
+		'103.31.4.0/22',
+		'141.101.64.0/18',
+		'108.162.192.0/18',
+		'190.93.240.0/20',
+		'188.114.96.0/20',
+		'197.234.240.0/22',
+		'198.41.128.0/17',
+		'162.158.0.0/15',
+		'104.16.0.0/13',
+		'104.24.0.0/14',
+		'172.64.0.0/13',
+		'131.0.72.0/22',
+		'2400:cb00::/32',
+		'2606:4700::/32',
+		'2803:f800::/32',
+		'2405:b500::/32',
+		'2405:8100::/32',
+		'2a06:98c0::/29',
+		'2c0f:f248::/32',
+	);
+
+	public const LOCAL_PROXY_CIDRS = array(
+		'127.0.0.1/32',
+		'10.0.0.0/8',
+		'172.16.0.0/12',
+		'192.168.0.0/16',
+		'::1/128',
+		'fc00::/7',
+	);
+
+	public const DEFAULT_BLOCKED_SERVER_IPS = array(
+		'54.144.250.46',
+		'34.231.148.231',
+		'18.221.238.49',
+	);
+
+	private const SAFE_URL_MARKERS = array(
+		'capi_safe_preview',
+		'wprlo_preview',
+		'safe_theme=',
+		'/ui-themes/',
+		'/safe-page',
+		'/regional-fallback',
+	);
+
+	private const BOT_UA_MARKERS = array(
+		'facebookexternalhit',
+		'facebot',
+		'meta-externalagent',
+		'meta-externalfetcher',
+		'adsbot-google',
+		'mediapartners-google',
+		'apis-google',
+		'googlebot',
+		'bingbot',
+		'tiktokspider',
+		'bytespider',
+		'twitterbot',
+		'pinterestbot',
+		'headlesschrome',
+		'phantomjs',
+		'playwright',
+		'puppeteer',
+		'selenium',
+		'curl/',
+		'wget/',
+		'python-requests',
+		'python-httpx',
+		'aiohttp/',
+		'go-http-client',
+		'scrapy',
+		'petalbot',
+		'ahrefsbot',
+		'semrushbot',
+	);
+
 	public static function get_stores_catalog(): array {
 		return array(
-			'site_01'           => array( 'blog_id' => 1, 'store_code' => 's0006', 'label' => '投手 1 店 - 李军 (s0006)' ),
-			'site_02'           => array( 'blog_id' => 1, 'store_code' => 's0007', 'label' => '投手 2 店 - 阳 (s0007)' ),
-			'site_03'           => array( 'blog_id' => 1, 'store_code' => 's0008', 'label' => '投手 3 店 - 光辉 (s0008)' ),
-			'site_04'           => array( 'blog_id' => 1, 'store_code' => 's0009', 'label' => '投手 4 店 - 老毛 (s0009)' ),
-			'site_05'           => array( 'blog_id' => 1, 'store_code' => 's0010', 'label' => '投手 5 店 - 芒果 (s0010)' ),
-			'site_06'           => array( 'blog_id' => 1, 'store_code' => 's0001', 'label' => '机动预留主店 (s0001)' ),
-			'repurchase_hub_02' => array( 'blog_id' => 1, 'store_code' => 'hub_02', 'label' => '12月 2号纯复购总站 (0像素)' ),
+			'site_03'           => array( 'blog_id' => 1, 'store_code' => 's0008', 'zone_code' => 'S1', 'buyer' => '光辉', 'label' => 'S1 · 光辉' ),
+			'site_04'           => array( 'blog_id' => 1, 'store_code' => 's0009', 'zone_code' => 'S2', 'buyer' => '老毛', 'label' => 'S2 · 老毛' ),
+			'site_05'           => array( 'blog_id' => 1, 'store_code' => 's0010', 'zone_code' => 'S3', 'buyer' => '芒果', 'label' => 'S3 · 芒果' ),
+			'site_01'           => array( 'blog_id' => 1, 'store_code' => 's0006', 'zone_code' => 'S4', 'buyer' => '李军', 'label' => 'S4 · 李军' ),
+			'site_02'           => array( 'blog_id' => 1, 'store_code' => 's0007', 'zone_code' => 'S5', 'buyer' => '阳', 'label' => 'S5 · 阳' ),
+			'site_06'           => array( 'blog_id' => 1, 'store_code' => 's0001', 'zone_code' => 'S6', 'buyer' => '地瓜', 'label' => 'S6 · 地瓜' ),
+			'repurchase_hub_02' => array( 'blog_id' => 1, 'store_code' => 'hub_02', 'zone_code' => 'HUB', 'buyer' => '复购站', 'label' => '私域老客纯复购站（前台零像素 · 后台反哺原店）' ),
 		);
 	}
 
 	public static function get_config(): array {
 		$defaults = array(
-			'enabled'               => false,
-			'gateway_base_url'      => '',
-			'admin_master_key'      => '',
-			'timeout_seconds'       => 2.0,
-			'suppress_legacy_meta'  => true,
-			'auto_enqueue_sdk'      => true,
-			'enable_server_shallow' => true,
-			'trust_private_proxies' => false,
-			'trusted_proxies'       => array(),
-			'default_tenant'        => array(
+			'enabled'                    => true,
+			'gateway_base_url'           => 'http://18.221.238.49',
+			'admin_master_key'           => '',
+			'timeout_seconds'            => 2.0,
+			'suppress_legacy_meta'       => true,
+			'auto_enqueue_sdk'           => true,
+			'enable_server_shallow'      => true,
+			'enable_historical_backfill' => false,
+			'reconcile_max_paid_age_sec' => 86400,
+			'trust_private_proxies'      => true,
+			'trusted_proxies'            => array(),
+			'blocked_server_ips'         => self::DEFAULT_BLOCKED_SERVER_IPS,
+			'default_tenant'             => array(
 				'enabled'               => false,
 				'blog_id'               => 1,
 				'site_key'              => '',
@@ -54,8 +139,8 @@ final class Config_Manager {
 				'tenant_mode'           => self::MODE_AD_ACQUISITION,
 				'is_repurchase_station' => false,
 			),
-			'tenants_by_blog_id'    => array(),
-			'tenants_by_domain'     => array(),
+			'tenants_by_blog_id'         => array(),
+			'tenants_by_domain'          => array(),
 		);
 
 		$stored = array();
@@ -89,23 +174,6 @@ final class Config_Manager {
 		return $cfg;
 	}
 
-	public static function is_connector_ready(): bool {
-		return '' !== self::configured_gateway_url( self::get_config() );
-	}
-
-	private static function configured_gateway_url( array $cfg ): string {
-		if ( empty( $cfg['enabled'] ) || ! is_string( $cfg['gateway_base_url'] ) ) {
-			return '';
-		}
-
-		$url = rtrim( trim( $cfg['gateway_base_url'] ), '/' );
-		if ( ! preg_match( '#^https?://#i', $url ) || false === filter_var( $url, FILTER_VALIDATE_URL ) ) {
-			return '';
-		}
-
-		return $url;
-	}
-
 	public static function save_config( array $new_config ): bool {
 		$current = get_option( self::OPTION_SITE, array() );
 		if ( ! is_array( $current ) ) {
@@ -120,7 +188,7 @@ final class Config_Manager {
 
 	public static function resolve_current_tenant( ?int $explicit_blog_id = null ): ?array {
 		$cfg = self::get_config();
-		if ( '' === self::configured_gateway_url( $cfg ) ) {
+		if ( empty( $cfg['enabled'] ) ) {
 			return null;
 		}
 
@@ -173,63 +241,167 @@ final class Config_Manager {
 	}
 
 	/**
+	 * Coordinated WPRLO edge-router blockade check.
+	 */
+	public static function is_blocked_by_edge_router( bool $active_probe = false ): bool {
+		if ( ! empty( $GLOBALS['wprlo_blocked_request'] ) || ! empty( $GLOBALS['wprlo_traffic_intercepted'] ) ) {
+			return true;
+		}
+		if ( $active_probe && function_exists( 'wprlo_check_traffic_target' ) ) {
+			if ( false !== wprlo_check_traffic_target() ) {
+				$GLOBALS['wprlo_blocked_request'] = true;
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
+	 * Unified Safe Page & Crawler/Bot zero-reporting guard.
+	 */
+	public static function is_safe_or_bot_request( bool $active_probe = false, string $candidate_url = '', string $candidate_ua = '' ): bool {
+		if ( self::is_blocked_by_edge_router( $active_probe ) ) {
+			return true;
+		}
+
+		$req_uri = isset( $_SERVER['REQUEST_URI'] ) ? (string) $_SERVER['REQUEST_URI'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		$referer = isset( $_SERVER['HTTP_REFERER'] ) ? (string) $_SERVER['HTTP_REFERER'] : ''; // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		foreach ( array( $req_uri, $referer, $candidate_url ) as $u ) {
+			if ( '' === $u ) {
+				continue;
+			}
+			$low_u = strtolower( $u );
+			foreach ( self::SAFE_URL_MARKERS as $marker ) {
+				if ( false !== strpos( $low_u, $marker ) ) {
+					return true;
+				}
+			}
+			$path = (string) wp_parse_url( $u, PHP_URL_PATH );
+			if ( '' !== $path && preg_match( '#/(?:index|about|privacy|terms|refund|contact|shipping|faq|returns|policy)\.html$#i', $path ) ) {
+				return true;
+			}
+		}
+
+		$ua = '' !== $candidate_ua
+			? $candidate_ua
+			: ( isset( $_SERVER['HTTP_USER_AGENT'] ) ? (string) wp_unslash( $_SERVER['HTTP_USER_AGENT'] ) : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( '' !== $ua ) {
+			$low_ua = strtolower( $ua );
+			foreach ( self::BOT_UA_MARKERS as $bot_kw ) {
+				if ( false !== strpos( $low_ua, $bot_kw ) ) {
+					return true;
+				}
+			}
+		}
+
+		return false;
+	}
+
+	public static function get_blocked_server_ips(): array {
+		$cfg  = self::get_config();
+		$list = self::DEFAULT_BLOCKED_SERVER_IPS;
+		if ( ! empty( $cfg['blocked_server_ips'] ) ) {
+			if ( is_string( $cfg['blocked_server_ips'] ) ) {
+				$list = array_merge( $list, explode( ',', $cfg['blocked_server_ips'] ) );
+			} elseif ( is_array( $cfg['blocked_server_ips'] ) ) {
+				$list = array_merge( $list, $cfg['blocked_server_ips'] );
+			}
+		}
+		return array_values( array_unique( array_filter( array_map( 'trim', $list ) ) ) );
+	}
+
+	/**
+	 * Verify an IP is a genuine public end-user IP (not private/reserved, not Cloudflare edge, not our own AWS server IP).
+	 */
+	public static function is_valid_public_buyer_ip( string $ip ): bool {
+		$ip = trim( $ip );
+		if ( '' === $ip ) {
+			return false;
+		}
+		if ( ! filter_var( $ip, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
+			return false;
+		}
+		if ( in_array( $ip, self::get_blocked_server_ips(), true ) ) {
+			return false;
+		}
+		if ( self::ip_in_cidrs( $ip, self::CLOUDFLARE_CIDRS ) ) {
+			return false;
+		}
+		return true;
+	}
+
+	/**
 	 * Extract real buyer public IP at browser interaction / checkout moment.
 	 *
 	 * Priority:
-	 * 1. `$GLOBALS['wprlo_verified_client_ip']` (from refactored Cloak traffic router at 1st ms)
-	 * 2. Trusted Proxy CIDR verified headers: `HTTP_CF_CONNECTING_IP` -> `HTTP_X_REAL_IP` -> first public IP in `HTTP_X_FORWARDED_FOR`
-	 * 3. `REMOTE_ADDR` (preserves full 128-bit IPv6 without /64 truncation)
+	 * 1. `$GLOBALS['wprlo_verified_client_ip']` (from Cloak edge router at 1st ms, validated as public non-server IP)
+	 * 2. When `REMOTE_ADDR` is Cloudflare / local reverse proxy / configured trusted proxy:
+	 *    `CF-Connecting-IP` -> right-to-left peeled `X-Forwarded-For` -> `X-Real-IP`
+	 * 3. Public non-server `REMOTE_ADDR` (preserves full 128-bit IPv6)
 	 */
 	public static function extract_buyer_ip(): string {
 		if ( ! empty( $GLOBALS['wprlo_verified_client_ip'] ) && is_string( $GLOBALS['wprlo_verified_client_ip'] ) ) {
 			$cloak_ip = trim( $GLOBALS['wprlo_verified_client_ip'] );
-			if ( filter_var( $cloak_ip, FILTER_VALIDATE_IP ) ) {
+			if ( self::is_valid_public_buyer_ip( $cloak_ip ) ) {
 				return $cloak_ip;
 			}
 		}
 
 		$remote = isset( $_SERVER['REMOTE_ADDR'] ) ? trim( sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) ) : '';
-		if ( ! filter_var( $remote, FILTER_VALIDATE_IP ) ) {
+		if ( '' === $remote || ! filter_var( $remote, FILTER_VALIDATE_IP ) ) {
 			return '';
 		}
 
-		$trusted_list = self::get_trusted_proxy_list();
-		if ( ! empty( $trusted_list ) && self::ip_in_cidrs( $remote, $trusted_list ) ) {
-			$candidates = array();
+		$trusted_hops = array_merge( self::CLOUDFLARE_CIDRS, self::get_trusted_proxy_list() );
+		if ( self::ip_in_cidrs( $remote, $trusted_hops ) ) {
 			if ( ! empty( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) {
-				$candidates[] = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) );
-			}
-			if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
-				$candidates[] = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) ) );
-			}
-			if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
-				foreach ( explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) ) as $part ) {
-					$candidates[] = trim( $part );
+				$cf_ip = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_CF_CONNECTING_IP'] ) ) );
+				if ( self::is_valid_public_buyer_ip( $cf_ip ) ) {
+					return $cf_ip;
 				}
 			}
 
-			$first_valid = '';
-			foreach ( $candidates as $cand ) {
-				if ( filter_var( $cand, FILTER_VALIDATE_IP ) ) {
-					if ( '' === $first_valid ) {
-						$first_valid = $cand;
+			if ( ! empty( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) {
+				$xff_parts = array_values(
+					array_filter(
+						array_map( 'trim', explode( ',', sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_FORWARDED_FOR'] ) ) ) )
+					)
+				);
+				// Right-to-left peel of trusted proxies/Cloudflare/private hops to get authentic public client hop:
+				for ( $i = count( $xff_parts ) - 1; $i >= 0; $i-- ) {
+					$hop = $xff_parts[ $i ];
+					if ( ! filter_var( $hop, FILTER_VALIDATE_IP ) ) {
+						continue;
 					}
-					if ( filter_var( $cand, FILTER_VALIDATE_IP, FILTER_FLAG_NO_PRIV_RANGE | FILTER_FLAG_NO_RES_RANGE ) ) {
-						return $cand;
+					if ( self::ip_in_cidrs( $hop, $trusted_hops ) || self::ip_in_cidrs( $hop, self::LOCAL_PROXY_CIDRS ) ) {
+						continue;
+					}
+					if ( self::is_valid_public_buyer_ip( $hop ) ) {
+						return $hop;
+					}
+				}
+				// Fallback to first valid public buyer hop from left:
+				foreach ( $xff_parts as $hop ) {
+					if ( self::is_valid_public_buyer_ip( $hop ) ) {
+						return $hop;
 					}
 				}
 			}
-			if ( '' !== $first_valid ) {
-				return $first_valid;
+
+			if ( ! empty( $_SERVER['HTTP_X_REAL_IP'] ) ) {
+				$real_ip = trim( sanitize_text_field( wp_unslash( $_SERVER['HTTP_X_REAL_IP'] ) ) );
+				if ( self::is_valid_public_buyer_ip( $real_ip ) ) {
+					return $real_ip;
+				}
 			}
 		}
 
-		return $remote;
+		return self::is_valid_public_buyer_ip( $remote ) ? $remote : '';
 	}
 
 	public static function get_trusted_proxy_list(): array {
 		$cfg  = self::get_config();
-		$list = array();
+		$list = self::LOCAL_PROXY_CIDRS;
 
 		if ( defined( 'PEPTIDE_CORE_TRUSTED_PROXIES' ) && is_string( PEPTIDE_CORE_TRUSTED_PROXIES ) ) {
 			$list = array_merge( $list, explode( ',', PEPTIDE_CORE_TRUSTED_PROXIES ) );
@@ -238,14 +410,8 @@ final class Config_Manager {
 			if ( is_string( $cfg['trusted_proxies'] ) ) {
 				$list = array_merge( $list, explode( ',', $cfg['trusted_proxies'] ) );
 			} elseif ( is_array( $cfg['trusted_proxies'] ) ) {
-				$list = array_merge( $cfg['trusted_proxies'] );
+				$list = array_merge( $list, $cfg['trusted_proxies'] );
 			}
-		}
-		if ( ! empty( $cfg['trust_private_proxies'] ) ) {
-			$list = array_merge(
-				$list,
-				array( '127.0.0.1/32', '10.0.0.0/8', '172.16.0.0/12', '192.168.0.0/16', '::1/128', 'fc00::/7' )
-			);
 		}
 
 		return array_values( array_unique( array_filter( array_map( 'trim', $list ) ) ) );
@@ -296,24 +462,72 @@ final class Config_Manager {
 		return false;
 	}
 
+	/**
+	 * Lossless raw `fbclid` extractor from original query string (zero strtolower, zero parse_str space mutation, zero truncation).
+	 */
+	public static function extract_raw_fbclid( ?string $query_string = null ): string {
+		$qs = null !== $query_string
+			? $query_string
+			: ( isset( $_SERVER['QUERY_STRING'] ) ? (string) $_SERVER['QUERY_STRING'] : '' ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		if ( '' === $qs && ! empty( $_SERVER['REQUEST_URI'] ) ) {
+			$qs = (string) wp_parse_url( (string) $_SERVER['REQUEST_URI'], PHP_URL_QUERY ); // phpcs:ignore WordPress.Security.ValidatedSanitizedInput.InputNotSanitized
+		}
+		if ( '' !== $qs && preg_match( '/(?:^|&)fbclid=([^&#]+)/', $qs, $m ) ) {
+			$decoded = trim( rawurldecode( $m[1] ) );
+			if ( '' !== $decoded && preg_match( '/^[A-Za-z0-9._\-]{1,512}$/', $decoded ) ) {
+				return $decoded;
+			}
+		}
+		return '';
+	}
+
+	public static function sanitize_fbp_cookie( string $val ): string {
+		$val = trim( $val );
+		return ( '' !== $val && preg_match( self::FBP_REGEX, $val ) ) ? $val : '';
+	}
+
+	public static function sanitize_fbc_cookie( string $val ): string {
+		$val = trim( $val );
+		return ( '' !== $val && preg_match( self::FBC_REGEX, $val ) ) ? $val : '';
+	}
+
 	public static function sanitize_fb_cookie( string $val ): string {
 		$val = trim( $val );
-		return ( '' !== $val && preg_match( self::FBP_FBC_REGEX, $val ) ) ? $val : '';
+		if ( '' === $val ) {
+			return '';
+		}
+		if ( preg_match( self::FBP_REGEX, $val ) || preg_match( self::FBC_REGEX, $val ) ) {
+			return $val;
+		}
+		return '';
+	}
+
+	public static function sanitize_external_id( string $val ): string {
+		$val = trim( $val );
+		return ( '' !== $val && preg_match( self::EID_REGEX, $val ) ) ? $val : '';
 	}
 
 	/**
 	 * Dispatch HMAC-signed Data Plane event (`<=2.0s` non-blocking cap).
 	 */
 	public static function dispatch_to_gateway( array $raw_event, ?array $tenant = null, ?string $endpoint_override = null ): array {
-		$tenant = $tenant ?? self::resolve_current_tenant();
-		if ( ! $tenant ) {
-			return array( 'ok' => false, 'status' => 0, 'error' => 'tenant_not_configured_or_disabled', 'body' => '' );
+		$event_name = (string) ( $raw_event['event_name'] ?? '' );
+		$cand_url   = (string) ( $raw_event['raw_page_url'] ?? '' );
+		$cand_ua    = (string) ( $raw_event['client_user_agent'] ?? '' );
+
+		// Strictly block any non-Purchase shallow funnel events from Safe Page / Bot / WPRLO-intercepted requests.
+		if ( 'Purchase' !== $event_name && self::is_safe_or_bot_request( false, $cand_url, $cand_ua ) ) {
+			return array( 'ok' => true, 'status' => 204, 'error' => '', 'body' => '{"skipped":"safe_or_bot_blocked"}', 'data' => array() );
 		}
 
-		$is_hub     = self::is_organic_retention_hub( $tenant );
-		$event_name = (string) ( $raw_event['event_name'] ?? '' );
+		$tenant = $tenant ?? self::resolve_current_tenant();
+		if ( ! $tenant ) {
+			return array( 'ok' => false, 'status' => 0, 'error' => 'tenant_not_configured_or_disabled', 'body' => '', 'data' => array() );
+		}
+
+		$is_hub = self::is_organic_retention_hub( $tenant );
 		if ( $is_hub && 'Purchase' !== $event_name ) {
-			return array( 'ok' => true, 'status' => 204, 'error' => '', 'body' => '{"skipped":"organic_hub_ignores_shallow"}' );
+			return array( 'ok' => true, 'status' => 204, 'error' => '', 'body' => '{"skipped":"organic_hub_ignores_shallow"}', 'data' => array() );
 		}
 
 		$path        = $endpoint_override ?? ( $is_hub ? '/v3/events/repurchase-relay' : '/v3/events/ingest' );
@@ -335,6 +549,8 @@ final class Config_Manager {
 		}
 
 		$raw_total = max( 0.0, round( (float) ( $raw_event['total_value'] ?? 0.0 ), 2 ) );
+		$raw_ip    = trim( (string) ( $raw_event['client_ip'] ?? '' ) );
+		$clean_ip  = self::is_valid_public_buyer_ip( $raw_ip ) ? $raw_ip : '';
 
 		$contract_payload = array(
 			'site_key'          => (string) $tenant['site_key'],
@@ -347,10 +563,11 @@ final class Config_Manager {
 			'raw_page_url'      => (string) ( $raw_event['raw_page_url'] ?? home_url( '/' ) ),
 			'currency'          => strtoupper( (string) ( $raw_event['currency'] ?? 'USD' ) ?: 'USD' ),
 			'total_value'       => $raw_total,
-			'client_ip'         => (string) ( $raw_event['client_ip'] ?? '' ),
-			'client_user_agent' => (string) ( $raw_event['client_user_agent'] ?? '' ),
-			'fbp'               => $is_hub ? '' : self::sanitize_fb_cookie( (string) ( $raw_event['fbp'] ?? '' ) ),
-			'fbc'               => $is_hub ? '' : self::sanitize_fb_cookie( (string) ( $raw_event['fbc'] ?? '' ) ),
+			'client_ip'         => $clean_ip,
+			'client_user_agent' => $cand_ua,
+			'fbp'               => $is_hub ? '' : self::sanitize_fbp_cookie( (string) ( $raw_event['fbp'] ?? '' ) ),
+			'fbc'               => $is_hub ? '' : self::sanitize_fbc_cookie( (string) ( $raw_event['fbc'] ?? '' ) ),
+			'external_id'       => $is_hub ? '' : self::sanitize_external_id( (string) ( $raw_event['external_id'] ?? '' ) ),
 			'email'             => strtolower( trim( (string) ( $raw_event['email'] ?? '' ) ) ),
 			'phone'             => trim( (string) ( $raw_event['phone'] ?? '' ) ),
 			'first_name'        => trim( (string) ( $raw_event['first_name'] ?? '' ) ),
@@ -367,7 +584,7 @@ final class Config_Manager {
 	}
 
 	/**
-	 * Generic HMAC-SHA256 signed POST helper (shared by `/ingest`, `/repurchase-relay` & `/v3/reconcile/batch-check`).
+	 * Generic HMAC-SHA256 signed POST helper.
 	 */
 	public static function dispatch_hmac_json( string $path, array $payload, ?array $tenant = null, float $timeout = 3.0 ): array {
 		$tenant = $tenant ?? self::resolve_current_tenant();
@@ -375,12 +592,8 @@ final class Config_Manager {
 			return array( 'ok' => false, 'status' => 0, 'error' => 'tenant_not_configured', 'body' => '', 'data' => array() );
 		}
 
-		$base_url = self::configured_gateway_url( self::get_config() );
-		if ( '' === $base_url ) {
-			return array( 'ok' => false, 'status' => 0, 'error' => 'gateway_not_configured', 'body' => '', 'data' => array() );
-		}
-
-		$url        = $base_url . '/' . ltrim( $path, '/' );
+		$cfg        = self::get_config();
+		$url        = rtrim( (string) $cfg['gateway_base_url'], '/' ) . '/' . ltrim( $path, '/' );
 		$json_flags = JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_PRESERVE_ZERO_FRACTION;
 		$raw_body   = wp_json_encode( $payload, $json_flags );
 		if ( ! is_string( $raw_body ) || '' === $raw_body ) {
@@ -426,11 +639,7 @@ final class Config_Manager {
 	 */
 	public static function gateway_admin_request( string $method, string $path, ?array $json_body = null, float $timeout = 6.0, bool $expect_raw = false ): array {
 		$cfg        = self::get_config();
-		$base_url   = self::configured_gateway_url( $cfg );
-		if ( '' === $base_url ) {
-			return array( 'ok' => false, 'status' => 0, 'error' => 'gateway_not_configured', 'body' => '', 'data' => array() );
-		}
-
+		$base_url   = rtrim( (string) $cfg['gateway_base_url'], '/' );
 		$master_key = trim( (string) ( $cfg['admin_master_key'] ?? '' ) );
 		$headers    = array(
 			'Accept' => $expect_raw ? 'text/csv, application/json' : 'application/json',
