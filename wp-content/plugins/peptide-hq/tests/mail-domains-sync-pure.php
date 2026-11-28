@@ -62,6 +62,7 @@ namespace PeptideHq {
 		public static array $zone_records = array();
 		public static array $expected = array();
 		public static function domains(): array { $d = get_option( 'pchq_cdn_domains', array() ); return is_array( $d ) ? $d : array(); }
+		public static function accounts(): array { return array( 'jun' => array( 'id' => 'jun', 'label' => '军', 'account_id' => 'cf-jun' ) ); }
 		private static function set_domain( string $domain, array $fields ): void {
 			$all = self::domains();
 			$all[ $domain ] = array_merge( $all[ $domain ] ?? array(), $fields );
@@ -176,6 +177,29 @@ namespace {
 	Cdn::$expected = array();
 	MD::backfill();
 	check( 'backfill: korgavex gets a sender', MD::has_connection( $E ) && 'zone-' . $E === Cdn::domains()[ $E ]['zone_id'] );
+
+	// 8. 2026-11-28：域名在投手自己的 Cloudflare 账号里 → 不建 orders@ 连接（主店账号的令牌发不了），记下原因
+	$S = 'sarnovea.com';
+	$cdn = get_option( 'pchq_cdn_domains' );
+	$cdn[ $S ] = array( 'site_id' => 6, 'stage' => 'done', 'account' => 'jun' );
+	update_option( 'pchq_cdn_domains', $cdn );
+	MD::backfill();
+	check( 'other account: no connection created', ! MD::has_connection( $S ) );
+	check( 'other account: reason recorded', str_contains( (string) Cdn::domains()[ $S ]['mail_error'], '军' ) );
+	$f = Mail::site_sender( array( 'id' => 6, 'name' => '李军', 'public_url' => 'https://www.sarnovea.com/' ) );
+	check( 'other account: store falls back to default sender with its brand', 'orders@vialcovepeptides.com' === $f['email'] && 'Sarnovea' === $f['name'] );
+	// 已经建错的旧连接：检查要报出来
+	$fm = get_option( 'fluentmail-settings' );
+	$fm['connections']['stale'] = $fm['connections']['base'];
+	$fm['mappings'][ 'orders@' . $S ] = 'stale';
+	update_option( 'fluentmail-settings', $fm );
+	$c = MD::check( $S, false );
+	check( 'other account: stale connection flagged', false === $c['ok'] && str_contains( $c['message'], '军' ) );
+	// 同一个账号（account_id 相同）照常建
+	$fm['connections']['base']['provider_settings']['account_id'] = 'cf-jun';
+	unset( $fm['mappings'][ 'orders@' . $S ], $fm['connections']['stale'] );
+	update_option( 'fluentmail-settings', $fm );
+	check( 'same account: allowed', '' === MD::other_account( $S, $fm['connections']['base']['provider_settings'] ) );
 
 	echo "mail-domains-sync-pure: {$checks} checks passed\n";
 }

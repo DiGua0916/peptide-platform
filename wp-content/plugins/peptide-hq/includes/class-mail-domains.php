@@ -122,6 +122,10 @@ final class Mail_Domains {
 		if ( ! $base ) {
 			return new \WP_Error( 'pchq_mail_domain_fm', '总后台没有 Cloudflare 发信连接可复制。' );
 		}
+		$other = self::other_account( $domain, (array) ( $base['provider_settings'] ?? array() ) );
+		if ( '' !== $other ) {
+			return new \WP_Error( 'pchq_mail_domain_account', '这个域名在 Cloudflare 账号「' . $other . '」里，主店发信连接属于另一个账号，Cloudflare 不让它用这个域名发信（2026-11-28 店铺邮件全部被拒就是这个原因）。这家店的邮件继续用总后台默认发信邮箱发出' );
+		}
 		$brand = Mail::brand_name( $domain, $domain );
 		$c     = $base;
 		$c['provider_settings']['sender_email'] = $email;
@@ -132,6 +136,27 @@ final class Mail_Domains {
 		$fm['mappings'][ $email ]  = $key;
 		update_option( 'fluentmail-settings', $fm );
 		return true;
+	}
+
+	/**
+	 * 域名归 CDN 页的某个 Cloudflare 账号，而这个账号不是主店发信连接所在的账号时，返回那个账号的名字；否则空串。
+	 *
+	 * Cloudflare 只让一个账号用自己名下的域名发信。复制来的连接用的是主店账号的令牌，
+	 * 拿去发投手账号里的域名会被拒（email.sending.error.email.invalid），所以这种域名不建 orders@ 连接。
+	 * 没记账号的域名（单账号时代）照旧。
+	 */
+	public static function other_account( string $domain, array $base_settings ): string {
+		$acct = (string) ( Cdn::domains()[ $domain ]['account'] ?? '' );
+		if ( '' === $acct || ! method_exists( Cdn::class, 'accounts' ) ) {
+			return '';
+		}
+		$row     = Cdn::accounts()[ $acct ] ?? array();
+		$their   = (string) ( $row['account_id'] ?? '' );
+		$ours    = (string) ( $base_settings['account_id'] ?? '' );
+		if ( '' !== $their && '' !== $ours && $their === $ours ) {
+			return '';
+		}
+		return '' !== (string) ( $row['label'] ?? '' ) ? (string) $row['label'] : $acct;
 	}
 
 	public static function register_hooks(): void {
@@ -264,6 +289,12 @@ final class Mail_Domains {
 		if ( ! $sender ) {
 			$why = '' !== (string) ( $row['mail_error'] ?? '' ) ? '上次自动接入失败：' . $row['mail_error'] : ( $row ? '还没有自动接入（定时任务会补）' : '这个域名不在 CDN 页的域名表里，不会自动接入' );
 			return array( 'ok' => false, 'sender' => false, 'missing' => array(), 'message' => 'orders@' . $domain . ' 还不能发信，这家店的邮件会用总后台默认发信邮箱发出。' . $why . '。' );
+		}
+		$fm      = get_option( 'fluentmail-settings', array() );
+		$own     = (array) ( $fm['connections'][ $fm['mappings'][ 'orders@' . $domain ] ?? '' ]['provider_settings'] ?? array() );
+		$other   = self::other_account( $domain, $own );
+		if ( '' !== $other ) {
+			return array( 'ok' => false, 'sender' => true, 'missing' => array(), 'message' => 'orders@' . $domain . ' 的发信连接用的是主店的 Cloudflare 账号，但域名在账号「' . $other . '」里，Cloudflare 会拒发。请在 FluentSMTP 删掉这条连接，邮件会改用总后台默认发信邮箱。' );
 		}
 		if ( ! $online ) {
 			return array( 'ok' => null, 'sender' => true, 'missing' => array(), 'message' => 'orders@' . $domain . ' 已配好；DNS 认证没有在线核对。' );
